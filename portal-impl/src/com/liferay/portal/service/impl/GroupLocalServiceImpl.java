@@ -454,6 +454,24 @@ public class GroupLocalServiceImpl extends GroupLocalServiceBaseImpl {
 				GroupConstants.DEFAULT_MEMBERSHIP_RESTRICTION;
 		}
 
+		if (FeatureFlagManagerUtil.isEnabled(
+				user.getCompanyId(), "LPD-82960")) {
+
+			UnicodeProperties typeSettingsUnicodeProperties =
+				UnicodePropertiesBuilder.create(
+					true
+				).fastLoad(
+					typeSettings
+				).build();
+
+			if (GetterUtil.getBoolean(
+					typeSettingsUnicodeProperties.getProperty(
+						GroupConstants.TYPE_SETTINGS_KEY_MAINTENANCE_MODE))) {
+
+				active = false;
+			}
+		}
+
 		if (className.equals(Group.class.getName())) {
 			if (!site && (liveGroupId == 0) &&
 				!(StringUtil.startsWith(groupKey, GroupConstants.APP) ||
@@ -482,7 +500,8 @@ public class GroupLocalServiceImpl extends GroupLocalServiceBaseImpl {
 				groupId, user.getCompanyId(), groupKey, type, site);
 		}
 
-		validateInheritContent(parentGroupId, inheritContent);
+		validateInheritContent(
+			user.getCompanyId(), groupId, inheritContent, parentGroupId);
 
 		friendlyURL = getValidatedFriendlyURL(
 			user.getCompanyId(), groupId, classNameId, classPK, friendlyURL);
@@ -4023,6 +4042,10 @@ public class GroupLocalServiceImpl extends GroupLocalServiceBaseImpl {
 
 		validateParentGroup(group.getGroupId(), parentGroupId);
 
+		validateInheritContent(
+			group.getCompanyId(), group.getGroupId(), inheritContent,
+			parentGroupId);
+
 		group.setParentGroupId(parentGroupId);
 		group.setTreePath(group.buildTreePath());
 		group.setGroupKey(groupKey);
@@ -4065,6 +4088,13 @@ public class GroupLocalServiceImpl extends GroupLocalServiceBaseImpl {
 			else if (!group.isMaintenanceMode() && maintenanceMode) {
 				active = false;
 			}
+		}
+
+		if (!active &&
+			(group.isCompany() || group.isControlPanel() || group.isGuest())) {
+
+			throw new RequiredGroupException.MustNotDeactivateSystemGroup(
+				group.getExternalReferenceCode());
 		}
 
 		if (group.isActive() != active) {
@@ -5290,7 +5320,8 @@ public class GroupLocalServiceImpl extends GroupLocalServiceBaseImpl {
 	}
 
 	protected void validateInheritContent(
-			long parentGroupId, boolean inheritContent)
+			long companyId, long groupId, boolean inheritContent,
+			long parentGroupId)
 		throws GroupInheritContentException {
 
 		if (!inheritContent) {
@@ -5304,6 +5335,13 @@ public class GroupLocalServiceImpl extends GroupLocalServiceBaseImpl {
 		Group parentGroup = groupPersistence.fetchByPrimaryKey(parentGroupId);
 
 		if (parentGroup.isInheritContent()) {
+			throw new GroupInheritContentException();
+		}
+
+		int count = groupPersistence.countByC_P_S_I(
+			companyId, groupId, true, true);
+
+		if (count > 0) {
 			throw new GroupInheritContentException();
 		}
 	}
