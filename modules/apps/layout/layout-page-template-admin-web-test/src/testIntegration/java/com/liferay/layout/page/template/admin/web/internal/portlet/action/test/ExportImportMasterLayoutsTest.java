@@ -6,6 +6,7 @@
 package com.liferay.layout.page.template.admin.web.internal.portlet.action.test;
 
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
+import com.liferay.layout.admin.constants.LayoutAdminPortletKeys;
 import com.liferay.layout.importer.LayoutsImportStrategy;
 import com.liferay.layout.importer.LayoutsImporter;
 import com.liferay.layout.importer.LayoutsImporterResultEntry;
@@ -18,6 +19,7 @@ import com.liferay.layout.util.structure.DropZoneLayoutStructureItem;
 import com.liferay.layout.util.structure.LayoutStructure;
 import com.liferay.layout.util.structure.LayoutStructureItem;
 import com.liferay.petra.string.CharPool;
+import com.liferay.portal.kernel.json.JSONArray;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.Repository;
@@ -36,7 +38,6 @@ import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.FileUtil;
-import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.test.rule.Inject;
@@ -46,8 +47,6 @@ import com.liferay.segments.service.SegmentsExperienceLocalService;
 
 import java.io.File;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.junit.Assert;
@@ -106,7 +105,7 @@ public class ExportImportMasterLayoutsTest {
 				_read("export_import_master_layout_layout_data.json"));
 
 		Repository repository = PortletFileRepositoryUtil.addPortletRepository(
-			_group1.getGroupId(), RandomTestUtil.randomString(),
+			_group1.getGroupId(), LayoutAdminPortletKeys.GROUP_PAGES,
 			_serviceContext1);
 
 		Class<?> clazz = getClass();
@@ -115,7 +114,7 @@ public class ExportImportMasterLayoutsTest {
 			null, _group1.getGroupId(), TestPropsValues.getUserId(),
 			LayoutPageTemplateEntry.class.getName(),
 			layoutPageTemplateEntry1.getLayoutPageTemplateEntryId(),
-			RandomTestUtil.randomString(), repository.getDlFolderId(),
+			LayoutAdminPortletKeys.GROUP_PAGES, repository.getDlFolderId(),
 			clazz.getResourceAsStream("dependencies/thumbnail.png"),
 			RandomTestUtil.randomString(), ContentTypes.IMAGE_PNG, false);
 
@@ -241,19 +240,6 @@ public class ExportImportMasterLayoutsTest {
 			FileUtil.getBytes(getClass(), "dependencies/" + fileName));
 	}
 
-	private List<String> _removeNonfragmentEntryKeys(
-		List<String> importedFragmentEntryKeys) {
-
-		List<String> filteredFragmentEntryKeys = new ArrayList<>();
-
-		ListUtil.filter(
-			importedFragmentEntryKeys, filteredFragmentEntryKeys,
-			fragmentEntryKey -> !fragmentEntryKey.equals(
-				"lfr-all-fragments-id"));
-
-		return Collections.unmodifiableList(filteredFragmentEntryKeys);
-	}
-
 	private void _validateDropZoneLayoutStructureItem(
 		DropZoneLayoutStructureItem expectedDropZoneLayoutStructureItem,
 		DropZoneLayoutStructureItem actualDropZoneLayoutStructureItem) {
@@ -262,14 +248,14 @@ public class ExportImportMasterLayoutsTest {
 			expectedDropZoneLayoutStructureItem.isAllowNewFragmentEntries(),
 			actualDropZoneLayoutStructureItem.isAllowNewFragmentEntries());
 
+		JSONArray actualFragmentEntriesJSONArray =
+			actualDropZoneLayoutStructureItem.getFragmentEntriesJSONArray();
+		JSONArray expectedFragmentEntriesJSONArray =
+			expectedDropZoneLayoutStructureItem.getFragmentEntriesJSONArray();
+
 		Assert.assertEquals(
-			ListUtil.sort(
-				_removeNonfragmentEntryKeys(
-					expectedDropZoneLayoutStructureItem.
-						getFragmentEntryKeys())),
-			ListUtil.sort(
-				_removeNonfragmentEntryKeys(
-					actualDropZoneLayoutStructureItem.getFragmentEntryKeys())));
+			expectedFragmentEntriesJSONArray.toString(),
+			actualFragmentEntriesJSONArray.toString());
 	}
 
 	@DeleteAfterTestRun
