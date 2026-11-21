@@ -23,10 +23,12 @@ import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.LayoutConstants;
 import com.liferay.portal.kernel.model.Repository;
 import com.liferay.portal.kernel.model.User;
+import com.liferay.portal.kernel.model.role.RoleConstants;
 import com.liferay.portal.kernel.portlet.bridges.mvc.MVCActionCommand;
 import com.liferay.portal.kernel.portlet.bridges.mvc.MVCResourceCommand;
 import com.liferay.portal.kernel.portletfilerepository.PortletFileRepositoryUtil;
 import com.liferay.portal.kernel.repository.model.FileEntry;
+import com.liferay.portal.kernel.security.auth.PrincipalException;
 import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.servlet.SessionMessages;
@@ -59,6 +61,7 @@ import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
 import com.liferay.portal.upload.test.util.UploadTestUtil;
 import com.liferay.style.book.constants.StyleBookConstants;
+import com.liferay.style.book.constants.StyleBookPortletKeys;
 import com.liferay.style.book.exception.DuplicateStyleBookEntryKeyException;
 import com.liferay.style.book.model.StyleBookEntry;
 import com.liferay.style.book.service.StyleBookEntryLocalService;
@@ -470,7 +473,8 @@ public class ExportImportStyleBookEntriesMVCResourceCommandTest {
 				RandomTestUtil.randomString(), RandomTestUtil.randomString(),
 				RandomTestUtil.randomString(), serviceContext);
 
-		FileEntry fileEntry = _addFileEntry(styleBookEntry);
+		FileEntry fileEntry = _addFileEntry(
+			_sourceGroup, StyleBookPortletKeys.STYLE_BOOK, styleBookEntry);
 
 		_styleBookEntryLocalService.updatePreviewFileEntryId(
 			styleBookEntry.getStyleBookEntryId(), fileEntry.getFileEntryId(),
@@ -612,7 +616,8 @@ public class ExportImportStyleBookEntriesMVCResourceCommandTest {
 				RandomTestUtil.randomString(), RandomTestUtil.randomString(),
 				RandomTestUtil.randomString(), serviceContext);
 
-		FileEntry fileEntry = _addFileEntry(styleBookEntry);
+		FileEntry fileEntry = _addFileEntry(
+			_sourceGroup, StyleBookPortletKeys.STYLE_BOOK, styleBookEntry);
 
 		_styleBookEntryLocalService.updatePreviewFileEntryId(
 			styleBookEntry.getStyleBookEntryId(), fileEntry.getFileEntryId(),
@@ -677,23 +682,72 @@ public class ExportImportStyleBookEntriesMVCResourceCommandTest {
 		}
 	}
 
-	private FileEntry _addFileEntry(StyleBookEntry styleBookEntry)
+	@Test
+	public void testExportStyleBookEntriesWithIrrelevantPreviewFileEntry()
+		throws Exception {
+
+		_testExportStyleBookEntriesWithIrrelevantPreviewFileEntry(
+			_sourceGroup, RandomTestUtil.randomString());
+		_testExportStyleBookEntriesWithIrrelevantPreviewFileEntry(
+			_targetGroup, StyleBookPortletKeys.STYLE_BOOK);
+	}
+
+	@Test
+	public void testExportStyleBookEntriesWithoutPermission() throws Exception {
+		_user = UserTestUtil.addGroupUser(
+			_targetGroup, RoleConstants.SITE_ADMINISTRATOR);
+
+		UserTestUtil.setUser(_user);
+
+		StyleBookEntry targetStyleBookEntry =
+			_styleBookEntryLocalService.addStyleBookEntry(
+				null, TestPropsValues.getUserId(), _targetGroup.getGroupId(),
+				false, StringPool.BLANK, null, RandomTestUtil.randomString(),
+				RandomTestUtil.randomString(), RandomTestUtil.randomString(),
+				ServiceContextTestUtil.getServiceContext(
+					_targetGroup, TestPropsValues.getUserId()));
+
+		Assert.assertNotNull(
+			_exportStyleBookEntry(targetStyleBookEntry.getStyleBookEntryId()));
+
+		try {
+			StyleBookEntry sourceStyleBookEntry =
+				_styleBookEntryLocalService.addStyleBookEntry(
+					null, TestPropsValues.getUserId(),
+					_sourceGroup.getGroupId(), false, StringPool.BLANK, null,
+					RandomTestUtil.randomString(),
+					RandomTestUtil.randomString(),
+					RandomTestUtil.randomString(),
+					ServiceContextTestUtil.getServiceContext(
+						_sourceGroup, TestPropsValues.getUserId()));
+
+			_exportStyleBookEntry(sourceStyleBookEntry.getStyleBookEntryId());
+
+			Assert.fail();
+		}
+		catch (PrincipalException principalException) {
+		}
+
+		UserTestUtil.setUser(TestPropsValues.getUser());
+	}
+
+	private FileEntry _addFileEntry(
+			Group group, String portletId, StyleBookEntry styleBookEntry)
 		throws Exception {
 
 		ServiceContext serviceContext =
 			ServiceContextTestUtil.getServiceContext(
-				_sourceGroup, TestPropsValues.getUserId());
+				group, TestPropsValues.getUserId());
 
 		Repository repository = PortletFileRepositoryUtil.addPortletRepository(
-			_sourceGroup.getGroupId(), RandomTestUtil.randomString(),
-			serviceContext);
+			group.getGroupId(), portletId, serviceContext);
 
 		Class<?> clazz = getClass();
 
 		return PortletFileRepositoryUtil.addPortletFileEntry(
-			null, _sourceGroup.getGroupId(), TestPropsValues.getUserId(),
+			null, group.getGroupId(), TestPropsValues.getUserId(),
 			StyleBookEntry.class.getName(),
-			styleBookEntry.getStyleBookEntryId(), RandomTestUtil.randomString(),
+			styleBookEntry.getStyleBookEntryId(), portletId,
 			repository.getDlFolderId(),
 			clazz.getResourceAsStream("dependencies/thumbnail.png"),
 			RandomTestUtil.randomString() + ".png", ContentTypes.IMAGE_PNG,
@@ -928,6 +982,55 @@ public class ExportImportStyleBookEntriesMVCResourceCommandTest {
 
 		Assert.assertEquals(
 			value, frontendTokenValueJSONObject.getString("value"));
+	}
+
+	private void _testExportStyleBookEntriesWithIrrelevantPreviewFileEntry(
+			Group group, String portletId)
+		throws Exception {
+
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(
+				_sourceGroup, TestPropsValues.getUserId());
+
+		PortletFileRepositoryUtil.addPortletRepository(
+			_sourceGroup.getGroupId(), StyleBookPortletKeys.STYLE_BOOK,
+			serviceContext);
+
+		StyleBookEntry styleBookEntry =
+			_styleBookEntryLocalService.addStyleBookEntry(
+				null, TestPropsValues.getUserId(), _sourceGroup.getGroupId(),
+				false, StringPool.BLANK, _read("frontend-tokens-values.json"),
+				RandomTestUtil.randomString(), RandomTestUtil.randomString(),
+				RandomTestUtil.randomString(), serviceContext);
+
+		FileEntry fileEntry = _addFileEntry(group, portletId, styleBookEntry);
+
+		try (Connection connection = DataAccess.getConnection();
+
+			PreparedStatement preparedStatement = connection.prepareStatement(
+				"update StyleBookEntry set previewFileEntryId = ? where " +
+					"styleBookEntryId = ?")) {
+
+			preparedStatement.setLong(1, fileEntry.getFileEntryId());
+			preparedStatement.setLong(2, styleBookEntry.getStyleBookEntryId());
+
+			preparedStatement.executeUpdate();
+		}
+
+		EntityCacheUtil.clearCache();
+
+		File file = _exportStyleBookEntry(styleBookEntry.getStyleBookEntryId());
+
+		try (ZipFile zipFile = new ZipFile(file)) {
+			Enumeration<? extends ZipEntry> enumeration = zipFile.entries();
+
+			while (enumeration.hasMoreElements()) {
+				ZipEntry zipEntry = enumeration.nextElement();
+
+				Assert.assertFalse(
+					_isStyleBookFile("thumbnail.png", zipEntry.getName()));
+			}
+		}
 	}
 
 	private void _validateZipEntry(
