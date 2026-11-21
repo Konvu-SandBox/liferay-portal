@@ -7,7 +7,9 @@ import {
 	pagination,
 } from 'shared/components/FrontendDataSet';
 import {getVisitorType} from 'contacts/pages/account/components/IndividualsDataSet';
+import {pickBy} from 'lodash';
 import {Routes, setUriQueryValues} from 'shared/util/router';
+import {useAccountFilter} from 'shared/hooks/useAccountFilter';
 import {useRangeQueryValues} from 'shared/hooks/useRangeQueryValues';
 
 interface IIndividualsTouchedDataSetProps {
@@ -60,12 +62,13 @@ const IndividualsTouchedDataSet: React.FC<IIndividualsTouchedDataSetProps> = ({
 	channelId,
 	groupId,
 }) => {
+	const {accountId} = useAccountFilter();
 	const {apiRangeParams, routeRangeParams} = useRangeQueryValues();
 
 	return (
 		<FrontendDataSet
 			apiURL={setUriQueryValues(
-				{channelId, ...apiRangeParams},
+				pickBy({accountIds: accountId, channelId, ...apiRangeParams}),
 				`/o/faro/contacts/${groupId}/campaigns/${campaignId}/individuals`
 			)}
 			customDataRenderers={{
@@ -91,6 +94,7 @@ const IndividualsTouchedDataSet: React.FC<IIndividualsTouchedDataSetProps> = ({
 						? columns.cmsLabelRenderer(getVisitorType(value))
 						: '',
 			}}
+			defaultSort={{key: 'lastActivityDate'}}
 			emptyState={{
 				description: Liferay.Language.get(
 					'check-back-later-to-verify-if-data-has-been-received-from-your-data-sources'
@@ -102,15 +106,6 @@ const IndividualsTouchedDataSet: React.FC<IIndividualsTouchedDataSetProps> = ({
 			id="campaign-individuals-dataset"
 			pagination={pagination}
 			showPagination
-			sorts={[
-				{
-					active: true,
-					default: true,
-					direction: 'desc',
-					key: 'lastActivityDate',
-					label: Liferay.Language.get('last-active'),
-				},
-			]}
 			views={views}
 		/>
 	);
