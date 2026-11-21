@@ -7,7 +7,7 @@ import '@testing-library/jest-dom';
 
 // eslint-disable-next-line
 import {checkAccessibility} from '@liferay/layout-js-components-web/test/__lib__/index';
-import {render, screen, waitFor} from '@testing-library/react';
+import {render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
@@ -30,27 +30,35 @@ jest.mock(
 	})
 );
 
-jest.mock('@ckeditor/ckeditor5-react', () => ({
-	CKEditor: ({onChange, onReady}: any) => {
-		const mockEditor = {
-			getData: jest.fn().mockReturnValue('mocked data'),
-			on: jest.fn(),
-			setData: jest.fn(),
-		};
-		onReady(mockEditor);
+jest.mock('@ckeditor/ckeditor5-react', () => {
+	const {useEffect, useRef} = jest.requireActual('react');
 
-		return (
-			<input
-				aria-label="Mocked CKEditor"
-				onChange={(event) => {
-					if (onChange) {
-						onChange(event, mockEditor);
-					}
-				}}
-			/>
-		);
-	},
-}));
+	return {
+		CKEditor: ({onChange, onReady}: any) => {
+			const mockEditorRef = useRef({
+				focus: jest.fn(),
+				getData: jest.fn().mockReturnValue('mocked data'),
+				on: jest.fn(),
+				setData: jest.fn(),
+			});
+
+			useEffect(() => {
+				onReady(mockEditorRef.current);
+			}, [onReady]);
+
+			return (
+				<input
+					aria-label="Mocked CKEditor"
+					onChange={(event) => {
+						if (onChange) {
+							onChange(event, mockEditorRef.current);
+						}
+					}}
+				/>
+			);
+		},
+	};
+});
 
 const initialComments: Comment[] = [
 	{
@@ -77,7 +85,11 @@ const initialComments: Comment[] = [
 				hasUpdatePermission: true,
 				negativeVotes: 0,
 				positiveVotes: 0,
+				ratingsClassName:
+					'com.liferay.message.boards.model.MBDiscussion',
 				rootComment: true,
+				thumbDown: false,
+				thumbUp: false,
 			},
 		],
 		className: 'Z7P5',
@@ -88,7 +100,10 @@ const initialComments: Comment[] = [
 		hasUpdatePermission: true,
 		negativeVotes: 0,
 		positiveVotes: 0,
+		ratingsClassName: 'com.liferay.message.boards.model.MBDiscussion',
 		rootComment: true,
+		thumbDown: false,
+		thumbUp: false,
 	},
 ];
 
@@ -265,6 +280,155 @@ describe('CommentsPanel', () => {
 		});
 	});
 
+	it('Votes when the thumb down button is pressed on a comment rated by other users', async () => {
+		renderComponent('addCommentURL', false, [
+			{
+				...initialComments[0],
+				children: [],
+				negativeVotes: 1,
+				positiveVotes: 1,
+				thumbDown: false,
+				thumbUp: false,
+			},
+		]);
+
+		const thumbDownButton = screen.getByTitle(/this-as-bad$/);
+
+		expect(thumbDownButton).toHaveAttribute('aria-pressed', 'false');
+
+		await userEvent.click(thumbDownButton);
+
+		expect(mockFetch).toHaveBeenCalledWith('/c/portal/rate_entry', {
+			body: expect.objectContaining({score: 0}),
+			method: 'POST',
+		});
+	});
+
+	it('Votes when the thumb up button is pressed on a comment rated by another user', async () => {
+		renderComponent('addCommentURL', false, [
+			{
+				...initialComments[0],
+				children: [],
+				positiveVotes: 1,
+				thumbDown: false,
+				thumbUp: false,
+			},
+		]);
+
+		const thumbUpButton = screen.getByTitle(/this-as-good$/);
+
+		expect(thumbUpButton).toHaveAttribute('aria-pressed', 'false');
+
+		await userEvent.click(thumbUpButton);
+
+		expect(mockFetch).toHaveBeenCalledWith('/c/portal/rate_entry', {
+			body: expect.objectContaining({
+				className: 'com.liferay.message.boards.model.MBDiscussion',
+				score: 1,
+			}),
+			method: 'POST',
+		});
+	});
+
+	it('Removes the vote when the thumb up button is pressed on a comment rated by the current user', async () => {
+		renderComponent('addCommentURL', false, [
+			{
+				...initialComments[0],
+				children: [],
+				positiveVotes: 1,
+				thumbDown: false,
+				thumbUp: true,
+			},
+		]);
+
+		const thumbUpButton = screen.getByTitle(/this-as-good$/);
+
+		expect(thumbUpButton).toHaveAttribute('aria-pressed', 'true');
+
+		await userEvent.click(thumbUpButton);
+
+		expect(mockFetch).toHaveBeenCalledWith('/c/portal/rate_entry', {
+			body: expect.objectContaining({score: -1}),
+			method: 'POST',
+		});
+	});
+
+	describe('when the vote of the current user is notified', () => {
+		let fireSpy: jest.SpyInstance;
+		let onSpy: jest.SpyInstance;
+
+		beforeEach(() => {
+			const listeners = new Map<
+				string | string[],
+				(event?: unknown) => void
+			>();
+
+			fireSpy = jest
+				.spyOn(Liferay, 'fire')
+				.mockImplementation((type, context) =>
+					listeners.get(type)?.(context)
+				);
+			onSpy = jest
+				.spyOn(Liferay, 'on')
+				.mockImplementation((events, callback) => {
+					if (callback) {
+						listeners.set(events, callback);
+					}
+
+					return {detach: () => 0};
+				});
+		});
+
+		afterEach(() => {
+			fireSpy.mockRestore();
+			onSpy.mockRestore();
+		});
+
+		it('keeps the vote after opening and closing the reply editor', async () => {
+			renderComponent('addCommentURL', false, [
+				{...initialComments[0], children: []},
+			]);
+
+			await userEvent.click(screen.getByTitle('rate-this-as-good'));
+
+			await userEvent.click(screen.getByText('reply'));
+
+			await userEvent.click(
+				within(screen.getByRole('article')).getByText('cancel')
+			);
+
+			const thumbUpButton = screen.getByTitle(/this-as-good$/);
+
+			expect(thumbUpButton).toHaveAttribute('aria-pressed', 'true');
+			expect(thumbUpButton).toHaveAttribute('value', '1');
+		});
+
+		it('keeps the vote of a reply after deleting its parent comment', async () => {
+			(CommentService.deleteComment as jest.Mock).mockResolvedValue({
+				data: {},
+			});
+
+			renderComponent();
+
+			await userEvent.click(screen.getAllByTitle('rate-this-as-bad')[0]);
+
+			await userEvent.click(screen.getAllByText('delete')[0]);
+
+			await waitFor(() => {
+				expect(
+					screen.queryByText('Parent comment')
+				).not.toBeInTheDocument();
+			});
+
+			await closeToast();
+
+			const thumbDownButton = screen.getByTitle(/this-as-bad$/);
+
+			expect(thumbDownButton).toHaveAttribute('aria-pressed', 'true');
+			expect(thumbDownButton).toHaveAttribute('value', '1');
+		});
+	});
+
 	it('Adds a new comment and fires the messagePosted event', async () => {
 		const addCommentSpy = jest
 			.spyOn(CommentService, 'addComment')
@@ -285,7 +449,11 @@ describe('CommentsPanel', () => {
 					hasUpdatePermission: true,
 					negativeVotes: 0,
 					positiveVotes: 0,
+					ratingsClassName:
+						'com.liferay.message.boards.model.MBDiscussion',
 					rootComment: true,
+					thumbDown: false,
+					thumbUp: false,
 				},
 				error: null,
 			});
@@ -343,5 +511,77 @@ describe('CommentsPanel', () => {
 
 		expect(screen.getByText('Parent comment')).toBeInTheDocument();
 		expect(screen.getByText('Child comment')).toBeInTheDocument();
+	});
+
+	it('tells that the highlighted comment is no longer available when it does not exist', async () => {
+		render(
+			<CommentsPanel
+				addCommentURL="addCommentURL"
+				comments={initialComments}
+				deleteCommentURL="deleteCommentURL"
+				editCommentURL="editCommentURL"
+				editorConfig={{}}
+				getCommentsURL="getCommentsURL"
+				highlightedCommentId="3"
+			/>
+		);
+
+		expect(
+			screen.getByText('this-comment-is-no-longer-available')
+		).toBeInTheDocument();
+
+		await userEvent.click(screen.getByRole('button', {name: 'Close'}));
+
+		expect(
+			screen.queryByText('this-comment-is-no-longer-available')
+		).not.toBeInTheDocument();
+	});
+
+	it('shows a toast instead of telling that the highlighted comment is no longer available when the comments cannot be loaded', async () => {
+		const error = 'Unexpected error loading the comments';
+
+		(CommentService.getComments as jest.Mock).mockResolvedValue({
+			data: null,
+			error,
+		});
+
+		render(
+			<CommentsPanel
+				addCommentURL="addCommentURL"
+				deleteCommentURL="deleteCommentURL"
+				editCommentURL="editCommentURL"
+				editorConfig={{}}
+				getCommentsURL="getCommentsURL"
+				highlightedCommentId="1"
+			/>
+		);
+
+		await waitFor(() => {
+			expect(screen.getByText(error)).toBeInTheDocument();
+		});
+
+		expect(
+			screen.queryByText('this-comment-is-no-longer-available')
+		).not.toBeInTheDocument();
+	});
+
+	it('does not tell that the highlighted comment is no longer available when it is a reply', () => {
+		Element.prototype.scrollIntoView = jest.fn();
+
+		render(
+			<CommentsPanel
+				addCommentURL="addCommentURL"
+				comments={initialComments}
+				deleteCommentURL="deleteCommentURL"
+				editCommentURL="editCommentURL"
+				editorConfig={{}}
+				getCommentsURL="getCommentsURL"
+				highlightedCommentId="2"
+			/>
+		);
+
+		expect(
+			screen.queryByText('this-comment-is-no-longer-available')
+		).not.toBeInTheDocument();
 	});
 });
