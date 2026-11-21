@@ -14,6 +14,8 @@ import com.liferay.dynamic.data.mapping.validator.DDMFormValuesValidationExcepti
 import com.liferay.fragment.processor.PortletRegistry;
 import com.liferay.friendly.url.exception.DuplicateFriendlyURLEntryException;
 import com.liferay.item.selector.ItemSelector;
+import com.liferay.launch.set.details.provider.LaunchSetDetailsProvider;
+import com.liferay.launch.set.permission.LaunchSetPermission;
 import com.liferay.layout.admin.constants.LayoutAdminPortletKeys;
 import com.liferay.layout.admin.web.internal.configuration.LayoutUtilityPageThumbnailConfiguration;
 import com.liferay.layout.admin.web.internal.constants.LayoutAdminWebKeys;
@@ -163,6 +165,9 @@ public class GroupPagesPortlet extends MVCPortlet {
 			include("/error.jsp", renderRequest, renderResponse);
 		}
 		else {
+			ServiceContext serviceContext =
+				ServiceContextThreadLocal.getServiceContext();
+
 			try {
 				List<LayoutPrototype> layoutPrototypes =
 					_layoutPrototypeLocalService.getLayoutPrototypes(
@@ -188,10 +193,8 @@ public class GroupPagesPortlet extends MVCPortlet {
 					}
 				}
 
-				ServiceContext serviceContext =
-					ServiceContextFactory.getInstance(renderRequest);
-
-				ServiceContextThreadLocal.pushServiceContext(serviceContext);
+				serviceContext = ServiceContextFactory.getInstance(
+					renderRequest);
 			}
 			catch (Exception exception) {
 				if (_log.isWarnEnabled()) {
@@ -199,58 +202,69 @@ public class GroupPagesPortlet extends MVCPortlet {
 				}
 			}
 
-			renderRequest.setAttribute(CETManager.class.getName(), _cetManager);
-			renderRequest.setAttribute(
-				ItemSelector.class.getName(), _itemSelector);
-			renderRequest.setAttribute(
-				LayoutUtilityPageThumbnailConfiguration.class.getName(),
-				_layoutUtilityPageThumbnailConfiguration);
+			ServiceContextThreadLocal.pushServiceContext(serviceContext);
 
-			ThemeDisplay themeDisplay =
-				(ThemeDisplay)renderRequest.getAttribute(WebKeys.THEME_DISPLAY);
+			try {
+				renderRequest.setAttribute(
+					CETManager.class.getName(), _cetManager);
+				renderRequest.setAttribute(
+					ItemSelector.class.getName(), _itemSelector);
+				renderRequest.setAttribute(
+					LayoutUtilityPageThumbnailConfiguration.class.getName(),
+					_layoutUtilityPageThumbnailConfiguration);
 
-			LayoutActionsHelper layoutActionsHelper = new LayoutActionsHelper(
-				_layoutConverterRegistry, _portletRegistry, themeDisplay,
-				_translationPermission);
+				ThemeDisplay themeDisplay =
+					(ThemeDisplay)renderRequest.getAttribute(
+						WebKeys.THEME_DISPLAY);
 
-			LayoutsAdminDisplayContext layoutsAdminDisplayContext =
-				new LayoutsAdminDisplayContext(
-					_itemSelector, layoutActionsHelper, _layoutService,
-					_layoutSetPrototypeHelper, _layoutSetSEORobotsProvider,
-					_portal.getLiferayPortletRequest(renderRequest),
-					_portal.getLiferayPortletResponse(renderResponse),
-					_siteConnectedGroupGroupProvider);
+				LayoutActionsHelper layoutActionsHelper =
+					new LayoutActionsHelper(
+						_layoutConverterRegistry, _portletRegistry,
+						themeDisplay, _translationPermission);
 
-			LayoutActionDropdownItemsProvider
-				layoutActionDropdownItemsProvider =
-					new LayoutActionDropdownItemsProvider(
-						_portal.getHttpServletRequest(renderRequest),
-						layoutActionsHelper, layoutsAdminDisplayContext,
+				LayoutsAdminDisplayContext layoutsAdminDisplayContext =
+					new LayoutsAdminDisplayContext(
+						_itemSelector, layoutActionsHelper, _layoutService,
+						_layoutSetPrototypeHelper, _layoutSetSEORobotsProvider,
+						_portal.getLiferayPortletRequest(renderRequest),
 						_portal.getLiferayPortletResponse(renderResponse),
-						_translationURLProvider);
+						_siteConnectedGroupGroupProvider);
 
-			renderRequest.setAttribute(
-				LayoutAdminWebKeys.LAYOUT_ACTION_DROPDOWN_ITEMS_PROVIDER,
-				layoutActionDropdownItemsProvider);
+				LayoutActionDropdownItemsProvider
+					layoutActionDropdownItemsProvider =
+						new LayoutActionDropdownItemsProvider(
+							_portal.getHttpServletRequest(renderRequest),
+							layoutActionsHelper, layoutsAdminDisplayContext,
+							_portal.getLiferayPortletResponse(renderResponse),
+							_translationURLProvider);
 
-			renderRequest.setAttribute(
-				LayoutAdminWebKeys.LAYOUT_PAGE_LAYOUT_ADMIN_DISPLAY_CONTEXT,
-				layoutsAdminDisplayContext);
-			renderRequest.setAttribute(
-				LayoutAdminWebKeys.MILLER_COLUMNS_DISPLAY_CONTEXT,
-				new MillerColumnsDisplayContext(
-					_layoutSetPrototypeHelper, layoutsAdminDisplayContext,
-					_portal.getLiferayPortletRequest(renderRequest),
-					_portal.getLiferayPortletResponse(renderResponse)));
-			renderRequest.setAttribute(
-				LayoutUtilityPageEntryDisplayContext.class.getName(),
-				new LayoutUtilityPageEntryDisplayContext(
-					renderRequest, renderResponse));
-			renderRequest.setAttribute(
-				TranslationURLProvider.class.getName(),
-				_translationURLProvider);
+				renderRequest.setAttribute(
+					LayoutAdminWebKeys.LAYOUT_ACTION_DROPDOWN_ITEMS_PROVIDER,
+					layoutActionDropdownItemsProvider);
 
-			super.doDispatch(renderRequest, renderResponse);
+				renderRequest.setAttribute(
+					LayoutAdminWebKeys.LAYOUT_PAGE_LAYOUT_ADMIN_DISPLAY_CONTEXT,
+					layoutsAdminDisplayContext);
+				renderRequest.setAttribute(
+					LayoutAdminWebKeys.MILLER_COLUMNS_DISPLAY_CONTEXT,
+					new MillerColumnsDisplayContext(
+						_launchSetDetailsProvider, _launchSetPermission,
+						_layoutSetPrototypeHelper, layoutsAdminDisplayContext,
+						_portal.getLiferayPortletRequest(renderRequest),
+						_portal.getLiferayPortletResponse(renderResponse)));
+				renderRequest.setAttribute(
+					LayoutUtilityPageEntryDisplayContext.class.getName(),
+					new LayoutUtilityPageEntryDisplayContext(
+						renderRequest, renderResponse));
+				renderRequest.setAttribute(
+					TranslationURLProvider.class.getName(),
+					_translationURLProvider);
+
+				super.doDispatch(renderRequest, renderResponse);
+			}
+			finally {
+				ServiceContextThreadLocal.popServiceContext();
+			}
 		}
 	}
 
@@ -304,6 +318,12 @@ public class GroupPagesPortlet extends MVCPortlet {
 
 	@Reference
 	private ItemSelector _itemSelector;
+
+	@Reference
+	private LaunchSetDetailsProvider _launchSetDetailsProvider;
+
+	@Reference
+	private LaunchSetPermission _launchSetPermission;
 
 	@Reference
 	private LayoutConverterRegistry _layoutConverterRegistry;
