@@ -6,7 +6,11 @@
 package com.liferay.osb.faro.rest.internal.jaxrs.container.request.filter;
 
 import com.liferay.osb.faro.rest.resource.v1_0.AccountLifecycleStageTransitionResource;
+import com.liferay.osb.faro.rest.resource.v1_0.EventAttributeDefinitionResource;
+import com.liferay.osb.faro.rest.resource.v1_0.EventDefinitionResource;
+import com.liferay.osb.faro.rest.resource.v1_0.IndividualSegmentMembershipResource;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
+import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.vulcan.jaxrs.exception.mapper.Problem;
 
 import jakarta.ws.rs.container.ContainerRequestContext;
@@ -35,22 +39,9 @@ public class ParameterContainerRequestFilterTest {
 
 	@Before
 	public void setUp() {
-		for (Method method :
-				AccountLifecycleStageTransitionResource.class.getMethods()) {
-
-			if (!Objects.equals(
-					method.getName(),
-					"getWorkspaceGroupAccountLifecycleStageTransitionsPage")) {
-
-				continue;
-			}
-
-			Mockito.when(
-				_resourceInfo.getResourceMethod()
-			).thenReturn(
-				method
-			);
-		}
+		_mockGetResourceMethod(
+			AccountLifecycleStageTransitionResource.class,
+			"getWorkspaceGroupAccountLifecycleStageTransitionsPage");
 
 		ReflectionTestUtil.setFieldValue(
 			_parameterContainerRequestFilter, "_resourceInfo", _resourceInfo);
@@ -58,39 +49,113 @@ public class ParameterContainerRequestFilterTest {
 
 	@Test
 	public void testFilter() {
+		Assert.assertNull(_filter("pageSize", "100"));
 		Assert.assertNull(_filter("rangeKey", "LAST_30_DAYS"));
 		Assert.assertNull(_filter("sort", "transitionDate:desc"));
+		Assert.assertNull(
+			_filter(_getRangeQueryParameters("2026-10-02", "2026-04-06")));
 		Assert.assertNull(_filter(null, null));
 
 		_assertTitle(
-			"\"bogusColumn\" is not a sortable column. Sortable columns: " +
-				"accountId, accountName, fromAccountLifecycleStageId, " +
-					"toAccountLifecycleStageId, transitionDate",
-			_filter("sort", "bogusColumn:desc"));
+			"\"pageSize\" must be a whole number from 1 to 100",
+			_filter("pageSize", "101"));
 		_assertTitle(
-			"\"pageSize\" must be a whole number from 1 to 500",
-			_filter("pageSize", "501"));
+			"\"rangeKey\" must be one of \"LAST_180_DAYS\", " +
+				"\"LAST_24_HOURS\", \"LAST_28_DAYS\", \"LAST_30_DAYS\", " +
+					"\"LAST_7_DAYS\", \"LAST_90_DAYS\", \"YESTERDAY\"",
+			_filter("rangeKey", "LAST_YEAR"));
 		_assertTitle(
 			"\"rangeEnd\" and \"rangeStart\" must be set together",
 			_filter("rangeStart", "2026-10-01"));
 		_assertTitle(
-			"\"rangeKey\" must be one of LAST_180_DAYS, LAST_24_HOURS, " +
-				"LAST_28_DAYS, LAST_30_DAYS, LAST_7_DAYS, LAST_90_DAYS, " +
-					"LAST_YEAR, YESTERDAY",
-			_filter("rangeKey", "LAST_2_DAYS"));
-		_assertTitle(
 			"\"rangeStart\" must not be after \"rangeEnd\"",
-			_filter(
-				new MultivaluedHashMap<String, String>() {
-					{
-						putSingle("rangeEnd", "2026-10-01");
-						putSingle("rangeStart", "2026-10-20");
-					}
-				}));
+			_filter(_getRangeQueryParameters("2026-10-01", "2026-10-20")));
+		_assertTitle(
+			"Date range must be at most 180 days",
+			_filter(_getRangeQueryParameters("2026-10-02", "2026-04-05")));
+		_assertTitle(
+			"\"sort\" accepts only one column on this endpoint",
+			_filter("sort", "accountName:asc,transitionDate:desc"));
 		_assertTitle(
 			"\"sort\" must be a comma separated list of \"column:asc\" or " +
 				"\"column:desc\" expressions",
 			_filter("sort", "accountName:sideways"));
+		_assertTitle(
+			"\"bogusColumn\" is not a sortable column. The sortable columns " +
+				"are \"accountId\", \"accountName\", " +
+					"\"fromAccountLifecycleStageId\", " +
+						"\"toAccountLifecycleStageId\", \"transitionDate\".",
+			_filter("sort", "bogusColumn:desc"));
+	}
+
+	@Test
+	public void testFilterWithEventAttributeDefinitionResourceMethod() {
+		_mockGetResourceMethod(
+			EventAttributeDefinitionResource.class,
+			"getWorkspaceGroupEventAttributeDefinitionsPage");
+
+		Assert.assertNull(_filter("attributeType", "GLOBAL"));
+		Assert.assertNull(
+			_filter(
+				"eventDefinitionId",
+				String.valueOf(RandomTestUtil.randomLong())));
+
+		_assertTitle(
+			"\"attributeType\" must be one of \"ALL\", \"GLOBAL\", \"LOCAL\"",
+			_filter("attributeType", RandomTestUtil.randomString()));
+		_assertTitle(
+			"\"eventDefinitionId\" must be a numeric ID",
+			_filter("eventDefinitionId", RandomTestUtil.randomString()));
+		_assertTitle(
+			"\"pageSize\" must be a whole number from 1 to 100",
+			_filter("pageSize", "101"));
+		_assertTitle(
+			"\"displayName\" is not a sortable column. The sortable columns " +
+				"are \"name\".",
+			_filter("sort", "displayName:asc"));
+	}
+
+	@Test
+	public void testFilterWithEventDefinitionResourceMethod() {
+		_mockGetResourceMethod(
+			EventDefinitionResource.class,
+			"getWorkspaceGroupEventDefinitionsPage");
+
+		Assert.assertNull(_filter("blocked", "TRUE"));
+		Assert.assertNull(_filter("eventType", "CUSTOM"));
+		Assert.assertNull(_filter("hidden", "False"));
+		Assert.assertNull(_filter("pageSize", "100"));
+		Assert.assertNull(_filter("sort", "displayName:desc"));
+
+		_assertTitle(
+			"\"blocked\" must be one of \"false\", \"true\"",
+			_filter("blocked", RandomTestUtil.randomString()));
+		_assertTitle(
+			"\"eventType\" must be one of \"ALL\", \"CUSTOM\", \"DEFAULT\"",
+			_filter("eventType", RandomTestUtil.randomString()));
+		_assertTitle(
+			"\"hidden\" must be one of \"false\", \"true\"",
+			_filter("hidden", RandomTestUtil.randomString()));
+		_assertTitle(
+			"\"pageSize\" must be a whole number from 1 to 100",
+			_filter("pageSize", "101"));
+		_assertTitle(
+			"\"blockedLastSeenDate\" is not a sortable column. The sortable " +
+				"columns are \"displayName\", \"name\".",
+			_filter("sort", "blockedLastSeenDate:desc"));
+	}
+
+	@Test
+	public void testFilterWithUnsortableResourceMethod() {
+		_mockGetResourceMethod(
+			IndividualSegmentMembershipResource.class,
+			"getWorkspaceGroupIndividualSegmentMembershipsPage");
+
+		Assert.assertNull(_filter(null, null));
+
+		_assertTitle(
+			"\"sort\" is not supported by this endpoint",
+			_filter("sort", "accountName:asc"));
 	}
 
 	private void _assertTitle(String expectedTitle, Response response) {
@@ -99,7 +164,9 @@ public class ParameterContainerRequestFilterTest {
 
 		Problem problem = (Problem)response.getEntity();
 
+		Assert.assertEquals(Response.Status.BAD_REQUEST, problem.getStatus());
 		Assert.assertEquals(expectedTitle, problem.getTitle());
+		Assert.assertNull(problem.getType());
 	}
 
 	private Response _filter(MultivaluedMap<String, String> queryParameters) {
@@ -155,6 +222,32 @@ public class ParameterContainerRequestFilterTest {
 		}
 
 		return _filter(queryParameters);
+	}
+
+	private MultivaluedMap<String, String> _getRangeQueryParameters(
+		String rangeEnd, String rangeStart) {
+
+		MultivaluedMap<String, String> rangeQueryParameters =
+			new MultivaluedHashMap<>();
+
+		rangeQueryParameters.putSingle("rangeEnd", rangeEnd);
+		rangeQueryParameters.putSingle("rangeStart", rangeStart);
+
+		return rangeQueryParameters;
+	}
+
+	private void _mockGetResourceMethod(Class<?> clazz, String methodName) {
+		for (Method method : clazz.getMethods()) {
+			if (!Objects.equals(method.getName(), methodName)) {
+				continue;
+			}
+
+			Mockito.when(
+				_resourceInfo.getResourceMethod()
+			).thenReturn(
+				method
+			);
+		}
 	}
 
 	private final ParameterContainerRequestFilter

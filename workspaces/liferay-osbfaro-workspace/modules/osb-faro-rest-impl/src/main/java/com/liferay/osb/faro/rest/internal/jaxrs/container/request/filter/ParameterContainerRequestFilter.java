@@ -5,17 +5,16 @@
 
 package com.liferay.osb.faro.rest.internal.jaxrs.container.request.filter;
 
+import com.liferay.osb.faro.rest.internal.jaxrs.util.ProblemUtil;
 import com.liferay.osb.faro.rest.internal.resource.v1_0.Interval;
 import com.liferay.osb.faro.rest.internal.resource.v1_0.TimeRange;
 import com.liferay.petra.string.CharPool;
 import com.liferay.petra.string.StringBundler;
-import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
-import com.liferay.portal.vulcan.jaxrs.exception.mapper.Problem;
 
 import jakarta.annotation.Priority;
 
@@ -25,7 +24,6 @@ import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.container.ResourceInfo;
 import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
@@ -34,6 +32,7 @@ import java.lang.reflect.Method;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -66,13 +65,9 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 		}
 		catch (BadRequestException badRequestException) {
 			containerRequestContext.abortWith(
-				Response.status(
-					Response.Status.BAD_REQUEST
-				).entity(
-					new Problem(badRequestException)
-				).type(
-					MediaType.APPLICATION_JSON
-				).build());
+				ProblemUtil.toResponse(
+					Response.Status.BAD_REQUEST,
+					badRequestException.getMessage()));
 		}
 	}
 
@@ -119,24 +114,40 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 		MultivaluedMap<String, String> pathParameters,
 		MultivaluedMap<String, String> queryParameters) {
 
-		for (String name : new String[] {"individualSegmentId", "segmentId"}) {
-			_validateId(name, pathParameters.getFirst(name));
-			_validateId(name, queryParameters.getFirst(name));
-		}
+		_validateBoolean("blocked", queryParameters.getFirst("blocked"));
+		_validateBoolean("hidden", queryParameters.getFirst("hidden"));
+		_validateId(
+			"eventDefinitionId", queryParameters.getFirst("eventDefinitionId"));
+		_validateId(
+			"individualSegmentId",
+			pathParameters.getFirst("individualSegmentId"));
+		_validateId(
+			"individualSegmentId",
+			queryParameters.getFirst("individualSegmentId"));
+		_validateId("segmentId", queryParameters.getFirst("segmentId"));
+		_validateInteger(100, "pageSize", queryParameters.getFirst("pageSize"));
+		_validateInteger(
+			Integer.MAX_VALUE, "page", queryParameters.getFirst("page"));
+		_validateRange(
+			queryParameters.getFirst("rangeEnd"),
+			queryParameters.getFirst("rangeStart"));
+		_validateSort(queryParameters.getFirst("sort"));
 
 		for (Map.Entry<String, String[]> entry : _validValues.entrySet()) {
 			_validateValue(
 				entry.getKey(), entry.getValue(),
 				queryParameters.getFirst(entry.getKey()));
 		}
+	}
 
-		_validateInteger(
-			Integer.MAX_VALUE, "page", queryParameters.getFirst("page"));
-		_validateInteger(500, "pageSize", queryParameters.getFirst("pageSize"));
-		_validateRange(
-			queryParameters.getFirst("rangeEnd"),
-			queryParameters.getFirst("rangeStart"));
-		_validateSort(queryParameters.getFirst("sort"));
+	private void _validateBoolean(String name, String value) {
+		if ((value != null) && !StringUtil.equalsIgnoreCase(value, "false") &&
+			!StringUtil.equalsIgnoreCase(value, "true")) {
+
+			throw new BadRequestException(
+				StringBundler.concat(
+					"\"", name, "\" must be one of \"false\", \"true\""));
+		}
 	}
 
 	private void _validateId(String name, String value) {
@@ -179,11 +190,20 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 				"\"rangeEnd\" and \"rangeStart\" must be set together");
 		}
 
-		if ((rangeEndLocalDate != null) &&
-			rangeStartLocalDate.isAfter(rangeEndLocalDate)) {
+		if (rangeEndLocalDate == null) {
+			return;
+		}
 
+		if (rangeStartLocalDate.isAfter(rangeEndLocalDate)) {
 			throw new BadRequestException(
 				"\"rangeStart\" must not be after \"rangeEnd\"");
+		}
+
+		if (ChronoUnit.DAYS.between(rangeStartLocalDate, rangeEndLocalDate) >=
+				_DATE_RANGE_LIMIT) {
+
+			throw new BadRequestException(
+				"Date range must be at most " + _DATE_RANGE_LIMIT + " days");
 		}
 	}
 
@@ -199,7 +219,7 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 
 		if ((sortableFieldNames != null) && (sortableFieldNames.length == 0)) {
 			throw new BadRequestException(
-				"\"sort\" is not supported by this tool");
+				"\"sort\" is not supported by this endpoint");
 		}
 
 		String[] sortStrings = StringUtil.split(sort);
@@ -210,7 +230,7 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 				"getWorkspaceGroupChannelIndividualsPage")) {
 
 			throw new BadRequestException(
-				"\"sort\" accepts only one column on this tool");
+				"\"sort\" accepts only one column on this endpoint");
 		}
 
 		for (String sortString : sortStrings) {
@@ -232,10 +252,9 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 
 				throw new BadRequestException(
 					StringBundler.concat(
-						"\"", fieldName, "\" is not a sortable column. ",
-						"Sortable columns: ",
-						StringUtil.merge(
-							sortableFieldNames, StringPool.COMMA_AND_SPACE)));
+						"\"", fieldName, "\" is not a sortable column. The ",
+						"sortable columns are \"",
+						StringUtil.merge(sortableFieldNames, "\", \""), "\"."));
 			}
 		}
 	}
@@ -246,10 +265,12 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 		if ((value != null) && !ArrayUtil.contains(validValues, value)) {
 			throw new BadRequestException(
 				StringBundler.concat(
-					"\"", name, "\" must be one of ",
-					StringUtil.merge(validValues, StringPool.COMMA_AND_SPACE)));
+					"\"", name, "\" must be one of \"",
+					StringUtil.merge(validValues, "\", \""), "\""));
 		}
 	}
+
+	private static final int _DATE_RANGE_LIMIT = 180;
 
 	private static final Map<String, String[]> _sortableFieldNames =
 		HashMapBuilder.put(
@@ -289,11 +310,21 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 				"viewsMetric", "visitorsMetric"
 			}
 		).put(
+			"getWorkspaceGroupEventAttributeDefinitionsPage",
+			new String[] {"name"}
+		).put(
+			"getWorkspaceGroupEventDefinitionsPage",
+			new String[] {"displayName", "name"}
+		).put(
 			"getWorkspaceGroupIndividualSegmentMembershipsPage", new String[0]
 		).build();
 	private static final Map<String, String[]> _validValues =
 		HashMapBuilder.put(
 			"activityStatus", new String[] {"ACTIVE", "INACTIVE"}
+		).put(
+			"attributeType", new String[] {"ALL", "GLOBAL", "LOCAL"}
+		).put(
+			"eventType", new String[] {"ALL", "CUSTOM", "DEFAULT"}
 		).put(
 			"interval", _getNames(Interval.values())
 		).put(
