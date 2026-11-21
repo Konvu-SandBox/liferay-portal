@@ -180,6 +180,19 @@ export const getDefaultValue = (property: Property): any => {
 				{key: 'operator', value: RelationalOperators.GE},
 				{key: 'value', value: 1},
 			]);
+		case PropertyTypes.Campaign:
+			return createCustomValueMap([
+				{
+					key: 'criterionGroup',
+					value: [
+						{
+							operatorName: RelationalOperators.In,
+							propertyName: name,
+							value: [],
+						},
+					],
+				},
+			]);
 		case PropertyTypes.Tag:
 		case PropertyTypes.Vocabulary:
 			return createCustomValueMap([
@@ -322,7 +335,7 @@ const CriteriaSidebarCollapse: React.FC<ICriteriaSidebarCollapseProps> = ({
 					description={Liferay.Language.get(
 						'review-your-search-and-try-again'
 					)}
-					title={Liferay.Language.get('no-results-found')}
+					title={Liferay.Language.get('no-results-were-found')}
 				/>
 			</div>
 		);
@@ -336,7 +349,9 @@ const CriteriaSidebarCollapse: React.FC<ICriteriaSidebarCollapseProps> = ({
 					description={Liferay.Language.get(
 						'connect-a-data-source-containing-account-data'
 					)}
-					title={Liferay.Language.get('no-account-data-synced')}
+					title={Liferay.Language.get(
+						'no-account-data-has-been-synced'
+					)}
 				>
 					<ClayLink
 						decoration="underline"
