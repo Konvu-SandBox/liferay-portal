@@ -6,7 +6,6 @@
 package com.liferay.taglib.aui;
 
 import com.liferay.petra.string.StringPool;
-import com.liferay.portal.kernel.bean.BeanPropertiesUtil;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.model.ModelHintsUtil;
 import com.liferay.portal.kernel.servlet.taglib.aui.ValidatorTag;
@@ -15,6 +14,7 @@ import com.liferay.portal.kernel.util.TextFormatter;
 import com.liferay.portal.kernel.util.Tuple;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.taglib.aui.base.BaseSelectTag;
+import com.liferay.taglib.util.BeanGetterUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.jsp.JspException;
@@ -175,6 +175,8 @@ public class SelectTag extends BaseSelectTag implements BodyTag {
 			listTypeFieldName = "listTypeId";
 		}
 
+		boolean numericValue = false;
+
 		String title = getTitle();
 
 		if ((title == null) && Validator.isNull(label)) {
@@ -185,7 +187,15 @@ public class SelectTag extends BaseSelectTag implements BodyTag {
 
 		if (Validator.isNull(listType)) {
 			if (bean != null) {
-				value = BeanPropertiesUtil.getStringSilent(bean, name, value);
+				Object beanValue = BeanGetterUtil.getObjectSilent(bean, name);
+
+				if (beanValue != null) {
+					if (beanValue instanceof Number) {
+						numericValue = true;
+					}
+
+					value = String.valueOf(beanValue);
+				}
 			}
 
 			if (!getIgnoreRequestValue()) {
@@ -194,6 +204,12 @@ public class SelectTag extends BaseSelectTag implements BodyTag {
 		}
 
 		setNamespacedAttribute(httpServletRequest, "bean", bean);
+
+		if (Validator.isNotNull(bodyContent)) {
+			setNamespacedAttribute(
+				httpServletRequest, "bodyContent", bodyContent.getString());
+		}
+
 		setNamespacedAttribute(httpServletRequest, "field", field);
 		setNamespacedAttribute(httpServletRequest, "id", id);
 		setNamespacedAttribute(httpServletRequest, "label", label);
@@ -201,13 +217,7 @@ public class SelectTag extends BaseSelectTag implements BodyTag {
 			httpServletRequest, "listTypeFieldName", listTypeFieldName);
 		setNamespacedAttribute(httpServletRequest, "model", getModel());
 		setNamespacedAttribute(
-			httpServletRequest, "title", String.valueOf(title));
-		setNamespacedAttribute(httpServletRequest, "value", value);
-
-		if (Validator.isNotNull(bodyContent)) {
-			setNamespacedAttribute(
-				httpServletRequest, "bodyContent", bodyContent.getString());
-		}
+			httpServletRequest, "numericValue", numericValue);
 
 		Map<String, ValidatorTag> validatorTags = getValidatorTags();
 
@@ -217,6 +227,10 @@ public class SelectTag extends BaseSelectTag implements BodyTag {
 			setNamespacedAttribute(
 				httpServletRequest, "required", Boolean.TRUE.toString());
 		}
+
+		setNamespacedAttribute(
+			httpServletRequest, "title", String.valueOf(title));
+		setNamespacedAttribute(httpServletRequest, "value", value);
 	}
 
 	private static final boolean _CLEAN_UP_SET_ATTRIBUTES = true;

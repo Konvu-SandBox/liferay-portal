@@ -5,35 +5,32 @@
 
 package com.liferay.launch.internal.set.publisher;
 
-import com.liferay.launch.entry.manager.LaunchEntryManager;
-import com.liferay.launch.entry.manager.LaunchEntryManagerRegistry;
+import com.liferay.launch.internal.background.task.LaunchSetPublishBackgroundTaskExecutor;
 import com.liferay.launch.internal.constants.LaunchDestinationNames;
+import com.liferay.launch.internal.set.util.LaunchSetUtil;
 import com.liferay.launch.set.publisher.LaunchSetPublisher;
-import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
-import com.liferay.object.model.ObjectRelationship;
-import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectEntryLocalService;
-import com.liferay.object.service.ObjectRelationshipLocalService;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
-import com.liferay.portal.kernel.dao.orm.QueryUtil;
+import com.liferay.portal.kernel.backgroundtask.BackgroundTaskManager;
+import com.liferay.portal.kernel.backgroundtask.constants.BackgroundTaskConstants;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.messaging.Message;
 import com.liferay.portal.kernel.scheduler.SchedulerEngineHelper;
+import com.liferay.portal.kernel.scheduler.SchedulerException;
 import com.liferay.portal.kernel.scheduler.StorageType;
 import com.liferay.portal.kernel.scheduler.TriggerFactory;
 import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.service.ServiceContext;
-import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
-import com.liferay.portal.kernel.util.MapUtil;
+import com.liferay.portal.kernel.util.HashMapBuilder;
+import com.liferay.portal.kernel.util.Time;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 
 import java.io.Serializable;
 
 import java.util.Date;
 import java.util.Map;
-import java.util.Objects;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -46,9 +43,9 @@ import org.osgi.service.component.annotations.Reference;
 public class LaunchSetPublisherImpl implements LaunchSetPublisher {
 
 	@Override
-	public void publish(long launchSetId) throws PortalException {
-		ObjectEntry launchSetObjectEntry = _getLaunchSetObjectEntry(
-			launchSetId);
+	public void publish(long launchSetId, long userId) throws PortalException {
+		ObjectEntry launchSetObjectEntry =
+			LaunchSetUtil.getLaunchSetObjectEntry(launchSetId);
 
 		if (launchSetObjectEntry.getStatus() ==
 				WorkflowConstants.STATUS_APPROVED) {
@@ -57,60 +54,37 @@ public class LaunchSetPublisherImpl implements LaunchSetPublisher {
 				"Launch set " + launchSetId + " was already published");
 		}
 
-		ObjectRelationship objectRelationship =
-			_objectRelationshipLocalService.getObjectRelationship(
-				launchSetObjectEntry.getObjectDefinitionId(),
-				"launchSetToLaunchEntries");
+		String name = String.valueOf(launchSetId);
 
-		ServiceContext serviceContext =
-			ServiceContextThreadLocal.getServiceContext();
+		int backgroundTasksCount =
+			_backgroundTaskManager.getBackgroundTasksCount(
+				BackgroundTaskConstants.GROUP_ID_DEFAULT, name,
+				LaunchSetPublishBackgroundTaskExecutor.class.getName(), false);
 
-		for (ObjectEntry launchEntryObjectEntry :
-				_objectEntryLocalService.getOneToManyObjectEntries(
-					launchSetObjectEntry.getGroupId(),
-					objectRelationship.getObjectRelationshipId(), null, false,
-					launchSetObjectEntry.getObjectEntryId(), true, null,
-					QueryUtil.ALL_POS, QueryUtil.ALL_POS, null)) {
-
-			Map<String, Serializable> values =
-				launchEntryObjectEntry.getValues();
-
-			String className = MapUtil.getString(values, "className");
-
-			LaunchEntryManager launchEntryManager =
-				_launchEntryManagerRegistry.getLaunchEntryManager(className);
-
-			if (launchEntryManager == null) {
-				throw new PortalException(
-					"No launch entry manager exists for " + className);
-			}
-
-			LaunchEntryManager.Version version =
-				launchEntryManager.publishDraft(
-					MapUtil.getLong(values, "classPK"),
-					MapUtil.getLong(values, "draftId"));
-
-			values.put("draftId", 0L);
-			values.put("versionKey", version.getVersionKey());
-
-			_objectEntryLocalService.updateObjectEntry(
-				serviceContext.getUserId(),
-				launchEntryObjectEntry.getObjectEntryId(),
-				launchEntryObjectEntry.getObjectEntryFolderId(), values,
-				serviceContext);
+		if (backgroundTasksCount > 0) {
+			throw new PortalException(
+				"Launch set " + launchSetId + " is already being published");
 		}
 
-		_objectEntryLocalService.updateStatus(
-			serviceContext.getUserId(), launchSetId,
-			WorkflowConstants.STATUS_APPROVED, serviceContext);
+		_backgroundTaskManager.addBackgroundTask(
+			userId, BackgroundTaskConstants.GROUP_ID_DEFAULT, name, null,
+			LaunchSetPublishBackgroundTaskExecutor.class,
+			HashMapBuilder.<String, Serializable>put(
+				"launchSetId", launchSetId
+			).put(
+				"scheduled",
+				launchSetObjectEntry.getStatus() ==
+					WorkflowConstants.STATUS_SCHEDULED
+			).build(),
+			null);
 	}
 
 	@Override
 	public void schedulePublish(Date date, long launchSetId, long userId)
 		throws PortalException {
 
-		ObjectEntry launchSetObjectEntry = _getLaunchSetObjectEntry(
-			launchSetId);
+		ObjectEntry launchSetObjectEntry =
+			LaunchSetUtil.getLaunchSetObjectEntry(launchSetId);
 
 		if (launchSetObjectEntry.getStatus() !=
 				WorkflowConstants.STATUS_DRAFT) {
@@ -119,10 +93,17 @@ public class LaunchSetPublisherImpl implements LaunchSetPublisher {
 				"Launch set " + launchSetId + " must be open to be scheduled");
 		}
 
-		if ((date == null) || !date.after(new Date())) {
-			throw new PortalException(
+		if ((date == null) ||
+			(date.getTime() < (System.currentTimeMillis() + Time.MINUTE))) {
+
+			SchedulerException schedulerException = new SchedulerException(
 				"Launch set " + launchSetId +
-					" must be scheduled for a future date");
+					" must be scheduled at least one minute in the future");
+
+			schedulerException.setType(
+				SchedulerException.TYPE_INVALID_START_DATE);
+
+			throw schedulerException;
 		}
 
 		ServiceContext serviceContext = _createServiceContext(
@@ -152,8 +133,8 @@ public class LaunchSetPublisherImpl implements LaunchSetPublisher {
 
 	@Override
 	public void unschedulePublish(long launchSetId) throws PortalException {
-		ObjectEntry launchSetObjectEntry = _getLaunchSetObjectEntry(
-			launchSetId);
+		ObjectEntry launchSetObjectEntry =
+			LaunchSetUtil.getLaunchSetObjectEntry(launchSetId);
 
 		if (launchSetObjectEntry.getStatus() ==
 				WorkflowConstants.STATUS_SCHEDULED) {
@@ -195,26 +176,6 @@ public class LaunchSetPublisherImpl implements LaunchSetPublisher {
 			launchSetObjectEntry.getCompanyId());
 	}
 
-	private ObjectEntry _getLaunchSetObjectEntry(long launchSetId)
-		throws PortalException {
-
-		ObjectEntry objectEntry = _objectEntryLocalService.getObjectEntry(
-			launchSetId);
-
-		ObjectDefinition objectDefinition =
-			_objectDefinitionLocalService.getObjectDefinition(
-				objectEntry.getObjectDefinitionId());
-
-		if (!Objects.equals(
-				objectDefinition.getExternalReferenceCode(), "L_LAUNCH_SET")) {
-
-			throw new PortalException(
-				"Object entry " + launchSetId + " is not a launch set");
-		}
-
-		return objectEntry;
-	}
-
 	private void _updateScheduledDate(
 			Date date, ObjectEntry launchSetObjectEntry,
 			ServiceContext serviceContext, long userId)
@@ -231,16 +192,10 @@ public class LaunchSetPublisherImpl implements LaunchSetPublisher {
 	}
 
 	@Reference
-	private LaunchEntryManagerRegistry _launchEntryManagerRegistry;
-
-	@Reference
-	private ObjectDefinitionLocalService _objectDefinitionLocalService;
+	private BackgroundTaskManager _backgroundTaskManager;
 
 	@Reference
 	private ObjectEntryLocalService _objectEntryLocalService;
-
-	@Reference
-	private ObjectRelationshipLocalService _objectRelationshipLocalService;
 
 	@Reference
 	private SchedulerEngineHelper _schedulerEngineHelper;
