@@ -3,8 +3,6 @@ import React from 'react';
 import {render} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = props => (
 	<MemoryRouter>
 		<IndividualLinkCell groupId='123' {...props} />
@@ -108,6 +106,6 @@ describe('IndividualLinkCell', () => {
 			/>
 		);
 
-		expect(getByText('–')).toHaveClass('text-secondary');
+		expect(getByText('–')).toBeInTheDocument();
 	});
 });

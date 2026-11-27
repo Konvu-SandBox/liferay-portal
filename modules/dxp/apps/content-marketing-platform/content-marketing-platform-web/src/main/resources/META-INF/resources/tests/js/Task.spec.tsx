@@ -92,6 +92,9 @@ jest.mock('../../js/utils/toastUtil', () => ({
 }));
 
 jest.mock('@liferay/site-cms-site-initializer', () => ({
+	StateLabel: jest.requireActual(
+		'@liferay/site-cms-site-initializer/src/main/resources/META-INF/resources/js/common/components/StateLabel'
+	).default,
 	displayErrorToast: (...args: any[]) => mockDisplayErrorToast(...args),
 	displayRequestSuccessToast: (...args: any[]) =>
 		mockDisplayRequestSuccessToast(...args),
@@ -244,12 +247,12 @@ describe('Kanban Task', () => {
 		expect(mockOpenCMPModal).toHaveBeenCalledTimes(1);
 	});
 
-	it('opens delete modal', () => {
+	it('opens delete modal', async () => {
 		const {getByText} = renderTask();
 
 		fireEvent.click(getByText('delete'));
 
-		expect(mockOpenCMPModal).toHaveBeenCalledTimes(1);
+		await waitFor(() => expect(mockOpenCMPModal).toHaveBeenCalledTimes(1));
 	});
 
 	it('opens update due date modal', () => {

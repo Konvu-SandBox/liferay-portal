@@ -8,9 +8,11 @@ package com.liferay.object.service.impl;
 import com.liferay.account.constants.AccountConstants;
 import com.liferay.account.model.AccountEntry;
 import com.liferay.account.service.AccountEntryLocalService;
+import com.liferay.document.library.kernel.service.DLAppService;
 import com.liferay.object.configuration.ObjectConfiguration;
 import com.liferay.object.constants.ObjectActionKeys;
 import com.liferay.object.constants.ObjectEntryFolderConstants;
+import com.liferay.object.constants.ObjectFieldConstants;
 import com.liferay.object.definition.security.permission.resource.ObjectDefinitionPortletResourcePermissionRegistryUtil;
 import com.liferay.object.entry.util.ObjectEntryThreadLocal;
 import com.liferay.object.exception.ObjectDefinitionAccountEntryRestrictedException;
@@ -19,6 +21,7 @@ import com.liferay.object.internal.security.permission.util.ObjectEntryPermissio
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectEntryFolder;
+import com.liferay.object.model.ObjectEntryTable;
 import com.liferay.object.model.ObjectField;
 import com.liferay.object.model.ObjectRelationship;
 import com.liferay.object.service.ObjectEntryFolderService;
@@ -53,6 +56,7 @@ import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.security.permission.InlineSQLHelper;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.security.permission.PermissionCheckerFactory;
+import com.liferay.portal.kernel.security.permission.PermissionThreadLocal;
 import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermission;
 import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermissionRegistryUtil;
 import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermissionUtil;
@@ -66,6 +70,7 @@ import com.liferay.portal.kernel.transaction.TransactionConfig;
 import com.liferay.portal.kernel.transaction.TransactionInvokerUtil;
 import com.liferay.portal.kernel.transaction.Transactional;
 import com.liferay.portal.kernel.util.ArrayUtil;
+import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
@@ -109,6 +114,8 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 		if (!ObjectEntryThreadLocal.isSkipObjectEntryResourcePermission()) {
 			_checkAddObjectEntryPortletResourcePermission(
 				groupId, objectDefinitionId, objectEntryFolderId, values);
+
+			_checkAttachmentPermissions(null, objectDefinitionId, values);
 		}
 
 		_validateSubmissionLimit(objectDefinitionId, getUser());
@@ -132,11 +139,11 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 		if (objectEntry == null) {
 			_checkAddObjectEntryPortletResourcePermission(
 				groupId, objectDefinitionId, objectEntryFolderId, values);
+
+			_checkAttachmentPermissions(null, objectDefinitionId, values);
 		}
 		else {
-			checkModelResourcePermission(
-				objectDefinitionId, objectEntry.getObjectEntryId(),
-				ActionKeys.UPDATE);
+			_checkUpdatePermissions(objectEntry, values);
 		}
 
 		return objectEntryLocalService.addOrUpdateObjectEntry(
@@ -156,18 +163,37 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 	}
 
 	@Override
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+	@Transactional(enabled = false)
+	public void checkModelResourcePermission(
+			ModelResourcePermission<ObjectEntry> modelResourcePermission,
+			ObjectEntry objectEntry, String actionId)
+		throws PortalException {
+
+		if (objectEntry.isRootDescendantNode() &&
+			(actionId.equals(ActionKeys.DELETE) ||
+			 actionId.equals(ActionKeys.VIEW)) &&
+			modelResourcePermission.contains(
+				getPermissionChecker(), objectEntry, ActionKeys.UPDATE)) {
+
+			return;
+		}
+
+		modelResourcePermission.check(
+			getPermissionChecker(), objectEntry, actionId);
+	}
+
+	@Override
+	@Transactional(enabled = false)
 	public void checkModelResourcePermission(
 			ObjectEntry objectEntry, String actionId)
 		throws PortalException {
 
 		ObjectDefinition objectDefinition = objectEntry.getObjectDefinition();
 
-		_checkPermission(
-			actionId,
+		checkModelResourcePermission(
 			ModelResourcePermissionRegistryUtil.getModelResourcePermission(
 				objectDefinition.getClassName()),
-			objectEntry);
+			objectEntry, actionId);
 	}
 
 	@Override
@@ -179,9 +205,7 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 		ObjectEntry objectEntry = objectEntryPersistence.findByPrimaryKey(
 			objectEntryId);
 
-		checkModelResourcePermission(
-			objectEntry.getObjectDefinitionId(), objectEntry.getObjectEntryId(),
-			ActionKeys.UPDATE);
+		_checkUpdatePermissions(objectEntry, values);
 
 		if (objectEntryFolderId !=
 				ObjectEntryFolderConstants.
@@ -235,26 +259,6 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 	}
 
 	@Override
-	public ObjectEntry fetchManyToOneObjectEntry(
-			long groupId, long objectRelationshipId, long primaryKey)
-		throws PortalException {
-
-		ObjectEntry objectEntry =
-			objectEntryLocalService.fetchManyToOneObjectEntry(
-				groupId, objectRelationshipId, primaryKey);
-
-		if ((objectEntry != null) &&
-			!ObjectEntryThreadLocal.isSkipObjectEntryResourcePermission()) {
-
-			objectEntryService.checkModelResourcePermission(
-				objectEntry.getObjectDefinitionId(),
-				objectEntry.getObjectEntryId(), ActionKeys.VIEW);
-		}
-
-		return objectEntry;
-	}
-
-	@Override
 	public ObjectEntry fetchObjectEntry(long objectEntryId)
 		throws PortalException {
 
@@ -284,6 +288,26 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 			_checkPermission(
 				ActionKeys.VIEW, objectEntry.getObjectDefinitionId(),
 				objectEntry);
+		}
+
+		return objectEntry;
+	}
+
+	@Override
+	public ObjectEntry fetchRelatedObjectEntry(
+			long groupId, long objectRelationshipId, long primaryKey)
+		throws PortalException {
+
+		ObjectEntry objectEntry =
+			objectEntryLocalService.fetchRelatedObjectEntry(
+				groupId, objectRelationshipId, primaryKey);
+
+		if ((objectEntry != null) &&
+			!ObjectEntryThreadLocal.isSkipObjectEntryResourcePermission()) {
+
+			objectEntryService.checkModelResourcePermission(
+				objectEntry.getObjectDefinitionId(),
+				objectEntry.getObjectEntryId(), ActionKeys.VIEW);
 		}
 
 		return objectEntry;
@@ -375,6 +399,43 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 	public int getObjectEntriesCount(
 		long groupId, long objectDefinitionId, int status) {
 
+		if (!ObjectEntryThreadLocal.isSkipObjectEntryResourcePermission() &&
+			(PermissionThreadLocal.getPermissionChecker() != null)) {
+
+			ObjectDefinition objectDefinition =
+				_objectDefinitionPersistence.fetchByPrimaryKey(
+					objectDefinitionId);
+
+			if (objectDefinition == null) {
+				return 0;
+			}
+
+			if (_inlineSQLHelper.isEnabled(
+					objectDefinition.getCompanyId(), groupId)) {
+
+				Predicate predicate = null;
+
+				if (status != WorkflowConstants.STATUS_ANY) {
+					predicate = ObjectEntryTable.INSTANCE.status.eq(status);
+				}
+
+				try {
+					return objectEntryLocalService.getValuesListCount(
+						new Long[] {groupId}, objectDefinition.getCompanyId(),
+						getUserId(), objectDefinitionId, predicate, false,
+						null);
+				}
+				catch (PortalException portalException) {
+					if (_log.isDebugEnabled()) {
+						_log.debug(
+							"Unable to count object entries", portalException);
+					}
+
+					return 0;
+				}
+			}
+		}
+
 		if (status == WorkflowConstants.STATUS_ANY) {
 			int count = objectEntryPersistence.countByG_ODI(
 				groupId, objectDefinitionId);
@@ -422,31 +483,6 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 	}
 
 	@Override
-	public List<ObjectEntry> getOneToManyObjectEntries(
-			long groupId, long objectRelationshipId, Predicate predicate,
-			boolean preferApproved, long primaryKey, boolean related,
-			String search, int start, int end, Sort[] sorts)
-		throws PortalException {
-
-		return _getObjectEntries(
-			groupId,
-			objectEntryLocalService.getOneToManyObjectEntries(
-				groupId, objectRelationshipId, predicate, preferApproved,
-				primaryKey, related, search, start, end, sorts));
-	}
-
-	@Override
-	public int getOneToManyObjectEntriesCount(
-			long groupId, long objectRelationshipId, Predicate predicate,
-			long primaryKey, boolean related, String search)
-		throws PortalException {
-
-		return objectEntryLocalService.getOneToManyObjectEntriesCount(
-			groupId, objectRelationshipId, predicate, primaryKey, related,
-			search);
-	}
-
-	@Override
 	public ObjectEntry getOrAddEmptyObjectEntry(
 			String externalReferenceCode, long groupId, long objectDefinitionId)
 		throws PortalException {
@@ -467,6 +503,31 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 
 		return objectEntryLocalService.getOrAddEmptyObjectEntry(
 			externalReferenceCode, groupId, getUserId(), objectDefinitionId);
+	}
+
+	@Override
+	public List<ObjectEntry> getRelatedObjectEntries(
+			long groupId, long objectRelationshipId, Predicate predicate,
+			boolean preferApproved, long primaryKey, boolean related,
+			String search, int start, int end, Sort[] sorts)
+		throws PortalException {
+
+		return _getObjectEntries(
+			groupId,
+			objectEntryLocalService.getRelatedObjectEntries(
+				groupId, objectRelationshipId, predicate, preferApproved,
+				primaryKey, related, search, start, end, sorts));
+	}
+
+	@Override
+	public int getRelatedObjectEntriesCount(
+			long groupId, long objectRelationshipId, Predicate predicate,
+			long primaryKey, boolean related, String search)
+		throws PortalException {
+
+		return objectEntryLocalService.getRelatedObjectEntriesCount(
+			groupId, objectRelationshipId, predicate, primaryKey, related,
+			search);
 	}
 
 	@Override
@@ -536,9 +597,7 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 		ObjectEntry objectEntry = objectEntryPersistence.findByPrimaryKey(
 			objectEntryId);
 
-		checkModelResourcePermission(
-			objectEntry.getObjectDefinitionId(), objectEntry.getObjectEntryId(),
-			ActionKeys.UPDATE);
+		_checkUpdatePermissions(objectEntry, values);
 
 		if (objectEntryFolderId !=
 				ObjectEntryFolderConstants.
@@ -584,9 +643,7 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 			objectEntryId);
 
 		if (!ObjectEntryThreadLocal.isSkipObjectEntryResourcePermission()) {
-			checkModelResourcePermission(
-				objectEntry.getObjectDefinitionId(),
-				objectEntry.getObjectEntryId(), ActionKeys.UPDATE);
+			_checkUpdatePermissions(objectEntry, values);
 		}
 
 		return objectEntryLocalService.partialUpdateObjectEntry(
@@ -647,9 +704,7 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 			objectEntryId);
 
 		if (!ObjectEntryThreadLocal.isSkipObjectEntryResourcePermission()) {
-			checkModelResourcePermission(
-				objectEntry.getObjectDefinitionId(),
-				objectEntry.getObjectEntryId(), ActionKeys.UPDATE);
+			_checkUpdatePermissions(objectEntry, values);
 		}
 
 		return objectEntryLocalService.updateObjectEntry(
@@ -766,32 +821,81 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 			ObjectActionKeys.ADD_OBJECT_ENTRY);
 	}
 
-	private void _checkPermission(
-			String actionId, long objectDefinitionId, ObjectEntry objectEntry)
+	private void _checkAttachmentPermission(
+			Serializable existingValue, Serializable value)
 		throws PortalException {
 
-		_checkPermission(
-			actionId, getModelResourcePermission(objectDefinitionId),
-			objectEntry);
-	}
+		long fileEntryId = GetterUtil.getLong(value);
 
-	private void _checkPermission(
-			String actionId,
-			ModelResourcePermission<ObjectEntry> modelResourcePermission,
-			ObjectEntry objectEntry)
-		throws PortalException {
-
-		if (objectEntry.isRootDescendantNode() &&
-			(actionId.equals(ActionKeys.DELETE) ||
-			 actionId.equals(ActionKeys.VIEW)) &&
-			modelResourcePermission.contains(
-				getPermissionChecker(), objectEntry, ActionKeys.UPDATE)) {
+		if ((fileEntryId <= 0) ||
+			(fileEntryId == GetterUtil.getLong(existingValue))) {
 
 			return;
 		}
 
-		modelResourcePermission.check(
-			getPermissionChecker(), objectEntry, actionId);
+		_dlAppService.fetchFileEntry(fileEntryId);
+	}
+
+	private void _checkAttachmentPermissions(
+			Map<String, Serializable> existingValues, long objectDefinitionId,
+			Map<String, Serializable> values)
+		throws PortalException {
+
+		if (MapUtil.isEmpty(values)) {
+			return;
+		}
+
+		if (existingValues == null) {
+			existingValues = Collections.emptyMap();
+		}
+
+		for (ObjectField objectField :
+				_objectFieldPersistence.findByODI_BT(
+					objectDefinitionId,
+					ObjectFieldConstants.BUSINESS_TYPE_ATTACHMENT)) {
+
+			if (objectField.isLocalized() &&
+				(values.get(objectField.getI18nObjectFieldName()) instanceof
+					Map<?, ?> localizedValues)) {
+
+				Map<?, ?> existingLocalizedValues =
+					(Map<?, ?>)existingValues.getOrDefault(
+						objectField.getI18nObjectFieldName(), new HashMap<>());
+
+				for (Map.Entry<?, ?> entry : localizedValues.entrySet()) {
+					_checkAttachmentPermission(
+						(Serializable)existingLocalizedValues.get(
+							entry.getKey()),
+						(Serializable)entry.getValue());
+				}
+			}
+
+			_checkAttachmentPermission(
+				existingValues.get(objectField.getName()),
+				values.get(objectField.getName()));
+		}
+	}
+
+	private void _checkPermission(
+			String actionId, long objectDefinitionId, ObjectEntry objectEntry)
+		throws PortalException {
+
+		checkModelResourcePermission(
+			getModelResourcePermission(objectDefinitionId), objectEntry,
+			actionId);
+	}
+
+	private void _checkUpdatePermissions(
+			ObjectEntry objectEntry, Map<String, Serializable> values)
+		throws PortalException {
+
+		checkModelResourcePermission(
+			objectEntry.getObjectDefinitionId(), objectEntry.getObjectEntryId(),
+			ActionKeys.UPDATE);
+
+		_checkAttachmentPermissions(
+			objectEntry.getValues(), objectEntry.getObjectDefinitionId(),
+			values);
 	}
 
 	private List<ObjectEntry> _getObjectEntries(
@@ -1017,6 +1121,9 @@ public class ObjectEntryServiceImpl extends ObjectEntryServiceBaseImpl {
 
 	@Reference
 	private ConfigurationProvider _configurationProvider;
+
+	@Reference
+	private DLAppService _dlAppService;
 
 	@Reference
 	private InlineSQLHelper _inlineSQLHelper;

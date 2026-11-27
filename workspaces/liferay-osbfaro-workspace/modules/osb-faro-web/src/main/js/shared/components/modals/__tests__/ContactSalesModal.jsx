@@ -7,8 +7,6 @@ import {noop} from 'lodash';
 import {Provider} from 'react-redux';
 import {renderModal} from 'test/render-modal';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = ({observer, ...props}) => (
 	<Provider store={mockStore()}>
 		<ContactSalesModal
@@ -33,7 +31,7 @@ describe('ContactSalesModal', () => {
 		await renderModal(observer => <DefaultComponent observer={observer} />);
 
 		expect(
-			screen.getByRole('heading', {name: 'Contact Sales'})
+			screen.getByRole('heading', {name: /^contact sales$/i})
 		).toBeInTheDocument();
 	});
 });
