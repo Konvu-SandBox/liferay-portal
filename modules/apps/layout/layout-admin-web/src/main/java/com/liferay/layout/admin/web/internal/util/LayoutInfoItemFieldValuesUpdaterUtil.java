@@ -1,0 +1,188 @@
+/**
+ * SPDX-FileCopyrightText: (c) 2000 Liferay, Inc. https://liferay.com
+ * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
+ */
+
+package com.liferay.layout.admin.web.internal.util;
+
+import com.liferay.fragment.entry.processor.constants.FragmentEntryProcessorConstants;
+import com.liferay.fragment.model.FragmentEntryLink;
+import com.liferay.fragment.service.FragmentEntryLinkLocalService;
+import com.liferay.info.field.InfoField;
+import com.liferay.info.field.InfoFieldValue;
+import com.liferay.info.item.InfoItemFieldValues;
+import com.liferay.info.localized.InfoLocalizedValue;
+import com.liferay.layout.admin.web.internal.info.item.LayoutInfoItemFields;
+import com.liferay.portal.kernel.json.JSONFactoryUtil;
+import com.liferay.portal.kernel.json.JSONObject;
+import com.liferay.portal.kernel.language.LanguageUtil;
+import com.liferay.portal.kernel.model.Layout;
+import com.liferay.portal.kernel.service.LayoutLocalService;
+import com.liferay.portal.kernel.util.GetterUtil;
+import com.liferay.portal.kernel.workflow.WorkflowConstants;
+import com.liferay.segments.service.SegmentsExperienceLocalServiceUtil;
+
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * @author Adolfo Pérez
+ */
+public class LayoutInfoItemFieldValuesUpdaterUtil {
+
+	public static Layout updateFromInfoItemFieldValues(
+		FragmentEntryLinkLocalService fragmentEntryLinkLocalService,
+		InfoItemFieldValues infoItemFieldValues, Layout layout,
+		LayoutLocalService layoutLocalService, long segmentsExperienceId) {
+
+		_updateFragmentEntryLinks(
+			fragmentEntryLinkLocalService, infoItemFieldValues);
+
+		if (layout.isDraftLayout()) {
+			_updateLayout(
+				infoItemFieldValues,
+				layoutLocalService.fetchLayout(layout.getClassPK()),
+				layoutLocalService, segmentsExperienceId);
+		}
+
+		return _updateLayout(
+			infoItemFieldValues, layout, layoutLocalService,
+			segmentsExperienceId);
+	}
+
+	private static Map<Locale, String> _getFieldMap(
+		String fieldName, InfoItemFieldValues infoItemFieldValues,
+		Map<Locale, String> initialValue) {
+
+		Map<Locale, String> fieldMap = new HashMap<>(initialValue);
+
+		InfoFieldValue<Object> infoFieldValue =
+			infoItemFieldValues.getInfoFieldValue(fieldName);
+
+		InfoLocalizedValue<Object> infoLocalizedValue =
+			(InfoLocalizedValue)infoFieldValue.getValue();
+
+		for (Locale locale : infoLocalizedValue.getAvailableLocales()) {
+			fieldMap.put(locale, (String)infoLocalizedValue.getValue(locale));
+		}
+
+		return fieldMap;
+	}
+
+	private static void _updateEditableValuesJSONObject(
+		JSONObject jsonObject, String fieldName,
+		InfoFieldValue<Object> infoFieldValue) {
+
+		for (String processorKey : jsonObject.keySet()) {
+			JSONObject processorJSONObject = jsonObject.getJSONObject(
+				processorKey);
+
+			if (!processorJSONObject.has(fieldName) ||
+				processorKey.equals(
+					FragmentEntryProcessorConstants.
+						KEY_FREEMARKER_FRAGMENT_ENTRY_PROCESSOR)) {
+
+				continue;
+			}
+
+			JSONObject valuesJSONObject = processorJSONObject.getJSONObject(
+				fieldName);
+
+			InfoLocalizedValue<String> infoLocalizedValue =
+				(InfoLocalizedValue<String>)infoFieldValue.getValue();
+
+			for (Locale locale : infoLocalizedValue.getAvailableLocales()) {
+				valuesJSONObject.put(
+					LanguageUtil.getLanguageId(locale),
+					infoLocalizedValue.getValue(locale));
+			}
+		}
+	}
+
+	private static void _updateFragmentEntryLinks(
+		FragmentEntryLinkLocalService fragmentEntryLinkLocalService,
+		InfoItemFieldValues infoItemFieldValues) {
+
+		Map<FragmentEntryLink, JSONObject> editableValuesJSONObjects =
+			new HashMap<>();
+
+		for (InfoFieldValue<Object> infoFieldValue :
+				infoItemFieldValues.getInfoFieldValues()) {
+
+			InfoField infoField = infoFieldValue.getInfoField();
+
+			Matcher matcher = _fragmentEntryLinkInfoFieldPattern.matcher(
+				infoField.getName());
+
+			if (!matcher.matches()) {
+				continue;
+			}
+
+			FragmentEntryLink fragmentEntryLink =
+				fragmentEntryLinkLocalService.fetchFragmentEntryLink(
+					GetterUtil.getLong(matcher.group("id")));
+
+			if (fragmentEntryLink == null) {
+				continue;
+			}
+
+			_updateEditableValuesJSONObject(
+				editableValuesJSONObjects.computeIfAbsent(
+					fragmentEntryLink,
+					curFragmentEntryLink ->
+						JSONFactoryUtil.safeCreateJSONObject(
+							curFragmentEntryLink.getEditableValues())),
+				matcher.group("name"), infoFieldValue);
+		}
+
+		for (Map.Entry<FragmentEntryLink, JSONObject> entry :
+				editableValuesJSONObjects.entrySet()) {
+
+			JSONObject jsonObject = entry.getValue();
+
+			if (jsonObject == null) {
+				continue;
+			}
+
+			FragmentEntryLink fragmentEntryLink = entry.getKey();
+
+			fragmentEntryLink.setEditableValues(jsonObject.toString());
+
+			fragmentEntryLinkLocalService.updateFragmentEntryLink(
+				fragmentEntryLink);
+		}
+	}
+
+	private static Layout _updateLayout(
+		InfoItemFieldValues infoItemFieldValues, Layout layout,
+		LayoutLocalService layoutLocalService, long segmentsExperienceId) {
+
+		if (layout == null) {
+			return null;
+		}
+
+		long defaultSegmentsExperienceId =
+			SegmentsExperienceLocalServiceUtil.fetchDefaultSegmentsExperienceId(
+				layout.getPlid());
+
+		if (segmentsExperienceId == defaultSegmentsExperienceId) {
+			layout.setNameMap(
+				_getFieldMap(
+					LayoutInfoItemFields.nameInfoField.getName(),
+					infoItemFieldValues, layout.getNameMap()));
+		}
+
+		if (layout.isDraftLayout()) {
+			layout.setStatus(WorkflowConstants.STATUS_DRAFT);
+		}
+
+		return layoutLocalService.updateLayout(layout);
+	}
+
+	private static final Pattern _fragmentEntryLinkInfoFieldPattern =
+		Pattern.compile("(?<id>\\d+):(?<name>.+)");
+
+}
