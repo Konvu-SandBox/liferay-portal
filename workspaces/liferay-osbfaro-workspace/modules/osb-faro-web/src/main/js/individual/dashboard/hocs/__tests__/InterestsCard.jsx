@@ -10,8 +10,6 @@ import {MockedProvider} from '@apollo/client/testing';
 import {omit} from 'lodash';
 import {waitFor} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useParams: () => ({
@@ -44,7 +42,7 @@ describe('InterestsCard', () => {
 
 		await waitFor(() =>
 			expect(
-				getByText('Top Interests as of Yesterday')
+				getByText(/^top interests as of yesterday$/i)
 			).toBeInTheDocument()
 		);
 	});
@@ -76,7 +74,7 @@ describe('InterestsCard', () => {
 
 		await waitFor(() =>
 			expect(
-				getByText('No interests were found.')
+				getByText(/^no interests were found\.$/i)
 			).toBeInTheDocument()
 		);
 	});

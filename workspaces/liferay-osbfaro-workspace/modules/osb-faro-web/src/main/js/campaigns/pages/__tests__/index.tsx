@@ -10,8 +10,6 @@ import {Provider} from 'react-redux';
 import {useCurrentUser} from 'shared/hooks/useCurrentUser';
 import {useDataSources} from 'shared/context/dataSources';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useParams: () => ({
@@ -92,9 +90,9 @@ describe('Campaigns', () => {
 	afterEach(cleanup);
 
 	it('should render the page title', () => {
-		const {getByText} = renderCampaigns();
+		const {getByRole} = renderCampaigns();
 
-		expect(getByText('Campaigns')).toBeTruthy();
+		expect(getByRole('heading', {name: /^campaigns$/i})).toBeTruthy();
 	});
 
 	it('should render the channel breadcrumb', () => {
@@ -125,7 +123,7 @@ describe('Campaigns', () => {
 	it('should no longer pin the list to all time', () => {
 		const {queryByText} = renderCampaigns();
 
-		expect(queryByText('All Time')).toBeNull();
+		expect(queryByText(/^all time$/i)).toBeNull();
 	});
 
 	it('should render the range selector in the sub header', () => {

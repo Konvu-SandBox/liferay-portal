@@ -136,6 +136,14 @@ public class ViewResourcesDesignLibraryDisplayContext
 						getFDSActionDropdownItems(
 							httpServletRequest, depotEntry, viewResourcesURL)) {
 
+				Map<String, Object> data =
+					(Map<String, Object>)fdsActionDropdownItem.get("data");
+
+				if ((data != null) && data.containsKey("module")) {
+					data.put(
+						"module", _resolveESImport((String)data.get("module")));
+				}
+
 				fdsActionDropdownItem.setVisibilityFilters(
 					_getVisibilityFilters(
 						designLibraryResourceTypeContributor));
@@ -193,9 +201,13 @@ public class ViewResourcesDesignLibraryDisplayContext
 						_toCreationItemMaps(
 							designLibraryResourceCreationItems));
 					resourceType.put(
-						"creationItemsGroupLabel",
+						"creationItemsCategoryKey",
 						designLibraryResourceTypeContributor.
-							getCreationItemsGroupLabel(
+							getCreationItemsCategoryKey());
+					resourceType.put(
+						"creationItemsSubmenuLabel",
+						designLibraryResourceTypeContributor.
+							getCreationItemsSubmenuLabel(
 								themeDisplay.getLocale()));
 				}
 			}
@@ -433,16 +445,18 @@ public class ViewResourcesDesignLibraryDisplayContext
 
 			maps.add(
 				HashMapBuilder.<String, Object>put(
-					"id", designLibraryResourceCreationItem.getId()
+					"href", designLibraryResourceCreationItem::getHref
 				).put(
-					"label", designLibraryResourceCreationItem.getLabel()
+					"id", designLibraryResourceCreationItem::getId
+				).put(
+					"label", designLibraryResourceCreationItem::getLabel
 				).put(
 					"module",
-					_resolveESImport(
+					() -> _resolveESImport(
 						designLibraryResourceCreationItem.getModule())
 				).put(
 					"moduleProps",
-					designLibraryResourceCreationItem.getModuleProps()
+					designLibraryResourceCreationItem::getModuleProps
 				).build());
 		}
 

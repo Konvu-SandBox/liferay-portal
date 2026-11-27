@@ -11,8 +11,6 @@ import {RangeKeyTimeRanges} from 'shared/util/constants';
 import {Routes} from 'shared/util/router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const mockUseDataSource = useDataSources;
 
 const WrappedComponent = () => (
@@ -58,7 +56,7 @@ describe('Individuals Dashboard KnownIndividuals List', () => {
 
 		const {getByText} = render(<WrappedComponent />);
 
-		expect(getByText('No Data Sources Connected')).toBeInTheDocument();
+		expect(getByText(/^no data sources are connected$/i)).toBeInTheDocument();
 	});
 
 	it('searches with the last year range key', async () => {

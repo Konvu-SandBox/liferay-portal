@@ -11,6 +11,7 @@ import com.liferay.design.library.resource.type.DesignLibraryResourceTypeContrib
 import com.liferay.frontend.data.set.model.FDSActionDropdownItem;
 import com.liferay.info.item.InfoItemServiceRegistry;
 import com.liferay.layout.page.template.admin.constants.LayoutPageTemplateAdminPortletKeys;
+import com.liferay.layout.page.template.admin.web.internal.constants.LayoutPageTemplateAdminWebConstants;
 import com.liferay.layout.page.template.admin.web.internal.util.MappingTypesUtil;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateActionKeys;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateConstants;
@@ -45,7 +46,7 @@ import org.osgi.service.component.annotations.Reference;
  * @author Javier Moral
  */
 @Component(
-	property = "service.ranking:Integer=300",
+	property = "service.ranking:Integer=400",
 	service = DesignLibraryResourceTypeContributor.class
 )
 public class DisplayPageTemplateDesignLibraryResourceTypeContributor
@@ -63,6 +64,27 @@ public class DisplayPageTemplateDesignLibraryResourceTypeContributor
 		throws PortalException {
 
 		Group depotGroup = depotEntry.getGroup();
+
+		if (FeatureFlagManagerUtil.isEnabled(
+				depotEntry.getCompanyId(), "LPD-81022")) {
+
+			return Collections.singletonList(
+				new DesignLibraryResourceCreationItem(
+					PortletURLBuilder.create(
+						PortalUtil.getControlPanelPortletURL(
+							httpServletRequest, depotGroup,
+							LayoutPageTemplateAdminPortletKeys.
+								LAYOUT_PAGE_TEMPLATES,
+							0, 0, PortletRequest.RENDER_PHASE)
+					).setMVCPath(
+						"/select_display_page_master_layout.jsp"
+					).setRedirect(
+						backURL
+					).buildString(),
+					"add-display-page-template",
+					LanguageUtil.get(
+						httpServletRequest, "new-display-page-template")));
+		}
 
 		ThemeDisplay themeDisplay =
 			(ThemeDisplay)httpServletRequest.getAttribute(
@@ -103,6 +125,12 @@ public class DisplayPageTemplateDesignLibraryResourceTypeContributor
 	}
 
 	@Override
+	public String getCreationItemsCategoryKey() {
+		return LayoutPageTemplateAdminWebConstants.
+			CREATION_ITEMS_CATEGORY_KEY_PAGES;
+	}
+
+	@Override
 	public String getDefaultActionId() {
 		return "edit";
 	}
@@ -139,6 +167,7 @@ public class DisplayPageTemplateDesignLibraryResourceTypeContributor
 				).buildString(),
 				"pencil", "edit", LanguageUtil.get(httpServletRequest, "edit"),
 				null, "get", "link"),
+			_getRenameFDSActionDropdownItem(httpServletRequest),
 			new FDSActionDropdownItem(
 				"{actions.markAsDefault.href}", "star", "markAsDefault",
 				LanguageUtil.get(httpServletRequest, "mark-as-default"), "post",
@@ -223,12 +252,6 @@ public class DisplayPageTemplateDesignLibraryResourceTypeContributor
 	public boolean hasViewPermission(
 		PermissionChecker permissionChecker, DepotEntry depotEntry) {
 
-		if (!FeatureFlagManagerUtil.isEnabled(
-				depotEntry.getCompanyId(), "LPD-81651")) {
-
-			return false;
-		}
-
 		return _portletResourcePermission.contains(
 			permissionChecker, depotEntry.getGroupId(), ActionKeys.VIEW);
 	}
@@ -258,6 +281,30 @@ public class DisplayPageTemplateDesignLibraryResourceTypeContributor
 		copyMenuFDSActionDropdownItem.setType("contextual");
 
 		return copyMenuFDSActionDropdownItem;
+	}
+
+	private FDSActionDropdownItem _getRenameFDSActionDropdownItem(
+		HttpServletRequest httpServletRequest) {
+
+		FDSActionDropdownItem renameFDSActionDropdownItem =
+			new FDSActionDropdownItem(
+				null, null, "rename",
+				LanguageUtil.get(httpServletRequest, "rename"), null, "update",
+				null);
+
+		renameFDSActionDropdownItem.putData(
+			"module",
+			"{RenameLayoutPageTemplateEntryDesignLibraryModalContent} from " +
+				"layout-page-template-admin-web");
+		renameFDSActionDropdownItem.putData(
+			"moduleProps",
+			HashMapBuilder.<String, Object>put(
+				"title",
+				LanguageUtil.get(
+					httpServletRequest, "rename-display-page-template")
+			).build());
+
+		return renameFDSActionDropdownItem;
 	}
 
 	@Reference

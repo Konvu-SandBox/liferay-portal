@@ -10,6 +10,7 @@ import com.liferay.design.library.resource.type.DesignLibraryResourceCreationIte
 import com.liferay.design.library.resource.type.DesignLibraryResourceTypeContributor;
 import com.liferay.frontend.data.set.model.FDSActionDropdownItem;
 import com.liferay.layout.page.template.admin.constants.LayoutPageTemplateAdminPortletKeys;
+import com.liferay.layout.page.template.admin.web.internal.constants.LayoutPageTemplateAdminWebConstants;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateActionKeys;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateConstants;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateEntryTypeConstants;
@@ -41,7 +42,7 @@ import org.osgi.service.component.annotations.Reference;
  * @author Georgel Pop
  */
 @Component(
-	property = "service.ranking:Integer=400",
+	property = "service.ranking:Integer=200",
 	service = DesignLibraryResourceTypeContributor.class
 )
 public class MasterPageDesignLibraryResourceTypeContributor
@@ -86,6 +87,12 @@ public class MasterPageDesignLibraryResourceTypeContributor
 	}
 
 	@Override
+	public String getCreationItemsCategoryKey() {
+		return LayoutPageTemplateAdminWebConstants.
+			CREATION_ITEMS_CATEGORY_KEY_PAGES;
+	}
+
+	@Override
 	public String getDefaultActionId() {
 		return "edit";
 	}
@@ -122,6 +129,7 @@ public class MasterPageDesignLibraryResourceTypeContributor
 				).buildString(),
 				"pencil", "edit", LanguageUtil.get(httpServletRequest, "edit"),
 				null, "get", "link"),
+			_getRenameFDSActionDropdownItem(httpServletRequest),
 			new FDSActionDropdownItem(
 				"{actions.markAsDefault.href}", "star", "markAsDefault",
 				LanguageUtil.get(httpServletRequest, "mark-as-default"), "post",
@@ -223,6 +231,29 @@ public class MasterPageDesignLibraryResourceTypeContributor
 		copyMenuFDSActionDropdownItem.setType("contextual");
 
 		return copyMenuFDSActionDropdownItem;
+	}
+
+	private FDSActionDropdownItem _getRenameFDSActionDropdownItem(
+		HttpServletRequest httpServletRequest) {
+
+		FDSActionDropdownItem renameFDSActionDropdownItem =
+			new FDSActionDropdownItem(
+				null, null, "rename",
+				LanguageUtil.get(httpServletRequest, "rename"), null, "update",
+				null);
+
+		renameFDSActionDropdownItem.putData(
+			"module",
+			"{RenameLayoutPageTemplateEntryDesignLibraryModalContent} from " +
+				"layout-page-template-admin-web");
+		renameFDSActionDropdownItem.putData(
+			"moduleProps",
+			HashMapBuilder.<String, Object>put(
+				"title",
+				LanguageUtil.get(httpServletRequest, "rename-master-page")
+			).build());
+
+		return renameFDSActionDropdownItem;
 	}
 
 	@Reference(

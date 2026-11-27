@@ -14,8 +14,6 @@ const defaultProps = {
 	interestId: 1
 };
 
-jest.unmock('react-dom');
-
 describe('InterestDetails', () => {
 	it('should render', async () => {
 		const {container, getByText} = render(
@@ -26,11 +24,11 @@ describe('InterestDetails', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(getByText('Back to Interests')).toBeInTheDocument();
+		expect(getByText(/^back to interests$/i)).toBeInTheDocument();
 	});
 
 	it('should render an active pages list tab', async () => {
-		const {container, getByText} = render(
+		const {container, getByRole, getByText} = render(
 			<MemoryRouter>
 				<InterestDetails {...defaultProps} />
 			</MemoryRouter>
@@ -38,12 +36,14 @@ describe('InterestDetails', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(getByText('Active Pages')).toBeTruthy();
-		expect(getByText('Active Pages').parentElement).toHaveClass('active');
+		expect(getByText(/^active pages$/i)).toBeTruthy();
+		expect(
+			getByRole('link', {name: /^active pages$/i})
+		).toHaveAttribute('aria-current', 'page');
 	});
 
 	it('should render an inactive pages list tab', async () => {
-		const {container, getByText} = render(
+		const {container, getByRole, getByText} = render(
 			<MemoryRouter>
 				<InterestDetails {...defaultProps} active='false' />
 			</MemoryRouter>
@@ -51,7 +51,9 @@ describe('InterestDetails', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(getByText('Inactive Pages')).toBeTruthy();
-		expect(getByText('Inactive Pages').parentElement).toHaveClass('active');
+		expect(getByText(/^inactive pages$/i)).toBeTruthy();
+		expect(
+			getByRole('link', {name: /^inactive pages$/i})
+		).toHaveAttribute('aria-current', 'page');
 	});
 });

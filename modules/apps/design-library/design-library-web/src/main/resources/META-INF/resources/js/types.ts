@@ -4,7 +4,11 @@
  */
 
 export interface ActionItem {
-	data: {id: string};
+	data: {
+		id: string;
+		module?: string;
+		moduleProps?: Record<string, unknown>;
+	};
 	href?: string;
 }
 
@@ -54,17 +58,15 @@ export interface DesignLibraryItemData {
 	type?: string | number;
 }
 
-export type DesignLibraryResourceCreationItem = {
-	id: string;
-	label: string;
-	module: string;
-	moduleProps: Record<string, unknown>;
-};
+export type DesignLibraryResourceCreationItem =
+	| LinkDesignLibraryResourceCreationItem
+	| ModalDesignLibraryResourceCreationItem;
 
 export interface DesignLibraryResourceType {
 	color: string;
 	creationItems?: DesignLibraryResourceCreationItem[];
-	creationItemsGroupLabel?: string;
+	creationItemsCategoryKey?: string;
+	creationItemsSubmenuLabel?: string;
 	defaultActionId: string;
 	entryClassName: string;
 	key: string;
@@ -75,6 +77,19 @@ export interface DesignLibraryResourceType {
 
 export interface EntryActions {
 	delete?: DeleteAction;
+}
+
+interface LinkDesignLibraryResourceCreationItem {
+	href: string;
+	id: string;
+	label: string;
+}
+
+interface ModalDesignLibraryResourceCreationItem {
+	id: string;
+	label: string;
+	module: string;
+	moduleProps: Record<string, unknown>;
 }
 
 export interface Site {

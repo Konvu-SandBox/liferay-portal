@@ -10,6 +10,7 @@ import com.liferay.design.library.resource.type.DesignLibraryResourceCreationIte
 import com.liferay.design.library.resource.type.DesignLibraryResourceTypeContributor;
 import com.liferay.frontend.data.set.model.FDSActionDropdownItem;
 import com.liferay.layout.page.template.admin.constants.LayoutPageTemplateAdminPortletKeys;
+import com.liferay.layout.page.template.admin.web.internal.constants.LayoutPageTemplateAdminWebConstants;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateActionKeys;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateCollectionTypeConstants;
 import com.liferay.layout.page.template.constants.LayoutPageTemplateConstants;
@@ -17,6 +18,7 @@ import com.liferay.layout.page.template.model.LayoutPageTemplateCollection;
 import com.liferay.layout.page.template.service.LayoutPageTemplateCollectionLocalService;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.log.Log;
@@ -45,7 +47,7 @@ import org.osgi.service.component.annotations.Reference;
  * @author Georgel Pop
  */
 @Component(
-	property = "service.ranking:Integer=50",
+	property = "service.ranking:Integer=300",
 	service = DesignLibraryResourceTypeContributor.class
 )
 public class LayoutPageTemplateCollectionDesignLibraryResourceTypeContributor
@@ -66,16 +68,21 @@ public class LayoutPageTemplateCollectionDesignLibraryResourceTypeContributor
 			httpServletRequest, depotEntry.getGroup(), backURL);
 
 		return ListUtil.fromArray(
-			_getDesignLibraryResourceCreationItem(
-				httpServletRequest, "add-content-page-template",
-				"new-content-page-template", "page-template", baseModuleProps),
+			_getContentPageTemplateDesignLibraryResourceCreationItem(
+				backURL, baseModuleProps, depotEntry, httpServletRequest),
 			_getDesignLibraryResourceCreationItem(
 				httpServletRequest, "add-page-template-set",
 				"new-page-template-set", "set", baseModuleProps));
 	}
 
 	@Override
-	public String getCreationItemsGroupLabel(Locale locale) {
+	public String getCreationItemsCategoryKey() {
+		return LayoutPageTemplateAdminWebConstants.
+			CREATION_ITEMS_CATEGORY_KEY_PAGES;
+	}
+
+	@Override
+	public String getCreationItemsSubmenuLabel(Locale locale) {
 		return LanguageUtil.get(locale, "page-templates");
 	}
 
@@ -241,6 +248,35 @@ public class LayoutPageTemplateCollectionDesignLibraryResourceTypeContributor
 				),
 				_log)
 		).build();
+	}
+
+	private DesignLibraryResourceCreationItem
+			_getContentPageTemplateDesignLibraryResourceCreationItem(
+				String backURL, Map<String, Object> baseModuleProps,
+				DepotEntry depotEntry, HttpServletRequest httpServletRequest)
+		throws PortalException {
+
+		if (!FeatureFlagManagerUtil.isEnabled(
+				depotEntry.getCompanyId(), "LPD-81022")) {
+
+			return _getDesignLibraryResourceCreationItem(
+				httpServletRequest, "add-content-page-template",
+				"new-content-page-template", "page-template", baseModuleProps);
+		}
+
+		return new DesignLibraryResourceCreationItem(
+			PortletURLBuilder.create(
+				PortalUtil.getControlPanelPortletURL(
+					httpServletRequest, depotEntry.getGroup(),
+					LayoutPageTemplateAdminPortletKeys.LAYOUT_PAGE_TEMPLATES, 0,
+					0, PortletRequest.RENDER_PHASE)
+			).setMVCPath(
+				"/select_layout_page_template_entry_master_layout.jsp"
+			).setRedirect(
+				backURL
+			).buildString(),
+			"add-content-page-template",
+			LanguageUtil.get(httpServletRequest, "new-content-page-template"));
 	}
 
 	private DesignLibraryResourceCreationItem

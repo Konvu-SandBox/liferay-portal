@@ -6,7 +6,11 @@
 package com.liferay.osb.faro.web.internal.fragment.renderer;
 
 import com.liferay.fragment.renderer.FragmentRendererContext;
+import com.liferay.osb.faro.web.internal.util.FaroNavigationUtil;
 import com.liferay.portal.kernel.language.LanguageUtil;
+import com.liferay.portal.kernel.model.Layout;
+import com.liferay.portal.kernel.theme.ThemeDisplay;
+import com.liferay.portal.kernel.util.WebKeys;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,9 +21,6 @@ import java.util.Locale;
  * @author Eudaldo Alonso
  */
 public abstract class BaseSectionFragmentRenderer extends BaseFragmentRenderer {
-
-	public static final String SECTION =
-		BaseSectionFragmentRenderer.class.getName() + "#SECTION";
 
 	@Override
 	public String getCollectionKey() {
@@ -37,20 +38,36 @@ public abstract class BaseSectionFragmentRenderer extends BaseFragmentRenderer {
 		HttpServletRequest httpServletRequest,
 		HttpServletResponse httpServletResponse) {
 
-		httpServletRequest.setAttribute(SECTION, getSection());
-
 		try {
-			super.render(
-				fragmentRendererContext, httpServletRequest,
-				httpServletResponse);
+			ThemeDisplay themeDisplay =
+				(ThemeDisplay)httpServletRequest.getAttribute(
+					WebKeys.THEME_DISPLAY);
+
+			Layout layout = themeDisplay.getLayout();
+
+			portal.addPageTitle(
+				layout.getHTMLTitle(themeDisplay.getLocale()),
+				httpServletRequest);
+
+			String key = "analytics-cloud";
+
+			if (FaroNavigationUtil.isLDPEnabled(
+					themeDisplay.getScopeGroupId())) {
+
+				key = "liferay-data-platform";
+			}
+
+			portal.addPageTitle(
+				LanguageUtil.get(httpServletRequest, key), httpServletRequest);
 		}
-		finally {
-			httpServletRequest.removeAttribute(SECTION);
+		catch (Exception exception) {
+			throw new RuntimeException(exception);
 		}
+
+		super.render(
+			fragmentRendererContext, httpServletRequest, httpServletResponse);
 	}
 
 	protected abstract String getLabelKey();
-
-	protected abstract String getSection();
 
 }
