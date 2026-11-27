@@ -1108,14 +1108,14 @@ public class ObjectDefinitionLocalServiceImpl
 			_dlFileEntryLocalService, _dlFileEntryTextProvider,
 			_groupLocalService, _kaleoDefinitionLocalService,
 			_listTypeLocalService, _objectActionLocalService,
-			objectDefinitionLocalService, _objectDefinitionSettingLocalService,
-			_objectEntryFolderLocalService, _objectEntryLocalService,
-			_objectEntryService, _objectFieldBusinessTypeRegistry,
-			_objectFieldLocalService, _objectFolderLocalService,
-			_objectLayoutLocalService, _objectLayoutTabLocalService,
-			_objectRelationshipLocalService, _objectScopeProviderRegistry,
-			_objectViewLocalService, _organizationLocalService, _portal,
-			_portletLocalService, _resourceActions, _userLocalService,
+			objectDefinitionLocalService, _objectEntryFolderLocalService,
+			_objectEntryLocalService, _objectEntryService,
+			_objectFieldBusinessTypeRegistry, _objectFieldLocalService,
+			_objectFolderLocalService, _objectLayoutLocalService,
+			_objectLayoutTabLocalService, _objectRelationshipLocalService,
+			_objectScopeProviderRegistry, _objectViewLocalService,
+			_organizationLocalService, _portal, _portletLocalService,
+			_resourceActions, _userLocalService,
 			_resourcePermissionLocalService, _searchLocalizationHelper,
 			_sharingModelResourcePermissionConfigurator,
 			_systemEventLocalService, _textEmbeddingDocumentContributor,
@@ -1700,6 +1700,29 @@ public class ObjectDefinitionLocalServiceImpl
 			StringUtil.equals(className, objectDefinition.getClassName())) {
 
 			return;
+		}
+
+		if (objectDefinition.isSystem()) {
+			ObjectDefinition existingObjectDefinition =
+				objectDefinitionPersistence.fetchByC_C(
+					objectDefinition.getCompanyId(), className);
+
+			if (existingObjectDefinition != null) {
+				if (_log.isInfoEnabled()) {
+					_log.info(
+						StringBundler.concat(
+							"Object definition ",
+							objectDefinition.getExternalReferenceCode(),
+							" uses class name ",
+							objectDefinition.getClassName(),
+							" because object definition ",
+							existingObjectDefinition.getExternalReferenceCode(),
+							" uses class name ", className, " in company ",
+							objectDefinition.getCompanyId()));
+				}
+
+				return;
+			}
 		}
 
 		ObjectDefinitionSetting objectDefinitionSetting =
@@ -2794,8 +2817,6 @@ public class ObjectDefinitionLocalServiceImpl
 		String oldClassName = objectDefinition.getClassName();
 		boolean oldEnableObjectEntrySubscription =
 			objectDefinition.isEnableObjectEntrySubscription();
-		String oldFriendlyURLSeparator =
-			objectDefinition.getFriendlyURLSeparator();
 
 		boolean addSystemObjectFields = false;
 
@@ -2960,13 +2981,8 @@ public class ObjectDefinitionLocalServiceImpl
 				objectDefinitionLocalService.deployObjectDefinition(
 					objectDefinition);
 
-				if (!StringUtil.equals(
-						oldFriendlyURLSeparator,
-						objectDefinition.getFriendlyURLSeparator())) {
-
-					_registerTransactionCallbackForCluster(
-						_deployObjectDefinitionMethodKey, objectDefinition);
-				}
+				_registerTransactionCallbackForCluster(
+					_deployObjectDefinitionMethodKey, objectDefinition);
 			}
 
 			if (active != oldActive) {
@@ -3281,17 +3297,19 @@ public class ObjectDefinitionLocalServiceImpl
 			return;
 		}
 
-		ObjectDefinition existingObjectDefinition =
-			objectDefinitionPersistence.fetchByC_C(companyId, className);
+		if (!system) {
+			ObjectDefinition existingObjectDefinition =
+				objectDefinitionPersistence.fetchByC_C(companyId, className);
 
-		if ((existingObjectDefinition != null) &&
-			(existingObjectDefinition.getObjectDefinitionId() !=
-				objectDefinitionId)) {
+			if ((existingObjectDefinition != null) &&
+				(existingObjectDefinition.getObjectDefinitionId() !=
+					objectDefinitionId)) {
 
-			_handleException(
-				new ObjectDefinitionClassNameException.MustNotBeDuplicate(
-					className),
-				"className", className);
+				_handleException(
+					new ObjectDefinitionClassNameException.MustNotBeDuplicate(
+						className),
+					"className", className);
+			}
 		}
 
 		if (!StringUtil.startsWith(
