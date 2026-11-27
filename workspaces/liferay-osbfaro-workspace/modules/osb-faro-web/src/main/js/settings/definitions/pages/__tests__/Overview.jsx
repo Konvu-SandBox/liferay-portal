@@ -7,8 +7,6 @@ import {Provider} from 'react-redux';
 import {render} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useParams: () => ({
@@ -34,32 +32,32 @@ describe('Definitions Overview', () => {
 
 		expect(
 			container.querySelectorAll('.list-group-title a')[0]
-		).toHaveTextContent('Individuals');
+		).toHaveTextContent(/individuals/i);
 
 		expect(
 			container.querySelectorAll('.list-group-title a')[1]
-		).toHaveTextContent('Accounts');
+		).toHaveTextContent(/accounts/i);
 
 		expect(
 			container.querySelectorAll('.list-group-title a')[2]
-		).toHaveTextContent('Behaviors');
+		).toHaveTextContent(/behaviors/i);
 
 		expect(
 			container.querySelectorAll('.list-group-title a')[3]
-		).toHaveTextContent('Events');
+		).toHaveTextContent(/events/i);
 
 		expect(
 			container.querySelectorAll('.list-group-title a')[4]
-		).toHaveTextContent('Event Attributes');
+		).toHaveTextContent(/event attributes/i);
 
 		expect(
 			container.querySelectorAll('.list-group-title a')[5]
-		).toHaveTextContent('Search');
+		).toHaveTextContent(/search/i);
 
 		if (ENABLE_BLOCKLIST_KEYWORDS) {
 			expect(
 				container.querySelectorAll('.list-group-title a')[6]
-			).toHaveTextContent('Interests');
+			).toHaveTextContent(/interests/i);
 		}
 	});
 });

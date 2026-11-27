@@ -202,6 +202,8 @@ public class ObjectDefinitionUtil {
 		).put(
 			"CMSDefaultPermission", "/cms/default-permissions"
 		).put(
+			"CMSDefaultValue", "/cms/default-values"
+		).put(
 			"CMSExternalVideo", "/cms/external-videos"
 		).put(
 			"CommerceReturn", "/commerce/returns"
@@ -268,6 +270,10 @@ public class ObjectDefinitionUtil {
 			"PersonalizationCookieEntry", "/personalization-cookies-entries"
 		).put(
 			"PIMBasicProduct", "/pim/basic-products"
+		).put(
+			"PIMBasicProductAttachment", "/pim/basic-product-attachments"
+		).put(
+			"PIMBasicProductImage", "/pim/basic-product-images"
 		).put(
 			"PIMCatalog", "/pim/catalogs"
 		).put(

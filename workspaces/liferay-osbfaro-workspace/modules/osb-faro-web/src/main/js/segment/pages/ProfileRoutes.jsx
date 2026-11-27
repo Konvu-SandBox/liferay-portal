@@ -19,7 +19,7 @@ import React, {
 import {ChannelContext} from 'shared/context/channel';
 import {CSVType} from 'shared/components/download-report/utils';
 import {DownloadStaticCSVReport} from 'shared/components/download-report/DownloadStaticCSVReport';
-import {getMatchedRoute, Routes, SEGMENTS, toRoute} from 'shared/util/router';
+import {getMatchedRoute, Routes, toRoute} from 'shared/util/router';
 import {getSegmentAlerts} from 'segment/utils/alerts';
 import {
 	Route,
@@ -28,11 +28,7 @@ import {
 	useParams
 } from 'react-router-dom';
 import {Segment} from 'shared/util/records';
-import {
-	SegmentCategories,
-	SegmentStates,
-	SegmentTypes
-} from 'shared/util/constants';
+import {SegmentCategories, SegmentStates, SegmentTypes, SEGMENTS} from 'shared/util/constants';
 import {useDeleteSegments} from 'segment/hooks/useDeleteSegments';
 import {useModal} from '@clayui/modal';
 import {useRequest} from 'shared/hooks/useRequest';
@@ -142,7 +138,7 @@ export const SegmentProfileRoutes = () => {
 				message={Liferay.Language.get(
 					'the-segment-you-are-looking-for-does-not-exist'
 				)}
-				subtitle={Liferay.Language.get('segment-not-found')}
+				subtitle={Liferay.Language.get('segment-was-not-found')}
 			/>
 		);
 	}

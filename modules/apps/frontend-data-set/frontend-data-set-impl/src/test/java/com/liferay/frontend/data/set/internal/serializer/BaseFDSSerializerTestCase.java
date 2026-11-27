@@ -9,19 +9,15 @@ import com.liferay.frontend.data.set.SystemFDSEntry;
 import com.liferay.frontend.data.set.action.FDSBulkActions;
 import com.liferay.frontend.data.set.action.FDSCreationMenu;
 import com.liferay.frontend.data.set.action.FDSItemsActions;
-import com.liferay.frontend.data.set.filter.GroupedFDSFilters;
 import com.liferay.frontend.data.set.internal.SystemFDSEntryRegistryImpl;
-import com.liferay.frontend.data.set.internal.action.FDSBulkActionsRegistryImpl;
 import com.liferay.frontend.data.set.internal.action.FDSCreationMenuRegistryImpl;
 import com.liferay.frontend.data.set.internal.action.FDSItemsActionsRegistryImpl;
-import com.liferay.frontend.data.set.internal.filter.GroupedFDSFiltersRegistryImpl;
 import com.liferay.frontend.data.set.internal.sort.FDSSortsRegistryImpl;
-import com.liferay.frontend.data.set.internal.view.FDSViewContextContributorRegistryImpl;
 import com.liferay.frontend.data.set.internal.view.FDSViewRegistryImpl;
 import com.liferay.frontend.data.set.model.FDSActionDropdownItem;
 import com.liferay.frontend.data.set.sort.FDSSorts;
 import com.liferay.frontend.data.set.view.FDSView;
-import com.liferay.frontend.data.set.view.FDSViewContextContributor;
+import com.liferay.frontend.taglib.clay.servlet.taglib.util.CreationMenu;
 import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerCustomizerFactory;
 import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMap;
 import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMapFactory;
@@ -64,18 +60,8 @@ public abstract class BaseFDSSerializerTestCase {
 	public void setUp() {
 		bundleContext = SystemBundleUtil.getBundleContext();
 
-		systemFDSSerializer.fdsBulkActionsRegistry =
-			new FDSBulkActionsRegistryImpl(
-				(ServiceTrackerMap
-					<String,
-					 ServiceTrackerCustomizerFactory.ServiceWrapper
-						 <FDSBulkActions>>)_registerServiceTrackerMap(
-							 ServiceTrackerMapFactory.openSingleValueMap(
-								 bundleContext, FDSBulkActions.class,
-								 "frontend.data.set.name",
-								 ServiceTrackerCustomizerFactory.
-									 <FDSBulkActions>serviceWrapper(
-										 bundleContext))));
+		systemFDSSerializer.activate(bundleContext);
+
 		systemFDSSerializer.fdsCreationMenuRegistry =
 			new FDSCreationMenuRegistryImpl(
 				(ServiceTrackerMap
@@ -110,22 +96,6 @@ public abstract class BaseFDSSerializerTestCase {
 							 "frontend.data.set.name",
 							 ServiceTrackerCustomizerFactory.
 								 <FDSSorts>serviceWrapper(bundleContext))));
-		systemFDSSerializer.fdsViewContextContributorRegistry =
-			new FDSViewContextContributorRegistryImpl(
-				(ServiceTrackerMap
-					<String,
-					 List
-						 <ServiceTrackerCustomizerFactory.ServiceWrapper
-							 <FDSViewContextContributor>>>)
-								 _registerServiceTrackerMap(
-									 ServiceTrackerMapFactory.openMultiValueMap(
-										 bundleContext,
-										 FDSViewContextContributor.class,
-										 "frontend.data.set.view.name",
-										 ServiceTrackerCustomizerFactory.
-											 <FDSViewContextContributor>
-												 serviceWrapper(
-													 bundleContext))));
 		systemFDSSerializer.fdsViewRegistry = new FDSViewRegistryImpl(
 			(ServiceTrackerMap
 				<String,
@@ -136,18 +106,6 @@ public abstract class BaseFDSSerializerTestCase {
 							 "frontend.data.set.name",
 							 ServiceTrackerCustomizerFactory.
 								 <FDSView>serviceWrapper(bundleContext))));
-		systemFDSSerializer.groupedFDSFiltersRegistry =
-			new GroupedFDSFiltersRegistryImpl(
-				(ServiceTrackerMap
-					<String,
-					 ServiceTrackerCustomizerFactory.ServiceWrapper
-						 <GroupedFDSFilters>>)_registerServiceTrackerMap(
-							 ServiceTrackerMapFactory.openSingleValueMap(
-								 bundleContext, GroupedFDSFilters.class,
-								 "frontend.data.set.name",
-								 ServiceTrackerCustomizerFactory.
-									 <GroupedFDSFilters>serviceWrapper(
-										 bundleContext))));
 		systemFDSSerializer.systemFDSEntryRegistry =
 			new SystemFDSEntryRegistryImpl(
 				(ServiceTrackerMap<String, SystemFDSEntry>)
@@ -159,6 +117,8 @@ public abstract class BaseFDSSerializerTestCase {
 
 	@After
 	public void tearDown() {
+		systemFDSSerializer.deactivate();
+
 		for (ServiceTrackerMap<String, ?> serviceTrackerMap :
 				_serviceTrackerMaps) {
 
@@ -225,6 +185,42 @@ public abstract class BaseFDSSerializerTestCase {
 		return bundleContext.registerService(
 			FDSBulkActions.class,
 			new FDSBulkActions() {
+
+				@Override
+				public List<FDSActionDropdownItem> getFDSActionDropdownItems(
+					HttpServletRequest httpServletRequest) {
+
+					return fdsActionDropdownItems;
+				}
+
+			},
+			MapUtil.singletonDictionary("frontend.data.set.name", fdsName));
+	}
+
+	protected ServiceRegistration<FDSCreationMenu> registerFDSCreationMenu(
+		CreationMenu creationMenu, String fdsName) {
+
+		return bundleContext.registerService(
+			FDSCreationMenu.class,
+			new FDSCreationMenu() {
+
+				@Override
+				public CreationMenu getCreationMenu(
+					HttpServletRequest httpServletRequest) {
+
+					return creationMenu;
+				}
+
+			},
+			MapUtil.singletonDictionary("frontend.data.set.name", fdsName));
+	}
+
+	protected ServiceRegistration<FDSItemsActions> registerFDSItemsActions(
+		List<FDSActionDropdownItem> fdsActionDropdownItems, String fdsName) {
+
+		return bundleContext.registerService(
+			FDSItemsActions.class,
+			new FDSItemsActions() {
 
 				@Override
 				public List<FDSActionDropdownItem> getFDSActionDropdownItems(
