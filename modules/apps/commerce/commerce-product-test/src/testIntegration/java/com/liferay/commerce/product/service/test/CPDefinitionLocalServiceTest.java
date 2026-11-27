@@ -51,6 +51,7 @@ import com.liferay.commerce.product.service.CProductLocalService;
 import com.liferay.commerce.product.service.CommerceCatalogLocalServiceUtil;
 import com.liferay.commerce.product.service.CommerceChannelAccountEntryRelLocalService;
 import com.liferay.commerce.product.service.CommerceChannelRelLocalService;
+import com.liferay.commerce.product.test.util.CPDefinitionTestUtil;
 import com.liferay.commerce.product.test.util.CPTestUtil;
 import com.liferay.commerce.product.type.simple.constants.SimpleCPTypeConstants;
 import com.liferay.commerce.product.util.comparator.CPDefinitionModifiedDateComparator;
@@ -766,6 +767,7 @@ public class CPDefinitionLocalServiceTest {
 		_testCopyCPDefinitionDoesNotCopyDraftCPDefinition();
 		_testCopyCPDefinitionOptionRelExternalReferenceCodes();
 		_testCopyCPDefinitionReturnsExistingDraftCPDefinition();
+		_testCopyCPDefinitionWithDifferentGroupId();
 		_testCopyCPDefinitionWithSKUCombinations();
 		_testCopyCPDefinitionWithVersioningDisabled();
 	}
@@ -816,7 +818,7 @@ public class CPDefinitionLocalServiceTest {
 		Assert.assertEquals(
 			1,
 			_cpDefinitionLinkLocalService.getCPDefinitionLinksCount(
-				cpDefinition1.getCPDefinitionId()));
+				cpDefinition1.getCPDefinitionId(), "related"));
 
 		_cpDefinitionLocalService.deleteCPDefinition(
 			cpDefinition2.getCPDefinitionId());
@@ -824,7 +826,7 @@ public class CPDefinitionLocalServiceTest {
 		Assert.assertEquals(
 			0,
 			_cpDefinitionLinkLocalService.getCPDefinitionLinksCount(
-				cpDefinition1.getCPDefinitionId()));
+				cpDefinition1.getCPDefinitionId(), "related"));
 	}
 
 	@Test
@@ -1769,10 +1771,57 @@ public class CPDefinitionLocalServiceTest {
 
 			Assert.assertEquals(
 				1,
-				_cpDefinitionLocalService.getCProductCPDefinitionsCount(
+				CPDefinitionTestUtil.getCProductCPDefinitionsCount(
 					cpDefinition1.getCProductId(),
 					WorkflowConstants.STATUS_DRAFT));
 		}
+	}
+
+	private void _testCopyCPDefinitionWithDifferentGroupId() throws Exception {
+		frutillaRule.scenario(
+			"Copy a product definition into a different group"
+		).given(
+			"A published product definition in a catalog"
+		).when(
+			"the product definition is copied into a different group"
+		).then(
+			"a CPDefinitionGroupIdException is thrown"
+		).and(
+			"the product carries no new version"
+		);
+
+		CPDefinition cpDefinition = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		try (CompanyConfigurationTemporarySwapper
+				companyConfigurationTemporarySwapper =
+					new CompanyConfigurationTemporarySwapper(
+						TestPropsValues.getCompanyId(),
+						CProductVersionConfiguration.class.getName(),
+						HashMapDictionaryBuilder.<String, Object>put(
+							"enabled", true
+						).put(
+							"versionThreshold", 2
+						).build())) {
+
+			CommerceCatalog commerceCatalog =
+				CommerceCatalogLocalServiceUtil.addCommerceCatalog(
+					null, RandomTestUtil.randomString(),
+					RandomTestUtil.randomString(),
+					LocaleUtil.US.getDisplayLanguage(), _serviceContext);
+
+			Assert.assertThrows(
+				CPDefinitionGroupIdException.class,
+				() -> _cpDefinitionLocalService.copyCPDefinition(
+					cpDefinition.getCPDefinitionId(),
+					commerceCatalog.getGroupId(),
+					WorkflowConstants.STATUS_DRAFT));
+		}
+
+		CProduct cProduct = cpDefinition.getCProduct();
+
+		Assert.assertEquals(1, cProduct.getLatestVersion());
 	}
 
 	private void _testCopyCPDefinitionWithSKUCombinations() throws Exception {
@@ -1908,7 +1957,7 @@ public class CPDefinitionLocalServiceTest {
 
 		Assert.assertEquals(
 			1,
-			_cpDefinitionLocalService.getCProductCPDefinitionsCount(
+			CPDefinitionTestUtil.getCProductCPDefinitionsCount(
 				cpDefinition1.getCProductId(), WorkflowConstants.STATUS_DRAFT));
 	}
 
@@ -2639,7 +2688,7 @@ public class CPDefinitionLocalServiceTest {
 
 			Assert.assertEquals(
 				1,
-				_cpDefinitionLocalService.getCProductCPDefinitionsCount(
+				CPDefinitionTestUtil.getCProductCPDefinitionsCount(
 					cpDefinition1.getCProductId(),
 					WorkflowConstants.STATUS_DRAFT));
 		}
@@ -2968,7 +3017,7 @@ public class CPDefinitionLocalServiceTest {
 
 			Assert.assertEquals(
 				1,
-				_cpDefinitionLocalService.getCProductCPDefinitionsCount(
+				CPDefinitionTestUtil.getCProductCPDefinitionsCount(
 					cpDefinition1.getCProductId(),
 					WorkflowConstants.STATUS_DRAFT));
 		}

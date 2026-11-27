@@ -154,6 +154,9 @@ if (Liferay.FeatureFlags['LPD-62272']) {
 			sections: [
 				'nodeInformation',
 				'promptSummary',
+				...(Liferay.FeatureFlags['LPD-69628']
+					? ['modelSummary', 'parametersSummary']
+					: []),
 				'ragSummary',
 				'toolsSummary',
 			],
@@ -176,6 +179,9 @@ if (Liferay.FeatureFlags['LPD-62272']) {
 			sections: [
 				'nodeInformation',
 				'promptSummary',
+				...(Liferay.FeatureFlags['LPD-69628']
+					? ['modelSummary', 'parametersSummary']
+					: []),
 				'ragSummary',
 				'toolsSummary',
 			],
@@ -183,7 +189,7 @@ if (Liferay.FeatureFlags['LPD-62272']) {
 			title: Liferay.Language.get('llm-node'),
 		};
 		contents['service'] = {
-			sections: ['nodeInformation', 'serviceConfiguration'],
+			sections: ['nodeInformation', 'serviceConfiguration', 'variables'],
 			showDeleteButton: true,
 			title: Liferay.Language.get('service-node'),
 		};

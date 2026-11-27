@@ -8,6 +8,7 @@ package com.liferay.layout.content.page.editor.web.internal.portlet.action.test;
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
 import com.liferay.asset.list.constants.AssetListEntryTypeConstants;
 import com.liferay.asset.list.model.AssetListEntry;
+import com.liferay.asset.list.model.AssetListEntryAudienceEntryRel;
 import com.liferay.asset.list.service.AssetListEntryAudienceEntryRelLocalService;
 import com.liferay.asset.list.service.AssetListEntryLocalService;
 import com.liferay.asset.list.service.AssetListEntrySegmentsEntryRelLocalService;
@@ -32,6 +33,7 @@ import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.test.rule.FeatureFlag;
+import com.liferay.portal.test.rule.FeatureFlags;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.segments.constants.SegmentsEntryConstants;
@@ -74,7 +76,12 @@ public class GetCollectionVariationsMVCResourceCommandTest {
 			AssetListEntryTypeConstants.TYPE_MANUAL, _serviceContext);
 	}
 
-	@FeatureFlag("LPD-109242")
+	@FeatureFlags(
+		featureFlags = {
+			@FeatureFlag("LPD-109242"),
+			@FeatureFlag(enable = false, value = "LPD-78863")
+		}
+	)
 	@Test
 	public void testDoServeResourceWithAudienceVariations() throws Exception {
 		AudiencesEntry audiencesEntry1 = _addAudiencesEntry();
@@ -87,9 +94,19 @@ public class GetCollectionVariationsMVCResourceCommandTest {
 		_addAssetListEntryAudienceEntryRel(
 			audiencesEntry1.getExternalReferenceCode(), 0);
 
+		AudiencesEntry audiencesEntry3 = _addAudiencesEntry();
+
+		AssetListEntryAudienceEntryRel assetListEntryAudienceEntryRel =
+			_addAssetListEntryAudienceEntryRel(
+				audiencesEntry3.getExternalReferenceCode(), 2);
+
 		String audienceEntryERC = RandomTestUtil.randomString();
 
-		_addAssetListEntryAudienceEntryRel(audienceEntryERC, 2);
+		assetListEntryAudienceEntryRel.setAudienceEntryERC(audienceEntryERC);
+
+		_assetListEntryAudienceEntryRelLocalService.
+			updateAssetListEntryAudienceEntryRel(
+				assetListEntryAudienceEntryRel);
 
 		JSONArray jsonArray = _getCollectionVariationsJSONArray();
 
@@ -122,7 +139,36 @@ public class GetCollectionVariationsMVCResourceCommandTest {
 			segmentsEntry.getName(LocaleUtil.US), jsonArray.getString(1));
 	}
 
-	@FeatureFlag("LPD-109242")
+	@FeatureFlags(
+		featureFlags = {@FeatureFlag("LPD-109242"), @FeatureFlag("LPD-78863")}
+	)
+	@Test
+	public void testDoServeResourceWithSegmentsVariationsAndAudienceVariationsFeatureFlag()
+		throws Exception {
+
+		AudiencesEntry audiencesEntry = _addAudiencesEntry();
+
+		_addAssetListEntryAudienceEntryRel(
+			audiencesEntry.getExternalReferenceCode(), 0);
+
+		SegmentsEntry segmentsEntry = _addAssetListEntrySegmentsEntryRel();
+
+		JSONArray jsonArray = _getCollectionVariationsJSONArray();
+
+		Assert.assertEquals(2, jsonArray.length());
+		Assert.assertEquals(
+			SegmentsEntryConstants.getDefaultSegmentsEntryName(LocaleUtil.US),
+			jsonArray.getString(0));
+		Assert.assertEquals(
+			segmentsEntry.getName(LocaleUtil.US), jsonArray.getString(1));
+	}
+
+	@FeatureFlags(
+		featureFlags = {
+			@FeatureFlag("LPD-109242"),
+			@FeatureFlag(enable = false, value = "LPD-78863")
+		}
+	)
 	@Test
 	public void testDoServeResourceWithoutAudienceVariations()
 		throws Exception {
@@ -134,11 +180,11 @@ public class GetCollectionVariationsMVCResourceCommandTest {
 		Assert.assertEquals(0, jsonArray.length());
 	}
 
-	private void _addAssetListEntryAudienceEntryRel(
+	private AssetListEntryAudienceEntryRel _addAssetListEntryAudienceEntryRel(
 			String audienceEntryERC, int priority)
 		throws Exception {
 
-		_assetListEntryAudienceEntryRelLocalService.
+		return _assetListEntryAudienceEntryRelLocalService.
 			addAssetListEntryAudienceEntryRel(
 				TestPropsValues.getUserId(), _group.getGroupId(),
 				_assetListEntry.getAssetListEntryId(), audienceEntryERC,

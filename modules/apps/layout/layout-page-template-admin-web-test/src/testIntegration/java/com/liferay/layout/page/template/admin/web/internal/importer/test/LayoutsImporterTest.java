@@ -31,6 +31,7 @@ import com.liferay.info.item.InfoItemServiceRegistry;
 import com.liferay.info.item.provider.InfoItemFormProvider;
 import com.liferay.item.selector.criteria.InfoItemItemSelectorReturnType;
 import com.liferay.item.selector.criteria.InfoListItemSelectorReturnType;
+import com.liferay.layout.admin.constants.LayoutAdminPortletKeys;
 import com.liferay.layout.exporter.LayoutsExporter;
 import com.liferay.layout.importer.LayoutsImportStrategy;
 import com.liferay.layout.importer.LayoutsImporter;
@@ -129,9 +130,7 @@ import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.kernel.zip.ZipReader;
-import com.liferay.portal.kernel.zip.ZipReaderFactory;
 import com.liferay.portal.kernel.zip.ZipWriter;
-import com.liferay.portal.kernel.zip.ZipWriterFactory;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
@@ -307,9 +306,9 @@ public class LayoutsImporterTest {
 			},
 			LayoutPageTemplateEntryTypeConstants.DISPLAY_PAGE);
 
-		ZipWriter zipWriter = _zipWriterFactory.getZipWriter();
+		ZipWriter zipWriter = new ZipWriter();
 
-		try (ZipReader zipReader = _zipReaderFactory.getZipReader(file)) {
+		try (ZipReader zipReader = new ZipReader(file)) {
 			for (String entry : zipReader.getEntries()) {
 				zipWriter.addEntry(entry, zipReader.getEntryAsString(entry));
 			}
@@ -321,7 +320,7 @@ public class LayoutsImporterTest {
 				LayoutPageTemplateEntryTypeConstants.MASTER_LAYOUT);
 		}
 
-		try (ZipReader zipReader = _zipReaderFactory.getZipReader(file)) {
+		try (ZipReader zipReader = new ZipReader(file)) {
 			for (String entry : zipReader.getEntries()) {
 				zipWriter.addEntry(entry, zipReader.getEntryAsString(entry));
 			}
@@ -1733,7 +1732,7 @@ public class LayoutsImporterTest {
 					).build()));
 
 		Repository repository = PortletFileRepositoryUtil.addPortletRepository(
-			_group1.getGroupId(), RandomTestUtil.randomString(),
+			_group1.getGroupId(), LayoutAdminPortletKeys.GROUP_PAGES,
 			_serviceContext1);
 
 		Class<?> clazz = getClass();
@@ -1742,7 +1741,7 @@ public class LayoutsImporterTest {
 			null, _group1.getGroupId(), TestPropsValues.getUserId(),
 			LayoutPageTemplateEntry.class.getName(),
 			layoutPageTemplateEntry.getLayoutPageTemplateEntryId(),
-			RandomTestUtil.randomString(), repository.getDlFolderId(),
+			LayoutAdminPortletKeys.GROUP_PAGES, repository.getDlFolderId(),
 			clazz.getResourceAsStream("dependencies/thumbnail.png"),
 			RandomTestUtil.randomString(), ContentTypes.IMAGE_PNG, false);
 
@@ -2153,7 +2152,7 @@ public class LayoutsImporterTest {
 		Enumeration<URL> enumeration = bundle.findEntries(
 			resourcePath, "*", true);
 
-		ZipWriter zipWriter = _zipWriterFactory.getZipWriter();
+		ZipWriter zipWriter = new ZipWriter();
 
 		while (enumeration.hasMoreElements()) {
 			URL url = enumeration.nextElement();
@@ -2701,11 +2700,5 @@ public class LayoutsImporterTest {
 	private StyleBookEntryLocalService _styleBookEntryLocalService;
 
 	private JSONObject _successMessageJSONObject;
-
-	@Inject
-	private ZipReaderFactory _zipReaderFactory;
-
-	@Inject
-	private ZipWriterFactory _zipWriterFactory;
 
 }
