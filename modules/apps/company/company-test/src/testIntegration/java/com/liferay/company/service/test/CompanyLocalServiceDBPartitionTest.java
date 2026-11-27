@@ -34,7 +34,6 @@ import com.liferay.portal.kernel.exception.CompanyVirtualHostException;
 import com.liferay.portal.kernel.exception.CompanyWebIdException;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.instance.PortalInstancePool;
-import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.model.ClassName;
 import com.liferay.portal.kernel.model.Company;
 import com.liferay.portal.kernel.model.CompanyConstants;
@@ -48,7 +47,6 @@ import com.liferay.portal.kernel.model.Ticket;
 import com.liferay.portal.kernel.model.TicketConstants;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.model.VirtualHost;
-import com.liferay.portal.kernel.module.util.SystemBundleUtil;
 import com.liferay.portal.kernel.repository.LocalRepository;
 import com.liferay.portal.kernel.repository.RepositoryFactory;
 import com.liferay.portal.kernel.repository.registry.RepositoryDefiner;
@@ -70,6 +68,7 @@ import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.AssumeTestRule;
 import com.liferay.portal.kernel.test.rule.DataGuard;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
+import com.liferay.portal.kernel.test.util.BundleContextTestUtil;
 import com.liferay.portal.kernel.test.util.CompanyTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
@@ -104,8 +103,6 @@ import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
 import com.liferay.portal.test.rule.TransactionalTestRule;
 import com.liferay.portal.util.PortalInstances;
-import com.liferay.search.experiences.model.SXPBlueprint;
-import com.liferay.search.experiences.service.SXPBlueprintLocalService;
 import com.liferay.sharing.model.SharingEntry;
 import com.liferay.sharing.security.permission.SharingEntryAction;
 import com.liferay.sharing.service.SharingEntryLocalService;
@@ -884,19 +881,6 @@ public class CompanyLocalServiceDBPartitionTest
 			ObjectDefinition objectDefinition =
 				ObjectDefinitionTestUtil.publishObjectDefinition();
 
-			SXPBlueprint sxpBlueprint =
-				_sxpBlueprintLocalService.addSXPBlueprint(
-					null, TestPropsValues.getUserId(),
-					JSONUtil.put(
-						"generalConfiguration",
-						JSONUtil.put(
-							"searchableAssetTypes",
-							JSONUtil.put(objectDefinition.getClassName()))
-					).toString(),
-					Collections.emptyMap(), StringPool.BLANK, StringPool.BLANK,
-					RandomTestUtil.randomLocaleStringMap(),
-					ServiceContextTestUtil.getServiceContext());
-
 			String newIndexNameCurrent = StringUtil.toLowerCase(
 				RandomTestUtil.randomString());
 			String newIndexNameNext = StringUtil.toLowerCase(
@@ -1001,17 +985,6 @@ public class CompanyLocalServiceDBPartitionTest
 					ListUtil.isNotEmpty(
 						_resourcePermissionLocalService.getResourcePermissions(
 							copiedObjectDefinition.getPortletId())));
-
-				SXPBlueprint copiedSXPBlueprint =
-					_sxpBlueprintLocalService.getSXPBlueprint(
-						sxpBlueprint.getSXPBlueprintId());
-
-				Assert.assertEquals(
-					StringUtil.replace(
-						sxpBlueprint.getConfigurationJSON(),
-						objectDefinition.getClassName(),
-						copiedObjectDefinition.getClassName()),
-					copiedSXPBlueprint.getConfigurationJSON());
 			}
 
 			companyLocalService.deleteCompany(copiedCompany);
@@ -1285,7 +1258,8 @@ public class CompanyLocalServiceDBPartitionTest
 
 		Assert.assertEquals(dbPartitionsCount - 1, _getDBPartitionsCount());
 
-		BundleContext bundleContext = SystemBundleUtil.getBundleContext();
+		BundleContext bundleContext = BundleContextTestUtil.getBundleContext(
+			CompanyLocalServiceDBPartitionTest.class);
 
 		Collection<ServiceReference<Portlet>> serviceReferences =
 			bundleContext.getServiceReferences(
@@ -1824,7 +1798,8 @@ public class CompanyLocalServiceDBPartitionTest
 	}
 
 	private void _createRepositories(Company company) throws Exception {
-		BundleContext bundleContext = SystemBundleUtil.getBundleContext();
+		BundleContext bundleContext = BundleContextTestUtil.getBundleContext(
+			CompanyLocalServiceDBPartitionTest.class);
 
 		_serviceRegistration = bundleContext.registerService(
 			RepositoryDefiner.class,
@@ -2078,9 +2053,6 @@ public class CompanyLocalServiceDBPartitionTest
 		filter = "(&(objectClass=com.liferay.document.library.kernel.store.Store)(default=true))"
 	)
 	private Store _store;
-
-	@Inject
-	private SXPBlueprintLocalService _sxpBlueprintLocalService;
 
 	@Inject
 	private TicketLocalService _ticketLocalService;

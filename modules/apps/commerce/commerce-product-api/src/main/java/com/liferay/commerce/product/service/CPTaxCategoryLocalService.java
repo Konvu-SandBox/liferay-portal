@@ -117,7 +117,7 @@ public interface CPTaxCategoryLocalService
 	 * @return the cp tax category that was removed
 	 * @throws PortalException
 	 */
-	@Indexable(type = IndexableType.REINDEX)
+	@Indexable(type = IndexableType.DELETE)
 	@SystemEvent(type = SystemEventConstants.TYPE_DELETE)
 	public CPTaxCategory deleteCPTaxCategory(CPTaxCategory cpTaxCategory)
 		throws PortalException;
@@ -270,9 +270,6 @@ public interface CPTaxCategoryLocalService
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public int getCPTaxCategoriesCount();
 
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public int getCPTaxCategoriesCount(long companyId);
-
 	/**
 	 * Returns the cp tax category with the primary key.
 	 *
@@ -369,4 +366,4 @@ public interface CPTaxCategoryLocalService
 		throws E;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1575278100
+// LIFERAY-SERVICE-BUILDER-HASH:134693586
