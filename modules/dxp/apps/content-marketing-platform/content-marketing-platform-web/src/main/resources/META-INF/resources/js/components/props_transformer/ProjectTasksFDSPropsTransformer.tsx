@@ -11,6 +11,7 @@ import {
 } from '@liferay/frontend-data-set-web';
 import {
 	SimpleActionLinkRenderer,
+	StateLabel,
 	addOnClickToCreationMenuItems,
 	deleteAssetEntriesBulkAction,
 	deleteItemAction,
@@ -26,9 +27,12 @@ import {
 import getCMPProjectObjectEntryIds from '../../utils/getCMPProjectObjectEntryIds';
 import {getFormattedLabel} from '../../utils/getFormattedText';
 import {openCMPModal} from '../../utils/openCMPModal';
+import {
+	getDeleteTaskConfirmationMessage,
+	getSubtasksCount,
+} from '../../utils/subtasksUtil';
 import {transformFDSBulkActions} from '../../utils/transformFDSBulkActions';
 import {ProjectTaskItemData, TaskAction} from '../../utils/types';
-import StateLabel from '../StateLabel';
 import BulkEditAssigneeModalContent from '../modal/BulkEditAssigneeModalContent';
 import BulkEditDueDateModalContent from '../modal/BulkEditDueDateModalContent';
 import BulkEditStateModalContent from '../modal/BulkEditStateModalContent';
@@ -222,9 +226,9 @@ export default function ProjectTasksFDSPropsTransformer({
 		}) {
 			if (action?.data?.id === 'delete') {
 				await deleteItemAction(
-					sub(
-						Liferay.Language.get('delete-task-confirmation-body'),
-						getFormattedLabel(itemData.embedded.title)
+					getDeleteTaskConfirmationMessage(
+						getFormattedLabel(itemData.embedded.title),
+						await getSubtasksCount(itemData.embedded)
 					),
 					itemData,
 					loadData

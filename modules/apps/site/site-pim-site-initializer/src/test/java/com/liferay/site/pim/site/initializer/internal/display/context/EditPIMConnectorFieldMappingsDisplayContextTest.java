@@ -22,6 +22,7 @@ import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.json.JSONArray;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
+import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.model.Group;
@@ -232,8 +233,6 @@ public class EditPIMConnectorFieldMappingsDisplayContextTest {
 		Assert.assertEquals(_CHANNEL_FIELD, reactData.get("channelField"));
 		Assert.assertEquals("SKU", reactData.get("channelFieldLabel"));
 		Assert.assertEquals(
-			Boolean.FALSE, reactData.get("channelFieldMultiple"));
-		Assert.assertEquals(
 			"/o/pim/connector-field-mapping-rules",
 			reactData.get("mappingRuleAPIURL"));
 		Assert.assertEquals(
@@ -349,9 +348,33 @@ public class EditPIMConnectorFieldMappingsDisplayContextTest {
 
 		reactData = editPIMConnectorFieldMappingsDisplayContext.getReactData();
 
-		Assert.assertEquals(
-			Boolean.TRUE, reactData.get("channelFieldMultiple"));
 		Assert.assertNull(reactData.get("mappingRule"));
+		Assert.assertEquals(
+			Boolean.FALSE, reactData.get("useFirstNonemptySourceSupported"));
+
+		Mockito.when(
+			pimConnector.getPIMConnectorChannelFields()
+		).thenReturn(
+			Collections.singletonList(
+				new PIMConnectorChannelField(
+					Collections.singletonList("categories"),
+					RandomTestUtil.randomString(), true, _CHANNEL_FIELD, false,
+					ObjectFieldConstants.BUSINESS_TYPE_TEXT))
+		);
+
+		editPIMConnectorFieldMappingsDisplayContext =
+			new EditPIMConnectorFieldMappingsDisplayContext(
+				_httpServletRequest, _objectDefinitionService,
+				_objectEntryLocalService, _objectFieldLocalService,
+				_pimConnectorRegistry);
+
+		reactData = editPIMConnectorFieldMappingsDisplayContext.getReactData();
+
+		Assert.assertEquals(
+			Collections.singletonList("categories"),
+			JSONUtil.toStringList(
+				(JSONArray)reactData.get(
+					"channelFieldAdditionalFieldMappingTypes")));
 
 		_objectDefinitionLocalServiceUtilMockedStatic.when(
 			() ->
@@ -388,6 +411,8 @@ public class EditPIMConnectorFieldMappingsDisplayContextTest {
 
 		reactData = editPIMConnectorFieldMappingsDisplayContext.getReactData();
 
+		Assert.assertNull(
+			reactData.get("channelFieldAdditionalFieldMappingTypes"));
 		Assert.assertEquals(_CHANNEL_FIELD, reactData.get("channelFieldLabel"));
 		Assert.assertEquals(
 			StringPool.BLANK,
@@ -542,7 +567,7 @@ public class EditPIMConnectorFieldMappingsDisplayContextTest {
 		ObjectEntry... objectEntries) {
 
 		_objectEntryLocalServiceUtilMockedStatic.when(
-			() -> ObjectEntryLocalServiceUtil.getOneToManyObjectEntries(
+			() -> ObjectEntryLocalServiceUtil.getRelatedObjectEntries(
 				_GROUP_ID, _PIM_FIELD_MAPPING_OBJECT_RELATIONSHIP_ID, null,
 				false, _OBJECT_ENTRY_ID, true, null, QueryUtil.ALL_POS,
 				QueryUtil.ALL_POS, null)
@@ -588,7 +613,7 @@ public class EditPIMConnectorFieldMappingsDisplayContextTest {
 		ObjectEntry... objectEntries) {
 
 		_objectEntryLocalServiceUtilMockedStatic.when(
-			() -> ObjectEntryLocalServiceUtil.getOneToManyObjectEntries(
+			() -> ObjectEntryLocalServiceUtil.getRelatedObjectEntries(
 				_GROUP_ID, _PIM_FIELD_MAPPING_RULE_OBJECT_RELATIONSHIP_ID, null,
 				false, _OBJECT_ENTRY_ID, true, null, QueryUtil.ALL_POS,
 				QueryUtil.ALL_POS, null)

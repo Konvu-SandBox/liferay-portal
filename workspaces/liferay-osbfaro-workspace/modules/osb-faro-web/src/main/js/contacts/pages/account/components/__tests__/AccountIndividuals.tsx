@@ -2,8 +2,6 @@ import AccountIndividuals from '../AccountIndividuals';
 import React from 'react';
 import {cleanup, render, screen} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 jest.mock('@liferay/frontend-data-set-web', () => ({
 	...jest.requireActual('@liferay/frontend-data-set-web'),
 	FrontendDataSet: (props: any) => (
@@ -54,7 +52,7 @@ describe('AccountIndividuals', () => {
 	it('should render the card title', () => {
 		render(<AccountIndividuals />);
 
-		expect(screen.getByText('Account Individuals')).toBeInTheDocument();
+		expect(screen.getByText(/^account individuals$/i)).toBeInTheDocument();
 	});
 
 	it('should render the range dropdown', () => {
@@ -122,7 +120,7 @@ describe('AccountIndividuals', () => {
 
 		expect(
 			screen.getByText(
-				'Lists all individuals associated with this account.'
+				/^lists all individuals associated with this account\.$/i
 			)
 		).toBeInTheDocument();
 	});

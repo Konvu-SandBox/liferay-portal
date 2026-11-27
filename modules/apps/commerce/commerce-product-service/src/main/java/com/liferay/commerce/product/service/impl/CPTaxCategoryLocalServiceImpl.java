@@ -130,7 +130,7 @@ public class CPTaxCategoryLocalServiceImpl
 		cpTaxCategoryPersistence.removeByCompanyId(companyId);
 	}
 
-	@Indexable(type = IndexableType.REINDEX)
+	@Indexable(type = IndexableType.DELETE)
 	@Override
 	@SystemEvent(type = SystemEventConstants.TYPE_DELETE)
 	public CPTaxCategory deleteCPTaxCategory(CPTaxCategory cpTaxCategory)
@@ -185,11 +185,6 @@ public class CPTaxCategoryLocalServiceImpl
 
 		return cpTaxCategoryPersistence.findByCompanyId(
 			companyId, start, end, orderByComparator);
-	}
-
-	@Override
-	public int getCPTaxCategoriesCount(long companyId) {
-		return cpTaxCategoryPersistence.countByCompanyId(companyId);
 	}
 
 	@Override
