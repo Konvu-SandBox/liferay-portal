@@ -9,8 +9,6 @@ import {
 import {LIFECYCLE_STAGE_DEFAULT_MAX_DAYS} from 'lifecycle/utils/constants';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const completeCondition: Partial<IStageCondition> = {
 	conditionValue: '1000',
 	field: 'account.annualRevenue',
@@ -77,6 +75,32 @@ describe('LifecycleConditionsPanel', () => {
 		expect(
 			screen.getByRole('button', {name: /add.stage/i})
 		).toBeInTheDocument();
+	});
+
+	it('disables the add stage button once the stage limit is reached', () => {
+		const stages = Array.from({length: 20}, (_, index) =>
+			buildStage(`stage-${index}`, `Stage ${index}`)
+		);
+
+		const {rerender} = renderPanel({stageConfigs: stages.slice(0, 19)});
+
+		expect(screen.getByRole('button', {name: /add.stage/i})).toBeEnabled();
+
+		rerender(
+			<LifecycleConditionsPanel
+				lifecycleName="Growth and Retention Hub"
+				onAddStage={jest.fn()}
+				onMoveStage={jest.fn()}
+				onRemoveStage={jest.fn()}
+				onSelect={jest.fn()}
+				selectedKey={null}
+				stageConfigs={stages}
+				stageErrorKeys={[]}
+				summaryError={false}
+			/>
+		);
+
+		expect(screen.getByRole('button', {name: /add.stage/i})).toBeDisabled();
 	});
 
 	it('numbers each stage and shows its trigger status', () => {

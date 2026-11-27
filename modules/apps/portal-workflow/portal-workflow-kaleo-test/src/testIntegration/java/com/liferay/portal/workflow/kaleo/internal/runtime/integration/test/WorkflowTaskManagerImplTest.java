@@ -20,7 +20,6 @@ import com.liferay.commerce.model.CommerceOrder;
 import com.liferay.commerce.order.engine.CommerceOrderEngine;
 import com.liferay.commerce.product.constants.CommerceChannelConstants;
 import com.liferay.commerce.product.model.CommerceChannel;
-import com.liferay.commerce.product.service.CommerceChannelLocalService;
 import com.liferay.commerce.product.service.CommerceChannelLocalServiceUtil;
 import com.liferay.commerce.service.CommerceOrderLocalService;
 import com.liferay.commerce.test.util.CommerceTestUtil;
@@ -61,6 +60,7 @@ import com.liferay.journal.service.JournalArticleLocalService;
 import com.liferay.journal.service.JournalFolderLocalService;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringPool;
+import com.liferay.portal.configuration.test.util.ConfigurationTemporarySwapper;
 import com.liferay.portal.configuration.test.util.ConfigurationTestUtil;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.exception.NoSuchModelException;
@@ -82,6 +82,7 @@ import com.liferay.portal.kernel.repository.model.FileVersion;
 import com.liferay.portal.kernel.repository.model.Folder;
 import com.liferay.portal.kernel.security.auth.PrincipalException;
 import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
+import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.security.permission.PermissionCheckerFactoryUtil;
 import com.liferay.portal.kernel.security.permission.PermissionThreadLocal;
@@ -96,6 +97,7 @@ import com.liferay.portal.kernel.service.UserGroupRoleLocalServiceUtil;
 import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.service.UserNotificationEventLocalService;
 import com.liferay.portal.kernel.settings.LocalizedValuesMap;
+import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.constants.TestDataConstants;
 import com.liferay.portal.kernel.test.context.ContextUserReplace;
 import com.liferay.portal.kernel.test.randomizerbumpers.NumericStringRandomizerBumper;
@@ -106,6 +108,7 @@ import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
+import com.liferay.portal.kernel.test.util.UserNotificationEventTestUtil;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
 import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.ContentTypes;
@@ -139,6 +142,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -1184,19 +1188,22 @@ public class WorkflowTaskManagerImplTest extends BaseWorkflowManagerTestCase {
 
 		// Prevent notifiying ancestor sites
 
-		ConfigurationTestUtil.saveConfiguration(
-			_configuration,
-			HashMapDictionaryBuilder.<String, Object>put(
-				"preventNotifyingAncestorSites", true
-			).build());
+		Dictionary<String, Object> properties = _configuration.getProperties();
 
-		blogsEntry = _addBlogsEntry();
+		properties.put("preventNotifyingAncestorSites", true);
 
-		Assert.assertEquals(
-			WorkflowConstants.STATUS_PENDING, blogsEntry.getStatus());
+		try (ConfigurationTemporarySwapper configurationTemporarySwapper =
+				new ConfigurationTemporarySwapper(
+					_configuration.getPid(), properties)) {
 
-		_checkUserNotificationEventsByUsers(1, childSiteMemberUser);
-		_checkUserNotificationEventsByUsers(0, _siteMemberUser);
+			blogsEntry = _addBlogsEntry();
+
+			Assert.assertEquals(
+				WorkflowConstants.STATUS_PENDING, blogsEntry.getStatus());
+
+			_checkUserNotificationEventsByUsers(1, childSiteMemberUser);
+			_checkUserNotificationEventsByUsers(0, _siteMemberUser);
+		}
 	}
 
 	@Test
@@ -1469,6 +1476,46 @@ public class WorkflowTaskManagerImplTest extends BaseWorkflowManagerTestCase {
 		Assert.assertEquals(1, total);
 
 		_deactivateWorkflow(BlogsEntry.class.getName(), 0, 0);
+	}
+
+	@Test
+	@TestInfo("LPD-94885")
+	public void testSearchWorkflowTaskByUserRolesWithRegularRole()
+		throws Exception {
+
+		Role role = _roleLocalService.addRole(
+			RandomTestUtil.randomString(), _companyAdminUser.getUserId(), null,
+			0, RandomTestUtil.randomString(), null, null,
+			RoleConstants.TYPE_REGULAR, null, null);
+
+		String workflowDefinitionJSON = StringUtil.replace(
+			StringUtil.read(
+				getResourceInputStream("role-id-workflow-definition.json")),
+			"[$ROLE_ID$]", String.valueOf(role.getRoleId()));
+
+		String name = RandomTestUtil.randomString();
+
+		_workflowDefinitionManager.deployWorkflowDefinition(
+			workflowDefinitionJSON.getBytes(), _company.getCompanyId(), null,
+			name, name, _adminUser.getUserId());
+
+		_activateWorkflow(DLFolder.class.getName(), 0, -1, name, 1);
+
+		FileVersion fileVersion = _addFileVersion(
+			DLFolderConstants.DEFAULT_PARENT_FOLDER_ID);
+
+		Assert.assertEquals(
+			WorkflowConstants.STATUS_PENDING, fileVersion.getStatus());
+
+		User user = _createUser(RoleConstants.SITE_MEMBER, _group, false);
+
+		_assertWorkflowTasksByUserRoles(0, fileVersion, user);
+
+		_userLocalService.addRoleUser(role.getRoleId(), user);
+
+		_assertWorkflowTasksByUserRoles(1, fileVersion, user);
+
+		_deactivateWorkflow(DLFolder.class.getName(), 0, -1);
 	}
 
 	@Test
@@ -1872,6 +1919,39 @@ public class WorkflowTaskManagerImplTest extends BaseWorkflowManagerTestCase {
 		}
 	}
 
+	private void _assertWorkflowTasksByUserRoles(
+			int expectedCount, FileVersion fileVersion, User user)
+		throws Exception {
+
+		try (ContextUserReplace contextUserReplace = new ContextUserReplace(
+				user)) {
+
+			Assert.assertEquals(
+				expectedCount,
+				_workflowTaskManager.getWorkflowTaskCountByUserRoles(
+					user.getCompanyId(), user.getUserId(), false));
+
+			List<WorkflowTask> workflowTasks =
+				_workflowTaskManager.getWorkflowTasksByUserRoles(
+					user.getCompanyId(), user.getUserId(), false,
+					QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+			Assert.assertEquals(
+				workflowTasks.toString(), expectedCount, workflowTasks.size());
+
+			Assert.assertEquals(expectedCount, _searchCountByUserRoles(user));
+
+			FileEntry fileEntry = _dlAppLocalService.getFileEntry(
+				fileVersion.getFileEntryId());
+
+			Assert.assertEquals(
+				expectedCount > 0,
+				fileEntry.containsPermission(
+					PermissionThreadLocal.getPermissionChecker(),
+					ActionKeys.VIEW));
+		}
+	}
+
 	private void _assignWorkflowTaskToUser(User user, User assigneeUser)
 		throws Exception {
 
@@ -1905,13 +1985,14 @@ public class WorkflowTaskManagerImplTest extends BaseWorkflowManagerTestCase {
 	}
 
 	private void _checkUserNotificationEventsByUsers(
-		long expected, User... users) {
+			long expected, User... users)
+		throws Exception {
 
 		for (User user : users) {
 			List<UserNotificationEvent> userNotificationEvents =
 				TransformUtil.transform(
-					_userNotificationEventLocalService.
-						getUserNotificationEvents(user.getUserId()),
+					UserNotificationEventTestUtil.getUserNotificationEvents(
+						user.getUserId()),
 					userNotificationEvent -> {
 						if ((userNotificationEvent.getDeliveryType() !=
 								UserNotificationDeliveryConstants.
@@ -2405,9 +2486,6 @@ public class WorkflowTaskManagerImplTest extends BaseWorkflowManagerTestCase {
 
 	@DeleteAfterTestRun
 	private Group _childGroup;
-
-	@Inject
-	private CommerceChannelLocalService _commerceChannelLocalService;
 
 	@Inject
 	private CommerceOrderEngine _commerceOrderEngine;

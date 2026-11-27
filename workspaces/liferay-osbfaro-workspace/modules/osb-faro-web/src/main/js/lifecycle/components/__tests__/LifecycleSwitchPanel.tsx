@@ -22,8 +22,6 @@ import {useCurrentUser} from 'shared/hooks/useCurrentUser';
 import {useRequest} from 'shared/hooks/useRequest';
 import {setBodyWidth} from 'test/body-width';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/hooks/useRequest', () => ({
 	useRequest: jest.fn(),
 }));
@@ -365,7 +363,7 @@ describe('LifecycleSwitchPanel', () => {
 
 		renderPanel();
 
-		expect(screen.getByText(/no results found/i)).toBeInTheDocument();
+		expect(screen.getByText(/no results were found/i)).toBeInTheDocument();
 		expect(document.querySelector('.list-group-item')).toBeNull();
 		expect(screen.queryByText(/showing/i)).toBeNull();
 	});

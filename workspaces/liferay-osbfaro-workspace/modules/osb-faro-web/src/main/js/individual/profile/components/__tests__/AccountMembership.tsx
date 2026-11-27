@@ -5,8 +5,6 @@ import {fromJS} from 'immutable';
 import {Provider} from 'react-redux';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const renderWithStore = (children: React.ReactNode) =>
 	render(<Provider store={mockStore()}>{children}</Provider>);
 
@@ -73,7 +71,7 @@ describe('Account Membership', () => {
 		);
 
 		expect(
-			getByText('Annual Revenue').nextElementSibling
+			getByText(/^annual revenue$/i).nextElementSibling
 		).toHaveTextContent('–');
 	});
 
@@ -85,10 +83,10 @@ describe('Account Membership', () => {
 		);
 
 		expect(
-			getByText('Annual Revenue').nextElementSibling
+			getByText(/^annual revenue$/i).nextElementSibling
 		).not.toHaveTextContent('–');
 		expect(
-			getByText('Annual Revenue').nextElementSibling
+			getByText(/^annual revenue$/i).nextElementSibling
 		).toHaveTextContent('0');
 	});
 

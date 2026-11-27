@@ -59,13 +59,25 @@ renderResponse.setTitle(publishProcessDisplayContext.getTitle(scheduledPublishPr
 			).put(
 				"pageTreeModalConfiguration", publishProcessDisplayContext.getPageTreeModalConfiguration()
 			).put(
-				"processesBackURL", HttpComponentsUtil.setParameter(backURL, liferayPortletResponse.getNamespace() + "tabs1", "processes")
+				"processesBackURL",
+				PortletURLBuilder.createRenderURL(
+					liferayPortletResponse
+				).setTabs1(
+					"processes"
+				).buildString()
 			).put(
 				"publishPreviewAPIURL", publishProcessDisplayContext.getPublishPreviewAPIURL()
 			).put(
 				"publishProcessAPIURL", publishProcessDisplayContext.getPublishProcessAPIURL()
 			).put(
-				"scheduledBackURL", HttpComponentsUtil.setParameter(backURL, liferayPortletResponse.getNamespace() + "tabs1", "scheduled")
+				"remoteConnection", publishProcessDisplayContext.getRemoteConnectionJSONObject()
+			).put(
+				"scheduledBackURL",
+				PortletURLBuilder.createRenderURL(
+					liferayPortletResponse
+				).setTabs1(
+					"scheduled"
+				).buildString()
 			).put(
 				"scheduledPublishProcessAPIURL", publishProcessDisplayContext.getScheduledPublishProcessAPIURL()
 			).put(

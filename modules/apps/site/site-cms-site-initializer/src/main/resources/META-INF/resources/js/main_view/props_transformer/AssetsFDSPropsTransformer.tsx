@@ -32,6 +32,7 @@ import {
 import {getAssetTitle} from '../../common/utils/getAssetTitle';
 import {getFormattedLabel} from '../../common/utils/getFormattedText';
 import {getScopeExternalReferenceCode} from '../../common/utils/getScopeExternalReferenceCode';
+import {isSpaceMember} from '../../common/utils/isSpaceMember';
 import {openBulkActionConfirmationModal} from '../../common/utils/openBulkActionConfirmationModal';
 import {openCMSModal} from '../../common/utils/openCMSModal';
 import refreshOnContentChanged from '../../common/utils/refreshOnContentChanged';
@@ -83,9 +84,51 @@ export interface AdditionalAPIURLParametersTransformerArgs {
 	additionalAPIURLParameters: string;
 	searchParam: string;
 }
-const additionalAPIURLParametersTransformer = (
+
+export interface IBreadcrumbProps {
+	breadcrumbItems: IBreadcrumbItem[];
+	displayType: string;
+	hideSpace?: boolean;
+	size: string;
+}
+
+export type AdditionalProps = {
+	additionalAPIURLParameters: string | undefined;
+	assetLibraries: AssetLibrary[];
+	autocompleteURL: string;
+	availableExportFileFormats: any[];
+	availableLocales: any[];
+	baseFolderViewURL: string;
+	breadcrumbProps?: IBreadcrumbProps;
+	brokenLinksCheckerEnabled: boolean;
+	candidateAssetLibraries: AssetLibrary[];
+	cmpEnabled?: boolean;
+	cmpProjectLinkObjectDefinitionId?: number;
+	cmpProjectObjectDefinitionId?: number;
+	cmpProjectViewURL?: string;
+	cmsGroupId?: number;
+	collaboratorURLs: Record<string, string>;
+	contentViewURL: string;
+	defaultPermissionAdditionalProps?: any;
+	editableImageMIMETypes: string[];
+	fileMimeTypeCssClasses: Record<string, string>;
+	fileMimeTypeIcons: Record<string, string>;
+	filter?: string;
+	galleryViewEnabled?: boolean;
+	objectDefinitionCssClasses: Record<string, string>;
+	objectDefinitionIcons: Record<string, string>;
+	objectEntryFolderExternalReferenceCode: string;
+	parentObjectEntryFolderExternalReferenceCode: string;
+	projectGroupExternalReferenceCode?: string;
+	redirect: string;
+	rootObjectEntryFolderExternalReferenceCode: string;
+	showAdditionalItemInfo?: boolean;
+	trashEnabled?: boolean;
+};
+
+export function additionalAPIURLParametersTransformer(
 	args: AdditionalAPIURLParametersTransformerArgs
-): string | undefined => {
+): string | undefined {
 	const {additionalAPIURLParameters, searchParam} = args;
 
 	if (!additionalAPIURLParameters) {
@@ -135,47 +178,7 @@ const additionalAPIURLParametersTransformer = (
 	}
 
 	return `${prefixPart}${cleanedFilters.join(' and ')}`.trim();
-};
-
-export interface IBreadcrumbProps {
-	breadcrumbItems: IBreadcrumbItem[];
-	displayType: string;
-	hideSpace?: boolean;
-	size: string;
 }
-
-export type AdditionalProps = {
-	additionalAPIURLParameters: string | undefined;
-	assetLibraries: AssetLibrary[];
-	autocompleteURL: string;
-	availableExportFileFormats: any[];
-	availableLocales: any[];
-	baseFolderViewURL: string;
-	breadcrumbProps?: IBreadcrumbProps;
-	brokenLinksCheckerEnabled: boolean;
-	candidateAssetLibraries: AssetLibrary[];
-	cmpEnabled?: boolean;
-	cmpProjectLinkObjectDefinitionId?: number;
-	cmpProjectObjectDefinitionId?: number;
-	cmpProjectViewURL?: string;
-	cmsGroupId?: number;
-	collaboratorURLs: Record<string, string>;
-	contentViewURL: string;
-	defaultPermissionAdditionalProps?: any;
-	editableImageMIMETypes: string[];
-	fileMimeTypeCssClasses: Record<string, string>;
-	fileMimeTypeIcons: Record<string, string>;
-	filter?: string;
-	galleryViewEnabled?: boolean;
-	objectDefinitionCssClasses: Record<string, string>;
-	objectDefinitionIcons: Record<string, string>;
-	objectEntryFolderExternalReferenceCode: string;
-	parentObjectEntryFolderExternalReferenceCode: string;
-	redirect: string;
-	rootObjectEntryFolderExternalReferenceCode: string;
-	showAdditionalItemInfo?: boolean;
-	trashEnabled?: boolean;
-};
 
 export default function AssetsFDSPropsTransformer({
 	additionalProps,
@@ -287,9 +290,19 @@ export default function AssetsFDSPropsTransformer({
 				} as IInternalRenderer,
 				{
 					component: ({actions, itemData, options}) => {
+						const spaceMember = isSpaceMember({
+							assetLibraries: additionalProps.assetLibraries,
+							itemData,
+							projectGroupExternalReferenceCode:
+								additionalProps.projectGroupExternalReferenceCode,
+						});
+
+						// Pass no actions to non-members so the title renders
+						// as plain text instead of an edit or view link
+
 						const simpleActionLink = (
 							<SimpleActionLinkRenderer
-								actions={actions}
+								actions={spaceMember ? actions : []}
 								additionalProps={additionalProps}
 								itemData={itemData}
 								onViewClick={(item) => {
@@ -429,13 +442,30 @@ export default function AssetsFDSPropsTransformer({
 						isEditableImage(
 							item,
 							additionalProps.editableImageMIMETypes
-						),
+						) &&
+						isSpaceMember({
+							assetLibraries: additionalProps.assetLibraries,
+							itemData: item,
+							projectGroupExternalReferenceCode:
+								additionalProps.projectGroupExternalReferenceCode,
+						}),
 				};
 			}
-			else if (
-				action?.data?.id === 'actionLink' ||
-				isScheduleDateActionId(action?.data?.id)
-			) {
+			else if (action?.data?.id === 'actionLink') {
+				return {
+					...action,
+					isVisible: (item: any) =>
+						item?.entryClassName !==
+							OBJECT_ENTRY_FOLDER_CLASS_NAME &&
+						isSpaceMember({
+							assetLibraries: additionalProps.assetLibraries,
+							itemData: item,
+							projectGroupExternalReferenceCode:
+								additionalProps.projectGroupExternalReferenceCode,
+						}),
+				};
+			}
+			else if (action?.data?.id === 'update-dates-menu') {
 				return {
 					...action,
 					isVisible: (item: any) =>
@@ -454,7 +484,13 @@ export default function AssetsFDSPropsTransformer({
 							item?.entryClassName !==
 								OBJECT_ENTRY_FOLDER_CLASS_NAME &&
 								!item?.embedded?.file
-						),
+						) &&
+						isSpaceMember({
+							assetLibraries: additionalProps.assetLibraries,
+							itemData: item,
+							projectGroupExternalReferenceCode:
+								additionalProps.projectGroupExternalReferenceCode,
+						}),
 				};
 			}
 			else if (action?.data?.id === 'view-content') {
@@ -465,7 +501,13 @@ export default function AssetsFDSPropsTransformer({
 							item?.entryClassName !==
 								OBJECT_ENTRY_FOLDER_CLASS_NAME &&
 								!item?.embedded?.file
-						),
+						) &&
+						isSpaceMember({
+							assetLibraries: additionalProps.assetLibraries,
+							itemData: item,
+							projectGroupExternalReferenceCode:
+								additionalProps.projectGroupExternalReferenceCode,
+						}),
 					target: 'event',
 				};
 			}
@@ -477,7 +519,13 @@ export default function AssetsFDSPropsTransformer({
 						Boolean(
 							item?.entryClassName !==
 								OBJECT_ENTRY_FOLDER_CLASS_NAME
-						),
+						) &&
+						isSpaceMember({
+							assetLibraries: additionalProps.assetLibraries,
+							itemData: item,
+							projectGroupExternalReferenceCode:
+								additionalProps.projectGroupExternalReferenceCode,
+						}),
 					target: 'event',
 				};
 			}
@@ -711,7 +759,14 @@ export default function AssetsFDSPropsTransformer({
 
 				const filteredItems = items.filter(
 					(item: any) =>
-						item?.entryClassName !== OBJECT_ENTRY_FOLDER_CLASS_NAME
+						item?.entryClassName !==
+							OBJECT_ENTRY_FOLDER_CLASS_NAME &&
+						isSpaceMember({
+							assetLibraries: additionalProps.assetLibraries,
+							itemData: item,
+							projectGroupExternalReferenceCode:
+								additionalProps.projectGroupExternalReferenceCode,
+						})
 				);
 
 				const currentItemPos = filteredItems.findIndex(

@@ -8,8 +8,6 @@ import {Provider} from 'react-redux';
 import {renderModal} from 'test/render-modal';
 import {Routes} from 'shared/util/router';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = ({observer, ...props}) => (
 	<Provider store={mockStore()}>
 		<MemoryRouter initialEntries={['/workspace/23/settings']}>
@@ -44,7 +42,7 @@ describe('HelpWidgetModal', () => {
 		await renderModal(observer => <DefaultComponent observer={observer} />);
 
 		expect(
-			screen.getByRole('heading', {name: 'Report an Issue'})
+			screen.getByRole('heading', {name: /^report an issue$/i})
 		).toBeInTheDocument();
 	});
 });

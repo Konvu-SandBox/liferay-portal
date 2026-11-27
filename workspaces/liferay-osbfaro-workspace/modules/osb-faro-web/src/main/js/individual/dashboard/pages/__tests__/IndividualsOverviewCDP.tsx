@@ -9,8 +9,6 @@ import {useDataSources} from 'shared/context/dataSources';
 import {useQuery} from '@apollo/client';
 import {useRequest} from 'shared/hooks/useRequest';
 
-jest.unmock('react-dom');
-
 jest.mock('@apollo/client', () => ({
 	...jest.requireActual('@apollo/client'),
 	useQuery: jest.fn(),
@@ -108,9 +106,9 @@ describe('IndividualsOverviewCDP', () => {
 
 		const {getByText} = renderIndividualsOverviewCDP();
 
-		expect(getByText('Total Individuals')).toBeInTheDocument();
-		expect(getByText('Known Individuals')).toBeInTheDocument();
-		expect(getByText('Anonymous Individuals')).toBeInTheDocument();
+		expect(getByText(/^total individuals$/i)).toBeInTheDocument();
+		expect(getByText(/^known individuals$/i)).toBeInTheDocument();
+		expect(getByText(/^anonymous individuals$/i)).toBeInTheDocument();
 	});
 
 	it('should render the period-over-period trend only for the known and anonymous individuals cards', () => {
