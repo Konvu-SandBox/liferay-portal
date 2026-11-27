@@ -6,7 +6,6 @@
 package com.liferay.message.boards.service;
 
 import com.liferay.exportimport.kernel.lar.PortletDataContext;
-import com.liferay.message.boards.model.MBDiscussion;
 import com.liferay.message.boards.model.MBMessage;
 import com.liferay.message.boards.model.MBMessageDisplay;
 import com.liferay.petra.function.UnsafeFunction;
@@ -38,7 +37,6 @@ import com.liferay.portal.kernel.util.ObjectValuePair;
 import com.liferay.portal.kernel.util.OrderByComparator;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.Serializable;
 
@@ -122,37 +120,11 @@ public interface MBMessageLocalService
 	@Deprecated
 	public MBMessage addMessage(
 			long userId, String userName, long groupId, long categoryId,
-			String subject, String body, ServiceContext serviceContext)
-		throws PortalException;
-
-	/**
-	 * @deprecated As of Cavanaugh (7.4.x), replaced by {@link
-	 #addMessage(String, long, String, long, long, long, long,
-	 String, String, String, List, boolean, double, boolean,
-	 ServiceContext)}
-	 */
-	@Deprecated
-	public MBMessage addMessage(
-			long userId, String userName, long groupId, long categoryId,
 			String subject, String body, String format,
 			List<ObjectValuePair<String, InputStream>> inputStreamOVPs,
 			boolean anonymous, double priority, boolean allowPingbacks,
 			ServiceContext serviceContext)
 		throws PortalException;
-
-	/**
-	 * @deprecated As of Cavanaugh (7.4.x), replaced by {@link
-	 #addMessage(String, long, String, long, long, long, long,
-	 String, String, String, List, boolean, double, boolean,
-	 ServiceContext)}
-	 */
-	@Deprecated
-	public MBMessage addMessage(
-			long userId, String userName, long groupId, long categoryId,
-			String subject, String body, String format, String fileName,
-			File file, boolean anonymous, double priority,
-			boolean allowPingbacks, ServiceContext serviceContext)
-		throws FileNotFoundException, PortalException;
 
 	public MBMessage addMessage(
 			String externalReferenceCode, long userId, String userName,
@@ -342,19 +314,11 @@ public interface MBMessageLocalService
 		throws PortalException;
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public MBMessage fetchFirstMessage(long threadId, long parentMessageId)
-		throws PortalException;
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public MBMessage fetchMBMessage(long messageId);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public MBMessage fetchMBMessageByExternalReferenceCode(
 		String externalReferenceCode, long groupId);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public MBMessage fetchMBMessageByUrlSubject(
-		long groupId, String urlSubject);
 
 	/**
 	 * Returns the message-boards message matching the UUID and group.
@@ -379,10 +343,6 @@ public interface MBMessageLocalService
 		OrderByComparator<MBMessage> orderByComparator);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public List<MBMessage> getCategoryMessages(
-		long groupId, long categoryId, long threadId);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public int getCategoryMessagesCount(
 		long groupId, long categoryId, int status);
 
@@ -398,15 +358,8 @@ public interface MBMessageLocalService
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public List<MBMessage> getCompanyMessages(
-		long companyId, int status, int start, int end);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public List<MBMessage> getCompanyMessages(
 		long companyId, int status, int start, int end,
 		OrderByComparator<MBMessage> orderByComparator);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public int getCompanyMessagesCount(long companyId, int status);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public MBMessageDisplay getDiscussionMessageDisplay(
@@ -429,23 +382,12 @@ public interface MBMessageLocalService
 		String className, long classPK, int status);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public List<MBDiscussion> getDiscussions(String className);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public ExportActionableDynamicQuery getExportActionableDynamicQuery(
 		PortletDataContext portletDataContext);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public MBMessage getFileEntryMessage(long fileEntryId)
 		throws PortalException;
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public MBMessage getFirstMessage(long threadId, long parentMessageId)
-		throws PortalException;
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public List<MBMessage> getGroupMessages(
-		long groupId, int status, int start, int end);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public List<MBMessage> getGroupMessages(
@@ -460,9 +402,6 @@ public interface MBMessageLocalService
 	public List<MBMessage> getGroupMessages(
 		long groupId, long userId, int status, int start, int end,
 		OrderByComparator<MBMessage> orderByComparator);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public int getGroupMessagesCount(long groupId, int status);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public int getGroupMessagesCount(long groupId, long userId, int status);
@@ -604,11 +543,6 @@ public interface MBMessageLocalService
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public List<MBMessage> getRootDiscussionMessages(
-			String className, long classPK, int status)
-		throws PortalException;
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public List<MBMessage> getRootDiscussionMessages(
 			String className, long classPK, int status, int start, int end)
 		throws PortalException;
 
@@ -640,9 +574,6 @@ public interface MBMessageLocalService
 	public List<MBMessage> getThreadMessages(
 		long userId, long threadId, int status, int start, int end,
 		Comparator<MBMessage> comparator);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public int getThreadMessagesCount(long threadId, int status);
 
 	public long moveMessageAttachmentToTrash(
 			long userId, long messageId, String fileName)
@@ -726,4 +657,4 @@ public interface MBMessageLocalService
 		throws E;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1874684514
+// LIFERAY-SERVICE-BUILDER-HASH:477138942

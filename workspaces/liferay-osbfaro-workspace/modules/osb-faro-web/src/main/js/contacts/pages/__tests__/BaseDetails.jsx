@@ -7,8 +7,6 @@ import {Provider} from 'react-redux';
 import {MemoryRouter} from 'react-router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = props => (
 	<MemoryRouter>
 		<Provider store={mockStore()}>
@@ -50,6 +48,6 @@ describe('BaseDetails', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(queryByText('Reload')).toBeTruthy();
+		expect(queryByText(/^reload$/i)).toBeTruthy();
 	});
 });

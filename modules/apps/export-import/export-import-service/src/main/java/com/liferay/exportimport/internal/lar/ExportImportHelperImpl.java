@@ -98,9 +98,7 @@ import com.liferay.portal.kernel.xml.Element;
 import com.liferay.portal.kernel.xml.ElementHandler;
 import com.liferay.portal.kernel.xml.ElementProcessor;
 import com.liferay.portal.kernel.zip.ZipReader;
-import com.liferay.portal.kernel.zip.ZipReaderFactory;
 import com.liferay.portal.kernel.zip.ZipWriter;
-import com.liferay.portal.kernel.zip.ZipWriterFactory;
 import com.liferay.portal.model.impl.LayoutImpl;
 import com.liferay.staging.StagingGroupHelper;
 import com.liferay.staging.StagingGroupHelperUtil;
@@ -245,7 +243,7 @@ public class ExportImportHelperImpl implements ExportImportHelper {
 		try (InputStream inputStream = _dlFileEntryLocalService.getFileAsStream(
 				fileEntry.getFileEntryId(), fileEntry.getVersion(), false);
 
-			ZipReader zipReader = _zipReaderFactory.getZipReader(inputStream)) {
+			ZipReader zipReader = new ZipReader(inputStream)) {
 
 			return _getExportImportGroups(
 				zipReader, ManifestXMLFilePathUtil.MANIFEST_XML_FILE_PATH);
@@ -301,7 +299,7 @@ public class ExportImportHelperImpl implements ExportImportHelper {
 				excludeDataAlwaysStaged, groupId);
 		}
 
-		if (FeatureFlagManagerUtil.isEnabled(companyId, "LPD-41307") &&
+		if (FeatureFlagManagerUtil.isEnabled(companyId, "LPD-57655") &&
 			_isSpaceDepotEntry(groupId)) {
 
 			return ListUtil.filter(
@@ -598,7 +596,7 @@ public class ExportImportHelperImpl implements ExportImportHelper {
 			String userIdStrategy = MapUtil.getString(
 				parameterMap, PortletDataHandlerKeys.USER_ID_STRATEGY);
 
-			try (ZipReader zipReader = _zipReaderFactory.getZipReader(file)) {
+			try (ZipReader zipReader = new ZipReader(file)) {
 				PortletDataContext portletDataContext =
 					_portletDataContextFactory.createImportPortletDataContext(
 						group.getCompanyId(), groupId, parameterMap,
@@ -894,7 +892,7 @@ public class ExportImportHelperImpl implements ExportImportHelper {
 				  group.getCompanyId(), "LPD-85946")) ||
 			 (group.isDepot() &&
 			  FeatureFlagManagerUtil.isEnabled(
-				  group.getCompanyId(), "LPD-41307"))) &&
+				  group.getCompanyId(), "LPD-57655"))) &&
 			group.isActive() && !group.isCMS() && !group.isStaged() &&
 			!group.isStagingGroup() &&
 			!stagingGroupHelper.isCompanyGroup(group)) {
@@ -1324,10 +1322,10 @@ public class ExportImportHelperImpl implements ExportImportHelper {
 			(_stagingConfiguration.stagingDeleteTempLAROnFailure() &&
 			 _stagingConfiguration.stagingDeleteTempLAROnSuccess())) {
 
-			return _zipWriterFactory.getZipWriter();
+			return new ZipWriter();
 		}
 
-		return _zipWriterFactory.getZipWriter(
+		return new ZipWriter(
 			new File(
 				SystemProperties.get(SystemProperties.TMP_DIR) +
 					StringPool.SLASH + fileName));
@@ -1863,12 +1861,6 @@ public class ExportImportHelperImpl implements ExportImportHelper {
 
 	@Reference
 	private UserLocalService _userLocalService;
-
-	@Reference
-	private ZipReaderFactory _zipReaderFactory;
-
-	@Reference
-	private ZipWriterFactory _zipWriterFactory;
 
 	private class ManifestSummaryElementProcessor implements ElementProcessor {
 

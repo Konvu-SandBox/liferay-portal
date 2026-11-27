@@ -5,7 +5,8 @@ import BundleRouter from 'route-middleware/BundleRouter';
 import ErrorPage from 'shared/pages/ErrorPage';
 import Loading from 'shared/components/Loading';
 import React, {lazy, Suspense, useContext} from 'react';
-import {ACCOUNTS, Routes, toRoute} from 'shared/util/router';
+import {ACCOUNTS} from 'shared/util/constants';
+import {Routes, toRoute} from 'shared/util/router';
 import {ChannelContext} from 'shared/context/channel';
 import {
 	Navigate,
@@ -69,7 +70,7 @@ const AccountProfileRoutes = () => {
 				message={Liferay.Language.get(
 					'the-account-you-are-looking-for-does-not-exist'
 				)}
-				subtitle={Liferay.Language.get('account-not-found')}
+				subtitle={Liferay.Language.get('account-was-not-found')}
 			/>
 		);
 	}

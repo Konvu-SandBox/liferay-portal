@@ -4,8 +4,6 @@ import moment from 'moment';
 import React from 'react';
 import {fireEvent, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('DatePicker', () => {
 	let currentDate;
 
@@ -55,7 +53,7 @@ describe('DatePicker', () => {
 
 		jest.runAllTimers();
 
-		expect(queryByText('End Date')).toBeTruthy();
+		expect(queryByText(/^end date$/i)).toBeTruthy();
 	});
 
 	fit('should render max range error when range > maxRange', () => {
