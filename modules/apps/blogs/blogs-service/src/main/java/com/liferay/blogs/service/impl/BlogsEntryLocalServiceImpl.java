@@ -24,10 +24,10 @@ import com.liferay.blogs.model.BlogsEntry;
 import com.liferay.blogs.service.base.BlogsEntryLocalServiceBaseImpl;
 import com.liferay.blogs.settings.BlogsGroupServiceSettings;
 import com.liferay.blogs.social.BlogsActivityKeys;
-import com.liferay.blogs.util.comparator.EntryDisplayDateComparator;
-import com.liferay.blogs.util.comparator.EntryIdComparator;
 import com.liferay.document.library.kernel.exception.NoSuchFileEntryException;
+import com.liferay.document.library.kernel.model.DLFileEntry;
 import com.liferay.document.library.kernel.model.DLFolderConstants;
+import com.liferay.document.library.kernel.service.DLFileEntryLocalService;
 import com.liferay.expando.kernel.service.ExpandoRowLocalService;
 import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.friendly.url.constants.FriendlyURLEntryConstants;
@@ -43,8 +43,10 @@ import com.liferay.portal.configuration.metatype.bnd.util.ConfigurableUtil;
 import com.liferay.portal.configuration.module.configuration.ConfigurationProvider;
 import com.liferay.portal.image.ImageToolUtil;
 import com.liferay.portal.kernel.comment.CommentManager;
+import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
+import com.liferay.portal.kernel.dao.orm.Property;
+import com.liferay.portal.kernel.dao.orm.PropertyFactoryUtil;
 import com.liferay.portal.kernel.dao.orm.QueryDefinition;
-import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.image.ImageBag;
 import com.liferay.portal.kernel.json.JSONFactory;
@@ -71,7 +73,6 @@ import com.liferay.portal.kernel.search.IndexableType;
 import com.liferay.portal.kernel.service.ClassNameLocalService;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.ImageLocalService;
-import com.liferay.portal.kernel.service.LayoutLocalService;
 import com.liferay.portal.kernel.service.ResourceLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.UserLocalService;
@@ -165,14 +166,16 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 	@Override
 	public FileEntry addAttachmentFileEntry(
 			String externalReferenceCode, long userId, long groupId,
-			String fileName, String mimeType, InputStream inputStream)
+			long entryId, String fileName, String mimeType,
+			InputStream inputStream)
 		throws PortalException {
 
 		Folder folder = addAttachmentsFolder(userId, groupId);
 
 		return _portletFileRepository.addPortletFileEntry(
-			externalReferenceCode, groupId, userId, null, 0,
-			BlogsConstants.SERVICE_NAME, folder.getFolderId(), inputStream,
+			externalReferenceCode, groupId, userId, BlogsEntry.class.getName(),
+			entryId, BlogsConstants.SERVICE_NAME, folder.getFolderId(),
+			inputStream,
 			_getUniqueFileName(groupId, fileName, folder.getFolderId()),
 			mimeType, true);
 	}
@@ -221,18 +224,6 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 			userId, title, StringPool.BLANK, StringPool.BLANK, content,
 			displayDate, true, true, new String[0], StringPool.BLANK, null,
 			null, serviceContext);
-	}
-
-	@Override
-	public BlogsEntry addEntry(
-			long userId, String title, String content,
-			ServiceContext serviceContext)
-		throws PortalException {
-
-		return blogsEntryLocalService.addEntry(
-			userId, title, StringPool.BLANK, StringPool.BLANK, content,
-			new Date(), true, true, new String[0], StringPool.BLANK, null, null,
-			serviceContext);
 	}
 
 	@Indexable(type = IndexableType.REINDEX)
@@ -516,8 +507,8 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 
 		FileEntry originalFileEntry =
 			_portletFileRepository.addPortletFileEntry(
-				groupId, userId, null, 0, BlogsConstants.SERVICE_NAME,
-				folder.getFolderId(), imageBytes,
+				groupId, userId, BlogsEntry.class.getName(), entryId,
+				BlogsConstants.SERVICE_NAME, folder.getFolderId(), imageBytes,
 				_getUniqueFileName(
 					groupId, imageSelector.getImageTitle(),
 					folder.getFolderId()),
@@ -685,6 +676,8 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 				smallImageFileEntryId);
 		}
 
+		_releaseAttachmentFileEntries(entry);
+
 		// Comment
 
 		_deleteDiscussion(entry);
@@ -812,50 +805,6 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 	}
 
 	@Override
-	public int getCompanyEntriesCount(
-		long companyId, Date displayDate,
-		QueryDefinition<BlogsEntry> queryDefinition) {
-
-		if (queryDefinition.isExcludeStatus()) {
-			return blogsEntryPersistence.countByC_LtD_NotS(
-				companyId, displayDate, queryDefinition.getStatus());
-		}
-
-		return blogsEntryPersistence.countByC_LtD_S(
-			companyId, displayDate, queryDefinition.getStatus());
-	}
-
-	@Override
-	public BlogsEntry[] getEntriesPrevAndNext(long entryId)
-		throws PortalException {
-
-		BlogsEntry entry = blogsEntryPersistence.findByPrimaryKey(entryId);
-
-		BlogsEntry[] entries = ListUtil.getPreviousAndNext(
-			blogsEntryPersistence.findByG_D_S(
-				entry.getGroupId(), entry.getDisplayDate(),
-				WorkflowConstants.STATUS_APPROVED, QueryUtil.ALL_POS,
-				QueryUtil.ALL_POS, EntryIdComparator.getInstance(true)),
-			entry::equals, BlogsEntry[]::new);
-
-		if (entries[0] == null) {
-			entries[0] = blogsEntryPersistence.fetchByG_LtD_S_First(
-				entry.getGroupId(), entry.getDisplayDate(),
-				WorkflowConstants.STATUS_APPROVED,
-				EntryDisplayDateComparator.getInstance(false));
-		}
-
-		if (entries[2] == null) {
-			entries[2] = blogsEntryPersistence.fetchByG_GtD_S_First(
-				entry.getGroupId(), entry.getDisplayDate(),
-				WorkflowConstants.STATUS_APPROVED,
-				EntryDisplayDateComparator.getInstance(true));
-		}
-
-		return entries;
-	}
-
-	@Override
 	public BlogsEntry getEntry(long entryId) throws PortalException {
 		return blogsEntryPersistence.findByPrimaryKey(entryId);
 	}
@@ -939,24 +888,6 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 
 		return blogsEntryPersistence.countByG_S(
 			groupId, queryDefinition.getStatus());
-	}
-
-	@Override
-	public List<BlogsEntry> getGroupUserEntries(
-		long groupId, long userId, Date displayDate,
-		QueryDefinition<BlogsEntry> queryDefinition) {
-
-		if (queryDefinition.isExcludeStatus()) {
-			return blogsEntryPersistence.findByG_U_NotS(
-				groupId, userId, queryDefinition.getStatus(),
-				queryDefinition.getStart(), queryDefinition.getEnd(),
-				queryDefinition.getOrderByComparator());
-		}
-
-		return blogsEntryPersistence.findByG_U_S(
-			groupId, userId, queryDefinition.getStatus(),
-			queryDefinition.getStart(), queryDefinition.getEnd(),
-			queryDefinition.getOrderByComparator());
 	}
 
 	@Override
@@ -1167,26 +1098,6 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 			smallImageImageSelector, serviceContext);
 	}
 
-	@Override
-	public BlogsEntry updateEntry(
-			long userId, long entryId, String title, String subtitle,
-			String description, String content, int displayDateMonth,
-			int displayDateDay, int displayDateYear, int displayDateHour,
-			int displayDateMinute, boolean allowPingbacks,
-			boolean allowTrackbacks, String[] trackbacks,
-			String coverImageCaption, ImageSelector coverImageImageSelector,
-			ImageSelector smallImageImageSelector,
-			ServiceContext serviceContext)
-		throws PortalException {
-
-		return blogsEntryLocalService.updateEntry(
-			userId, entryId, title, subtitle, _getURLTitle(entryId),
-			description, content, displayDateMonth, displayDateDay,
-			displayDateYear, displayDateHour, displayDateMinute, allowPingbacks,
-			allowTrackbacks, trackbacks, coverImageCaption,
-			coverImageImageSelector, smallImageImageSelector, serviceContext);
-	}
-
 	@Indexable(type = IndexableType.REINDEX)
 	@Override
 	public BlogsEntry updateEntry(
@@ -1390,28 +1301,6 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 			displayDate, allowPingbacks, allowTrackbacks, trackbacks,
 			coverImageCaption, coverImageImageSelector, smallImageImageSelector,
 			serviceContext);
-	}
-
-	@Override
-	public void updateEntryResources(
-			BlogsEntry entry, ModelPermissions modelPermissions)
-		throws PortalException {
-
-		_resourceLocalService.updateResources(
-			entry.getCompanyId(), entry.getGroupId(),
-			BlogsEntry.class.getName(), entry.getEntryId(), modelPermissions);
-	}
-
-	@Override
-	public void updateEntryResources(
-			BlogsEntry entry, String[] groupPermissions,
-			String[] guestPermissions)
-		throws PortalException {
-
-		_resourceLocalService.updateResources(
-			entry.getCompanyId(), entry.getGroupId(),
-			BlogsEntry.class.getName(), entry.getEntryId(), groupPermissions,
-			guestPermissions);
 	}
 
 	@Indexable(type = IndexableType.REINDEX)
@@ -2318,6 +2207,39 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 		blogsEntryPersistence.update(entry);
 	}
 
+	private void _releaseAttachmentFileEntries(BlogsEntry entry)
+		throws PortalException {
+
+		ActionableDynamicQuery actionableDynamicQuery =
+			_dlFileEntryLocalService.getActionableDynamicQuery();
+
+		actionableDynamicQuery.setAddCriteriaMethod(
+			dynamicQuery -> {
+				Property classNameIdProperty = PropertyFactoryUtil.forName(
+					"classNameId");
+
+				dynamicQuery.add(
+					classNameIdProperty.eq(
+						_classNameLocalService.getClassNameId(
+							BlogsEntry.class)));
+
+				Property classPKProperty = PropertyFactoryUtil.forName(
+					"classPK");
+
+				dynamicQuery.add(classPKProperty.eq(entry.getEntryId()));
+			});
+		actionableDynamicQuery.setGroupId(entry.getGroupId());
+		actionableDynamicQuery.setPerformActionMethod(
+			(DLFileEntry dlFileEntry) -> {
+				dlFileEntry.setClassNameId(0);
+				dlFileEntry.setClassPK(0);
+
+				_dlFileEntryLocalService.updateDLFileEntry(dlFileEntry);
+			});
+
+		actionableDynamicQuery.performActions();
+	}
+
 	private String _sanitizeUrlTitle(String urlTitle) {
 		while (urlTitle.startsWith(StringPool.SLASH)) {
 			urlTitle = urlTitle.substring(1);
@@ -2516,6 +2438,9 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 	private ConfigurationProvider _configurationProvider;
 
 	@Reference
+	private DLFileEntryLocalService _dlFileEntryLocalService;
+
+	@Reference
 	private ExpandoRowLocalService _expandoRowLocalService;
 
 	@Reference
@@ -2541,9 +2466,6 @@ public class BlogsEntryLocalServiceImpl extends BlogsEntryLocalServiceBaseImpl {
 
 	@Reference
 	private JSONFactory _jsonFactory;
-
-	@Reference
-	private LayoutLocalService _layoutLocalService;
 
 	@Reference
 	private Localization _localization;

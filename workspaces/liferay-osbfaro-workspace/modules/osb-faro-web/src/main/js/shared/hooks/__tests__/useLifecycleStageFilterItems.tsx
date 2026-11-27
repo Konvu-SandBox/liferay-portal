@@ -1,8 +1,7 @@
 import * as API from 'shared/api';
+import {LifecycleStages} from 'contacts/pages/account/utils/constants';
 import {renderHook, waitFor} from '@testing-library/react';
 import {useLifecycleStageFilterItems} from 'shared/hooks/useLifecycleStageFilterItems';
-
-jest.unmock('react-dom');
 
 jest.mock('shared/api', () => ({
 	accounts: {
@@ -25,7 +24,7 @@ describe('useLifecycleStageFilterItems', () => {
 				externalReferenceCode: 'erc-stage-1001',
 				id: '1001',
 				stageName: 'Prospect',
-				stageType: 'AWARE',
+				stageType: LifecycleStages.AWARE,
 			},
 		},
 		{
@@ -33,7 +32,7 @@ describe('useLifecycleStageFilterItems', () => {
 			stage: {
 				externalReferenceCode: 'erc-stage-1001',
 				id: '1001',
-				stageType: 'AWARE',
+				stageType: LifecycleStages.AWARE,
 			},
 		},
 		{

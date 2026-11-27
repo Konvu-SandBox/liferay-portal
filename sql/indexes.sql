@@ -318,6 +318,7 @@ create unique index IX_982329B on RegionLocalization (regionId, languageId[$COLU
 create unique index IX_8BD6BCA7 on Release_ (servletContextName[$COLUMN_LENGTH:75$]);
 
 create index IX_D4C6FBCB on RememberMeToken (expirationDate);
+create index IX_291F58D4 on RememberMeToken (userId);
 
 create unique index IX_D09B1261 on Repository (groupId, externalReferenceCode[$COLUMN_LENGTH:75$], ctCollectionId);
 create unique index IX_CFC212C8 on Repository (groupId, portletId[$COLUMN_LENGTH:200$], name[$COLUMN_LENGTH:200$], ctCollectionId);
@@ -359,12 +360,10 @@ create index IX_1271F25F on SocialActivity (mirrorActivityId);
 create index IX_121CA3CB on SocialActivity (receiverUserId);
 create index IX_3504B8BC on SocialActivity (userId);
 
-create index IX_8F6408F0 on SocialActivityAchievement (groupId, name[$COLUMN_LENGTH:75$]);
-create unique index IX_5ED94F08 on SocialActivityAchievement (groupId, userId, name[$COLUMN_LENGTH:75$], ctCollectionId);
+create unique index IX_6308B388 on SocialActivityAchievement (groupId, name[$COLUMN_LENGTH:75$], userId, ctCollectionId);
 
 create index IX_A4B9A23B on SocialActivityCounter (classNameId, classPK);
 create unique index IX_8F6B63C5 on SocialActivityCounter (groupId, classNameId, classPK, name[$COLUMN_LENGTH:75$], ownerType, endPeriod, ctCollectionId);
-create unique index IX_D520F00C on SocialActivityCounter (groupId, classNameId, classPK, name[$COLUMN_LENGTH:75$], ownerType, startPeriod, ctCollectionId);
 
 create index IX_B15863FA on SocialActivityLimit (classNameId, classPK);
 create unique index IX_4A636E75 on SocialActivityLimit (groupId, userId, classNameId, classPK, activityType, activityCounterName[$COLUMN_LENGTH:75$], ctCollectionId);

@@ -196,6 +196,12 @@ components:
                     format: int64
                     readOnly: true
                     type: integer
+                id:
+                    description:
+                        The ID of the uploaded file. Pass it as the import process's importPreviewId to import this file.
+                    format: int64
+                    readOnly: true
+                    type: integer
                 portletDataHandlers:
                     items:
                         $ref: "#/components/schemas/PortletDataHandler"
@@ -268,6 +274,11 @@ components:
                     description:
                         A flag that indicates whether the file's deletions are applied.
                     type: boolean
+                importPreviewId:
+                    description:
+                        The ID of the import preview whose uploaded file is imported. Defaults to the user's last uploaded file.
+                    format: int64
+                    type: integer
                 name:
                     description:
                         The import process's name. Defaults to the name of the uploaded file.
@@ -643,8 +654,39 @@ components:
                 ratings:
                     default: false
                     type: boolean
+                remoteConnection:
+                    $ref: "#/components/schemas/RemoteConnection"
+                    description:
+                        The connection to the remote live site, accepted only for a site staged remotely. Defaults to the site's remote staging settings.
             required:
                 -   name
+            type: object
+        RemoteConnection:
+            description:
+                Represents the connection to the remote live site of a site staged remotely. Each property left out takes the value of the site's remote staging settings.
+            properties:
+                address:
+                    description:
+                        The remote live server's host name or IP address.
+                    type: string
+                pathContext:
+                    description:
+                        The remote live portal's path context.
+                    type: string
+                port:
+                    description:
+                        The remote live server's port.
+                    format: int32
+                    type: integer
+                secureConnection:
+                    description:
+                        A flag that indicates whether the connection to the remote live server is secure.
+                    type: boolean
+                siteId:
+                    description:
+                        The remote live site's ID.
+                    format: int64
+                    type: integer
             type: object
         ReportEntry:
             description:
@@ -887,7 +929,7 @@ components:
             type: object
 info:
     description:
-        "Exports, imports, and publishes the content of the instance, a site, an asset library, or one of their portlets, and syncs a site template to its sites. Get the preview first, then send its portlet data handlers back in the process request with the controls you want. Only the handlers and controls in the request are processed. A Java client JAR is available for use with the group ID 'com.liferay', artifact ID 'com.liferay.exportimport.rest.client', and version '1.0.13'."
+        "Exports, imports, and publishes the content of the instance, a site, an asset library, or one of their portlets, and syncs a site template to its sites. Get the preview first, then send its portlet data handlers back in the process request with the controls you want. Only the handlers and controls in the request are processed. A Java client JAR is available for use with the group ID 'com.liferay', artifact ID 'com.liferay.exportimport.rest.client', and version '1.0.14'."
     license:
         name: Apache 2.0
         url: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -1056,7 +1098,7 @@ paths:
     "/asset-libraries/{assetLibraryExternalReferenceCode}/import-preview":
         post:
             description:
-                Uploads a file to import into the specified asset library and retrieves its portlet data handlers and counts. The import process of the same scope imports the user's last uploaded file.
+                Uploads a file to import into the specified asset library and retrieves its portlet data handlers and counts. Pass the returned ID as the import process's importPreviewId to import this file.
             operationId: postAssetLibraryImportPreview
             parameters:
                 -   in: path
@@ -1159,7 +1201,7 @@ paths:
             tags: ["ImportProcess"]
         post:
             description:
-                Imports the user's last uploaded file into the specified asset library, or into one of its portlets. Returns a 404 when there is no uploaded file.
+                Imports the uploaded file with the importPreviewId, or else the user's last uploaded file, into the specified asset library, or into one of its portlets. Returns a 404 when there is no uploaded file.
             operationId: postAssetLibraryImportProcess
             parameters:
                 -   in: path
@@ -1530,7 +1572,7 @@ paths:
     "/import-preview":
         post:
             description:
-                Uploads a file to import into the instance and retrieves its portlet data handlers, counts, and sites. The import process of the same scope imports the user's last uploaded file.
+                Uploads a file to import into the instance and retrieves its portlet data handlers, counts, and sites. Pass the returned ID as the import process's importPreviewId to import this file.
             operationId: postImportPreview
             parameters:
                 -   in: query
@@ -1623,7 +1665,7 @@ paths:
             tags: ["ImportProcess"]
         post:
             description:
-                Imports the user's last uploaded file into the instance, or into one of its portlets. The sites and asset libraries in the request are imported in full, unless a portlet ID is given. Returns a 404 when there is no uploaded file.
+                Imports the uploaded file with the importPreviewId, or else the user's last uploaded file, into the instance, or into one of its portlets. The sites and asset libraries in the request are imported in full, unless a portlet ID is given. Returns a 404 when there is no uploaded file.
             operationId: postImportProcess
             parameters:
                 -   in: query
@@ -2196,7 +2238,7 @@ paths:
     "/sites/{siteExternalReferenceCode}/import-preview":
         post:
             description:
-                Uploads a file to import into the specified site and retrieves its portlet data handlers and counts. The import process of the same scope imports the user's last uploaded file.
+                Uploads a file to import into the specified site and retrieves its portlet data handlers and counts. Pass the returned ID as the import process's importPreviewId to import this file.
             operationId: postSiteImportPreview
             parameters:
                 -   in: path
@@ -2311,7 +2353,7 @@ paths:
             tags: ["ImportProcess"]
         post:
             description:
-                Imports the user's last uploaded file into the specified site, or into one of its portlets. Returns a 404 when there is no uploaded file.
+                Imports the uploaded file with the importPreviewId, or else the user's last uploaded file, into the specified site, or into one of its portlets. Returns a 404 when there is no uploaded file.
             operationId: postSiteImportProcess
             parameters:
                 -   in: path
