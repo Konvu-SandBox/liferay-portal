@@ -7,6 +7,7 @@ package com.liferay.fragment.internal.struts.test;
 
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
 import com.liferay.fragment.model.FragmentCollection;
+import com.liferay.fragment.model.FragmentEntry;
 import com.liferay.fragment.service.FragmentCollectionLocalService;
 import com.liferay.fragment.service.FragmentCompositionService;
 import com.liferay.fragment.service.FragmentEntryLocalService;
@@ -36,7 +37,6 @@ import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.kernel.zip.ZipWriter;
-import com.liferay.portal.kernel.zip.ZipWriterFactory;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.upload.test.util.UploadTestUtil;
@@ -139,10 +139,12 @@ public class ImportFragmentEntriesStrutsActionTest {
 
 		FragmentCollection fragmentCollection = fragmentCollections.get(0);
 
+		List<FragmentEntry> fragmentEntries =
+			_fragmentEntryLocalService.getFragmentEntries(
+				fragmentCollection.getFragmentCollectionId());
+
 		Assert.assertEquals(
-			5,
-			_fragmentEntryLocalService.getFragmentEntriesCount(
-				fragmentCollection.getFragmentCollectionId()));
+			fragmentEntries.toString(), 5, fragmentEntries.size());
 
 		Assert.assertEquals(
 			1,
@@ -235,7 +237,7 @@ public class ImportFragmentEntriesStrutsActionTest {
 		Enumeration<URL> enumeration = _bundle.findEntries(
 			_RESOURCES_PATH, "*", true);
 
-		ZipWriter zipWriter = _zipWriterFactory.getZipWriter();
+		ZipWriter zipWriter = new ZipWriter();
 
 		while (enumeration.hasMoreElements()) {
 			URL url = enumeration.nextElement();
@@ -331,8 +333,5 @@ public class ImportFragmentEntriesStrutsActionTest {
 
 	@Inject
 	private UserLocalService _userLocalService;
-
-	@Inject
-	private ZipWriterFactory _zipWriterFactory;
 
 }

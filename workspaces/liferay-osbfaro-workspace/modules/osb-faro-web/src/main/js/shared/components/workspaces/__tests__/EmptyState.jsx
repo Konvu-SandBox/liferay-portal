@@ -5,8 +5,6 @@ import {BrowserRouter} from 'react-router-dom';
 import {cleanup, fireEvent, render, screen} from '@testing-library/react';
 import {Provider} from 'react-redux';
 
-jest.unmock('react-dom');
-
 describe('Workspace Empty State', () => {
 	afterEach(cleanup);
 
@@ -33,11 +31,11 @@ describe('Workspace Empty State', () => {
 
 		expect(screen.queryByRole('dialog')).toBeNull();
 
-		fireEvent.click(screen.getByText('Contact Sales'));
+		fireEvent.click(screen.getByText(/^contact sales$/i));
 
 		expect(await screen.findByRole('dialog')).toBeInTheDocument();
 		expect(
-			await screen.findByRole('heading', {name: 'Contact Sales'})
+			await screen.findByRole('heading', {name: /^contact sales$/i})
 		).toBeInTheDocument();
 	});
 });

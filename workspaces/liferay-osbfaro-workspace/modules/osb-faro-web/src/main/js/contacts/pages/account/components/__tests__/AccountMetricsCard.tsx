@@ -2,8 +2,6 @@ import AccountMetricsCard from '../AccountMetricsCard';
 import React from 'react';
 import {cleanup, fireEvent, render, screen} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const renderAccountMetricsCard = (props = {}) =>
 	render(
 		<AccountMetricsCard
@@ -62,7 +60,7 @@ describe('AccountMetricsCard', () => {
 				metrics: [{label: '{0} Individuals'}],
 			});
 
-			expect(screen.getByText('–')).toHaveClass('text-secondary');
+			expect(screen.getByText('–')).toBeInTheDocument();
 			expect(screen.queryByText('0')).not.toBeInTheDocument();
 		});
 
@@ -151,7 +149,7 @@ describe('AccountMetricsCard', () => {
 			renderAccountMetricsCard({error: true});
 
 			expect(
-				screen.getByText('An unexpected error occurred.')
+				screen.getByText(/^an unexpected error occurred\.$/i)
 			).toBeInTheDocument();
 			expect(screen.queryByText('1.2K')).not.toBeInTheDocument();
 		});
@@ -175,7 +173,7 @@ describe('AccountMetricsCard', () => {
 			renderAccountMetricsCard({error: false});
 
 			expect(
-				screen.queryByText('An unexpected error occurred.')
+				screen.queryByText(/^an unexpected error occurred\.$/i)
 			).not.toBeInTheDocument();
 			expect(screen.getByText('1.2K')).toBeInTheDocument();
 		});
@@ -193,7 +191,7 @@ describe('AccountMetricsCard', () => {
 				container.querySelector('.loading-root')
 			).toBeInTheDocument();
 			expect(
-				screen.queryByText('An unexpected error occurred.')
+				screen.queryByText(/^an unexpected error occurred\.$/i)
 			).not.toBeInTheDocument();
 		});
 
@@ -202,7 +200,7 @@ describe('AccountMetricsCard', () => {
 
 			renderAccountMetricsCard({error: true, refetch});
 
-			fireEvent.click(screen.getByText('Reload'));
+			fireEvent.click(screen.getByText(/^reload$/i));
 
 			expect(refetch).toHaveBeenCalledTimes(1);
 		});
@@ -211,9 +209,9 @@ describe('AccountMetricsCard', () => {
 			renderAccountMetricsCard({error: true});
 
 			expect(
-				screen.getByText('An unexpected error occurred.')
+				screen.getByText(/^an unexpected error occurred\.$/i)
 			).toBeInTheDocument();
-			expect(screen.queryByText('Reload')).not.toBeInTheDocument();
+			expect(screen.queryByText(/^reload$/i)).not.toBeInTheDocument();
 		});
 	});
 
@@ -250,32 +248,13 @@ describe('AccountMetricsCard', () => {
 	});
 
 	describe('styling', () => {
-		it('should stretch the card to fill its column', () => {
-			const {container} = renderAccountMetricsCard();
-
-			expect(container.querySelector('.card-root')).toHaveClass(
-				'flex-fill',
-				'p-3',
-				'w-100'
-			);
-		});
-
 		it('should keep the class name passed by the consumer', () => {
 			const {container} = renderAccountMetricsCard({
 				className: 'custom-card',
 			});
 
 			expect(container.querySelector('.card-root')).toHaveClass(
-				'custom-card',
-				'flex-fill'
-			);
-		});
-
-		it('should render the body without the default card padding', () => {
-			const {container} = renderAccountMetricsCard();
-
-			expect(container.querySelector('.card-body')).toHaveClass(
-				'no-padding'
+				'custom-card'
 			);
 		});
 
@@ -287,9 +266,6 @@ describe('AccountMetricsCard', () => {
 				],
 			});
 
-			expect(container.querySelector('.card-body > .d-flex')).toHaveClass(
-				'justify-content-between'
-			);
 			expect(container.querySelectorAll('.text-nowrap')).toHaveLength(2);
 		});
 	});

@@ -208,8 +208,10 @@ test(
 			}).toPass();
 
 			await clickAndExpectToBeHidden({
-				target: page.getByText('Welcome to Analytics Cloud'),
-				trigger: page.locator('.onboarding-modal-root button.close'),
+				target: page.getByText('Welcome to Liferay Data Platform'),
+				trigger: page
+					.getByRole('dialog')
+					.getByRole('button', {name: 'Close'}),
 			});
 		};
 
@@ -230,7 +232,7 @@ test(
 			await goToDataSources();
 
 			await expect(
-				page.getByText('No Data Sources Connected')
+				page.getByText('No Data Sources Are Connected')
 			).toBeVisible();
 
 			await expect(

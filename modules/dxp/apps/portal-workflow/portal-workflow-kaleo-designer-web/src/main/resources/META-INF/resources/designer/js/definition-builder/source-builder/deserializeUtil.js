@@ -122,10 +122,16 @@ DeserializeUtil.prototype = {
 						[]
 					);
 
+					data.modelName = node['model-name'] || '';
+
+					data.modelProvider = node['model-provider'] || '';
+
 					data.outputVariables = parseJSON(
 						node['output-variables'],
 						[]
 					);
+
+					data.parameters = parseJSON(node.parameters, []);
 
 					data.prompt = node.prompt || '';
 
@@ -141,6 +147,20 @@ DeserializeUtil.prototype = {
 						node['agent-definition-external-reference-code'] || '';
 
 					data.timeout = node.timeout || '';
+				}
+
+				if (type === 'ask-a-human') {
+					data.inputVariables = parseJSON(
+						node['input-variables'],
+						[]
+					);
+
+					data.outputVariables = parseJSON(
+						node['output-variables'],
+						[]
+					);
+
+					data.question = parseJSON(node.question);
 				}
 
 				if (type === 'condition') {
@@ -169,7 +189,17 @@ DeserializeUtil.prototype = {
 				}
 
 				if (type === 'service') {
+					data.inputVariables = parseJSON(
+						node['input-variables'],
+						[]
+					);
+
 					data.javaDelegate = node['java-delegate'] || '';
+
+					data.outputVariables = parseJSON(
+						node['output-variables'],
+						[]
+					);
 				}
 
 				if (type === 'task') {
