@@ -10,8 +10,6 @@ import {Provider} from 'react-redux';
 import {Routes} from 'shared/util/router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const mockGroupId = '23';
 
 const Wrapper = ({children, mocks = []}) => (
@@ -84,18 +82,18 @@ describe('BlockListCard', () => {
 		await waitForLoadingToBeRemoved(container);
 
 		expect(
-			screen.getByText('There are no events blocked.')
+			screen.getByText(/^there are no events blocked\.$/i)
 		).toBeInTheDocument();
 
 		expect(
 			screen.getByText(
-				"To block events, select one from the events' table."
+				/^to block events, select one from the events' table\.$/i
 			)
 		).toBeInTheDocument();
 
 		expect(
 			screen.getByText(
-				'Access our documentation to learn how to manage custom events.'
+				/^access our documentation to learn how to manage custom events\.$/i
 			)
 		).toBeInTheDocument();
 	});

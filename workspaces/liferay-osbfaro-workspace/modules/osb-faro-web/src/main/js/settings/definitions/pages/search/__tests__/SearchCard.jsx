@@ -16,8 +16,6 @@ import {Provider} from 'react-redux';
 import {useCurrentUser} from 'shared/hooks/useCurrentUser';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/hooks/useCurrentUser', () => ({
 	useCurrentUser: jest.fn()
 }));
@@ -140,10 +138,10 @@ describe('SearchCard', () => {
 
 		expect(screen.queryByRole('dialog')).toBeNull();
 
-		fireEvent.click(screen.getByText('Cancel'));
+		fireEvent.click(screen.getByText(/^cancel$/i));
 
 		expect(
-			await screen.findByText('Exit without saving?')
+			await screen.findByText(/^exit without saving\?$/i)
 		).toBeInTheDocument();
 	});
 });

@@ -66,7 +66,6 @@ import com.liferay.object.constants.ObjectFieldSettingConstants;
 import com.liferay.object.constants.ObjectFieldValidationConstants;
 import com.liferay.object.constants.ObjectFilterConstants;
 import com.liferay.object.constants.ObjectRelationshipConstants;
-import com.liferay.object.definition.tree.util.ObjectDefinitionTreeUtil;
 import com.liferay.object.exception.NoSuchObjectEntryException;
 import com.liferay.object.exception.NoSuchObjectEntryFolderException;
 import com.liferay.object.exception.ObjectDefinitionAccountEntryRestrictedException;
@@ -468,8 +467,6 @@ public class DefaultObjectEntryManagerImplTest
 	@Before
 	@Override
 	public void setUp() throws Exception {
-		ObjectDefinitionTreeUtil.invalidate();
-
 		super.setUp();
 
 		_depotEntry = _addDepotEntry();
@@ -1132,8 +1129,6 @@ public class DefaultObjectEntryManagerImplTest
 			objectDefinitionLocalService,
 			new String[] {"C_A", "C_AA", "C_AB", "C_AAA", "C_AAB"},
 			_objectEntryLocalService, _objectRelationshipLocalService);
-
-		ObjectDefinitionTreeUtil.invalidate();
 	}
 
 	@Test
@@ -1711,13 +1706,13 @@ public class DefaultObjectEntryManagerImplTest
 						properties = HashMapBuilder.<String, Object>put(
 							"attachmentObjectFieldName",
 							HashMapBuilder.<String, Object>put(
-								"id", fileEntryId
+								"externalReferenceCode",
+								dlFileEntryExternalReferenceCode
 							).build()
 						).build();
 					}
 				},
 				String.valueOf(group.getGroupId())));
-
 		Assert.assertNotNull(
 			_defaultObjectEntryManager.addObjectEntry(
 				_simpleDTOConverterContext, objectDefinition,
@@ -1726,8 +1721,7 @@ public class DefaultObjectEntryManagerImplTest
 						properties = HashMapBuilder.<String, Object>put(
 							"attachmentObjectFieldName",
 							HashMapBuilder.<String, Object>put(
-								"externalReferenceCode",
-								dlFileEntryExternalReferenceCode
+								"id", fileEntryId
 							).build()
 						).build();
 					}
@@ -1755,8 +1749,7 @@ public class DefaultObjectEntryManagerImplTest
 						() -> {
 							com.liferay.portal.kernel.repository.model.FileEntry
 								fileEntry = TempFileEntryUtil.addTempFileEntry(
-									group.getGroupId(),
-									TestPropsValues.getUserId(),
+									group.getGroupId(), _user.getUserId(),
 									objectDefinition.getPortletId(),
 									TempFileEntryUtil.getTempFileName(fileName),
 									FileUtil.createTempFile(
@@ -1790,13 +1783,13 @@ public class DefaultObjectEntryManagerImplTest
 						properties = HashMapBuilder.<String, Object>put(
 							"attachmentObjectFieldName",
 							HashMapBuilder.<String, Object>put(
-								"id", fileEntryId
+								"externalReferenceCode",
+								dlFileEntryExternalReferenceCode
 							).build()
 						).build();
 					}
 				},
 				String.valueOf(group.getGroupId())));
-
 		Assert.assertThrows(
 			PrincipalException.class,
 			() -> _defaultObjectEntryManager.addObjectEntry(
@@ -1806,9 +1799,33 @@ public class DefaultObjectEntryManagerImplTest
 						properties = HashMapBuilder.<String, Object>put(
 							"attachmentObjectFieldName",
 							HashMapBuilder.<String, Object>put(
-								"externalReferenceCode",
-								dlFileEntryExternalReferenceCode
+								"id", fileEntryId
 							).build()
+						).build();
+					}
+				},
+				String.valueOf(group.getGroupId())));
+		Assert.assertThrows(
+			PrincipalException.class,
+			() -> _defaultObjectEntryManager.addObjectEntry(
+				_simpleDTOConverterContext, objectDefinition,
+				new ObjectEntry() {
+					{
+						properties = HashMapBuilder.<String, Object>put(
+							"attachmentObjectFieldName",
+							String.valueOf(fileEntryId)
+						).build();
+					}
+				},
+				String.valueOf(group.getGroupId())));
+		Assert.assertThrows(
+			PrincipalException.class,
+			() -> _defaultObjectEntryManager.addObjectEntry(
+				_simpleDTOConverterContext, objectDefinition,
+				new ObjectEntry() {
+					{
+						properties = HashMapBuilder.<String, Object>put(
+							"attachmentObjectFieldName", fileEntryId
 						).build();
 					}
 				},
@@ -4737,6 +4754,49 @@ public class DefaultObjectEntryManagerImplTest
 			_objectDefinition3, objectEntry.getId());
 	}
 
+	@FeatureFlag("LPD-72278")
+	@Test
+	public void testDeleteObjectEntryWithNonheadObjectEntries()
+		throws Exception {
+
+		_enableObjectEntryDraft(_objectDefinition6);
+
+		ObjectEntry objectEntry = _addObjectEntry(
+			_objectDefinition6,
+			ObjectEntryFolderConstants.PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+			String.valueOf(_depotEntry.getGroupId()), 1);
+
+		com.liferay.object.model.ObjectEntry draftServiceBuilderObjectEntry =
+			_objectEntryLocalService.addDraftObjectEntry(
+				TestPropsValues.getUserId(), objectEntry.getId(),
+				RandomTestUtil.randomInt(), Collections.emptyMap(),
+				ServiceContextTestUtil.getServiceContext());
+
+		_defaultObjectEntryManager.deleteObjectEntry(
+			_objectDefinition6,
+			draftServiceBuilderObjectEntry.getObjectEntryId());
+
+		Assert.assertNull(
+			_objectEntryLocalService.fetchObjectEntry(
+				draftServiceBuilderObjectEntry.getObjectEntryId()));
+
+		com.liferay.object.model.ObjectEntry
+			latestApprovedServiceBuilderObjectEntry =
+				_objectEntryLocalService.addLatestApprovedObjectEntry(
+					null, _depotEntry.getGroupId(), TestPropsValues.getUserId(),
+					objectEntry.getId(), _objectDefinition6,
+					ObjectEntryFolderConstants.
+						PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+					_objectDefinition6.getDefaultLanguageId(),
+					RandomTestUtil.randomInt(), Collections.emptyMap());
+
+		AssertUtils.assertFailure(
+			NoSuchObjectEntryException.class, null,
+			() -> _defaultObjectEntryManager.deleteObjectEntry(
+				_objectDefinition6,
+				latestApprovedServiceBuilderObjectEntry.getObjectEntryId()));
+	}
+
 	@Test
 	public void testDeleteObjectEntryWithRelatedObjectEntries()
 		throws Exception {
@@ -6764,6 +6824,40 @@ public class DefaultObjectEntryManagerImplTest
 							1, String.valueOf(parentObjectEntry2.getId()))))));
 	}
 
+	@FeatureFlag("LPD-72278")
+	@Test
+	public void testGetObjectEntriesWithNonheadObjectEntries()
+		throws Exception {
+
+		_objectDefinition1 = _enableObjectEntryVersioning();
+
+		_enableObjectEntryDraft(_objectDefinition1);
+
+		ObjectEntry objectEntry1 = _addObjectEntry(
+			_objectDefinition1, WorkflowConstants.STATUS_APPROVED);
+
+		_objectEntryLocalService.addDraftObjectEntry(
+			TestPropsValues.getUserId(), objectEntry1.getId(),
+			RandomTestUtil.randomInt(), Collections.emptyMap(),
+			ServiceContextTestUtil.getServiceContext());
+
+		ObjectEntry objectEntry2 = _addObjectEntry(
+			_objectDefinition1, WorkflowConstants.STATUS_APPROVED);
+
+		_objectEntryLocalService.addLatestApprovedObjectEntry(
+			null, 0, TestPropsValues.getUserId(), objectEntry2.getId(),
+			_objectDefinition1,
+			ObjectEntryFolderConstants.PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+			_objectDefinition1.getDefaultLanguageId(),
+			RandomTestUtil.randomInt(), Collections.emptyMap());
+
+		assertEquals(
+			_defaultObjectEntryManager.getObjectEntries(
+				companyId, _objectDefinition1, null, null, dtoConverterContext,
+				(String)null, null, null, null),
+			Page.of(ListUtil.fromArray(objectEntry1, objectEntry2), null, 2));
+	}
+
 	@Test
 	public void testGetObjectEntriesWithPreferredLocale() throws Exception {
 		_objectEntryManager.addObjectEntry(
@@ -7248,6 +7342,47 @@ public class DefaultObjectEntryManagerImplTest
 
 		Assert.assertEquals(Long.valueOf(user.getUserId()), creator.getId());
 		Assert.assertEquals(user.getFullName(), creator.getName());
+	}
+
+	@FeatureFlag("LPD-72278")
+	@Test
+	public void testGetObjectEntryWithNonheadObjectEntries() throws Exception {
+		_objectDefinition1 = _enableObjectEntryVersioning();
+
+		_enableObjectEntryDraft(_objectDefinition1);
+
+		ObjectEntry headObjectEntry = _addObjectEntry(
+			_objectDefinition1, WorkflowConstants.STATUS_APPROVED);
+
+		AssertUtils.assertFailure(
+			NoSuchObjectEntryException.class, null,
+			() -> _defaultObjectEntryManager.getObjectEntry(
+				dtoConverterContext, _objectDefinition1,
+				_objectEntryLocalService.addLatestApprovedObjectEntry(
+					null, 0, TestPropsValues.getUserId(),
+					headObjectEntry.getId(), _objectDefinition1,
+					ObjectEntryFolderConstants.
+						PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+					_objectDefinition1.getDefaultLanguageId(),
+					RandomTestUtil.randomInt(), Collections.emptyMap())));
+
+		String textObjectFieldValue = RandomTestUtil.randomString();
+
+		ObjectEntry draftObjectEntry =
+			_defaultObjectEntryManager.getObjectEntry(
+				dtoConverterContext, _objectDefinition1,
+				_objectEntryLocalService.addDraftObjectEntry(
+					TestPropsValues.getUserId(), headObjectEntry.getId(),
+					RandomTestUtil.randomInt(),
+					HashMapBuilder.<String, Serializable>put(
+						"textObjectFieldName", textObjectFieldValue
+					).build(),
+					ServiceContextTestUtil.getServiceContext()));
+
+		Assert.assertEquals(
+			textObjectFieldValue,
+			MapUtil.getString(
+				draftObjectEntry.getProperties(), "textObjectFieldName"));
 	}
 
 	@Test
@@ -10461,6 +10596,174 @@ public class DefaultObjectEntryManagerImplTest
 		_assertObjectEntryVersionUser(adminUser, objectEntry.getId(), user);
 	}
 
+	@FeatureFlag("LPD-72278")
+	@Test
+	public void testUpdateObjectEntryWithDraftObjectEntry() throws Exception {
+		_objectDefinition1 = _enableObjectEntryVersioning();
+
+		_enableObjectEntryDraft(_objectDefinition1);
+
+		ObjectEntry headObjectEntry = _addObjectEntry(
+			_objectDefinition1, WorkflowConstants.STATUS_APPROVED);
+
+		com.liferay.object.model.ObjectEntry serviceBuilderObjectEntry =
+			_objectEntryLocalService.addDraftObjectEntry(
+				TestPropsValues.getUserId(), headObjectEntry.getId(),
+				RandomTestUtil.randomInt(), Collections.emptyMap(),
+				ServiceContextTestUtil.getServiceContext());
+
+		String textObjectFieldValue = RandomTestUtil.randomString();
+
+		ObjectEntry draftObjectEntry =
+			_defaultObjectEntryManager.updateObjectEntry(
+				dtoConverterContext, _objectDefinition1,
+				serviceBuilderObjectEntry.getObjectEntryId(),
+				new ObjectEntry() {
+					{
+						properties = HashMapBuilder.<String, Object>put(
+							"textObjectFieldName", textObjectFieldValue
+						).build();
+					}
+				});
+
+		Assert.assertEquals(
+			textObjectFieldValue,
+			MapUtil.getString(
+				draftObjectEntry.getProperties(), "textObjectFieldName"));
+
+		_assertObjectEntryStatus(
+			WorkflowConstants.STATUS_DRAFT, draftObjectEntry);
+	}
+
+	@Test
+	public void testUpdateObjectEntryWithHierarchy() throws Exception {
+		ObjectDefinition objectDefinitionA = _addObjectDefinition();
+		ObjectDefinition objectDefinitionAA = _addObjectDefinition();
+
+		ObjectRelationship objectRelationshipA_AA = TreeTestUtil.bind(
+			objectDefinitionA.getObjectDefinitionId(),
+			objectDefinitionAA.getObjectDefinitionId(),
+			_objectRelationshipLocalService);
+
+		ObjectDefinition objectDefinitionAB = _addObjectDefinition();
+
+		ObjectRelationship objectRelationshipA_AB = TreeTestUtil.bind(
+			objectDefinitionA.getObjectDefinitionId(),
+			objectDefinitionAB.getObjectDefinitionId(),
+			_objectRelationshipLocalService);
+
+		ObjectDefinition objectDefinitionAAA = _addObjectDefinition();
+
+		ObjectRelationship objectRelationshipAA_AAA = TreeTestUtil.bind(
+			objectDefinitionAA.getObjectDefinitionId(),
+			objectDefinitionAAA.getObjectDefinitionId(),
+			_objectRelationshipLocalService);
+
+		ObjectEntry objectEntryA = _addObjectEntry(
+			objectDefinitionA, Collections.emptyMap());
+
+		ObjectEntry objectEntryAA1 = _addRelatedObjectEntry(
+			objectEntryA, objectRelationshipA_AA);
+		ObjectEntry objectEntryAA2 = _addRelatedObjectEntry(
+			objectEntryA, objectRelationshipA_AA);
+		ObjectEntry objectEntryAB = _addRelatedObjectEntry(
+			objectEntryA, objectRelationshipA_AB);
+
+		ObjectEntry objectEntryAAA1 = _addRelatedObjectEntry(
+			objectEntryAA1, objectRelationshipAA_AAA);
+		ObjectEntry objectEntryAAA2 = _addRelatedObjectEntry(
+			objectEntryAA1, objectRelationshipAA_AAA);
+		ObjectEntry objectEntryAAA3 = _addRelatedObjectEntry(
+			objectEntryAA2, objectRelationshipAA_AAA);
+
+		AssertUtils.assertFailure(
+			ObjectEntryValuesException.ExceedsTextMaxLength.class,
+			"Object entry value exceeds the maximum length of 280 characters " +
+				"for object field \"textObjectFieldName\"",
+			() -> _defaultObjectEntryManager.updateObjectEntry(
+				_simpleDTOConverterContext, objectDefinitionA,
+				objectEntryA.getId(),
+				new ObjectEntry() {
+					{
+						properties = LinkedHashMapBuilder.<String, Object>put(
+							objectRelationshipA_AA.getName(),
+							List.of(
+								HashMapBuilder.<String, Object>put(
+									"externalReferenceCode",
+									objectEntryAA1.getExternalReferenceCode()
+								).put(
+									objectRelationshipAA_AAA.getName(),
+									List.of(
+										HashMapBuilder.<String, Object>put(
+											"externalReferenceCode",
+											objectEntryAAA1.
+												getExternalReferenceCode()
+										).build())
+								).build())
+						).put(
+							objectRelationshipA_AB.getName(),
+							List.of(
+								HashMapBuilder.<String, Object>put(
+									"externalReferenceCode",
+									objectEntryAB.getExternalReferenceCode()
+								).put(
+									"textObjectFieldName",
+									RandomTestUtil.randomString(281)
+								).build())
+						).build();
+					}
+				}));
+
+		Assert.assertNotNull(
+			_objectEntryLocalService.fetchObjectEntry(objectEntryAA2.getId()));
+		Assert.assertNotNull(
+			_objectEntryLocalService.fetchObjectEntry(objectEntryAAA2.getId()));
+
+		_defaultObjectEntryManager.updateObjectEntry(
+			_simpleDTOConverterContext, objectDefinitionA, objectEntryA.getId(),
+			new ObjectEntry() {
+				{
+					properties = LinkedHashMapBuilder.<String, Object>put(
+						objectRelationshipA_AA.getName(),
+						List.of(
+							HashMapBuilder.<String, Object>put(
+								"externalReferenceCode",
+								objectEntryAA1.getExternalReferenceCode()
+							).put(
+								objectRelationshipAA_AAA.getName(),
+								List.of(
+									HashMapBuilder.<String, Object>put(
+										"externalReferenceCode",
+										objectEntryAAA1.
+											getExternalReferenceCode()
+									).build())
+							).build())
+					).build();
+				}
+			});
+
+		Assert.assertNotNull(
+			_objectEntryLocalService.fetchObjectEntry(objectEntryAA1.getId()));
+		Assert.assertNull(
+			_objectEntryLocalService.fetchObjectEntry(objectEntryAA2.getId()));
+		Assert.assertNotNull(
+			_objectEntryLocalService.fetchObjectEntry(objectEntryAAA1.getId()));
+		Assert.assertNull(
+			_objectEntryLocalService.fetchObjectEntry(objectEntryAAA2.getId()));
+		Assert.assertNull(
+			_objectEntryLocalService.fetchObjectEntry(objectEntryAAA3.getId()));
+		Assert.assertNotNull(
+			_objectEntryLocalService.fetchObjectEntry(objectEntryAB.getId()));
+
+		TreeTestUtil.deleteObjectDefinitionHierarchy(
+			objectDefinitionLocalService,
+			new String[] {
+				objectDefinitionA.getName(), objectDefinitionAA.getName(),
+				objectDefinitionAAA.getName(), objectDefinitionAB.getName()
+			},
+			_objectEntryLocalService, _objectRelationshipLocalService);
+	}
+
 	@Test
 	public void testUpdateObjectEntryWithObjectEntryFolder() throws Exception {
 		ObjectEntryFolder objectEntryFolder =
@@ -11270,6 +11573,20 @@ public class DefaultObjectEntryManagerImplTest
 			ObjectDefinitionConstants.SCOPE_COMPANY);
 	}
 
+	private ObjectEntry _addRelatedObjectEntry(
+			ObjectEntry objectEntry, ObjectRelationship objectRelationship)
+		throws Exception {
+
+		return _defaultObjectEntryManager.addRelatedObjectEntry(
+			_simpleDTOConverterContext,
+			new ObjectEntry() {
+				{
+					properties = new HashMap<>();
+				}
+			},
+			objectEntry.getId(), objectRelationship);
+	}
+
 	private void _addResourcePermission(
 			String actionId, ObjectDefinition objectDefinition, Role role)
 		throws Exception {
@@ -11832,6 +12149,12 @@ public class DefaultObjectEntryManagerImplTest
 			deleteAccountEntryOrganizationRel(
 				accountEntry.getAccountEntryId(),
 				organization.getOrganizationId());
+	}
+
+	private void _enableObjectEntryDraft(ObjectDefinition objectDefinition) {
+		objectDefinition.setEnableObjectEntryDraft(true);
+
+		objectDefinitionLocalService.updateObjectDefinition(objectDefinition);
 	}
 
 	private ObjectDefinition _enableObjectEntryVersioning() {
