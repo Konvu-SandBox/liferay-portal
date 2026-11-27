@@ -66,7 +66,6 @@ import com.liferay.object.constants.ObjectFieldSettingConstants;
 import com.liferay.object.constants.ObjectFieldValidationConstants;
 import com.liferay.object.constants.ObjectFilterConstants;
 import com.liferay.object.constants.ObjectRelationshipConstants;
-import com.liferay.object.definition.tree.util.ObjectDefinitionTreeUtil;
 import com.liferay.object.exception.NoSuchObjectEntryException;
 import com.liferay.object.exception.NoSuchObjectEntryFolderException;
 import com.liferay.object.exception.ObjectDefinitionAccountEntryRestrictedException;
@@ -468,8 +467,6 @@ public class DefaultObjectEntryManagerImplTest
 	@Before
 	@Override
 	public void setUp() throws Exception {
-		ObjectDefinitionTreeUtil.invalidate();
-
 		super.setUp();
 
 		_depotEntry = _addDepotEntry();
@@ -1132,8 +1129,6 @@ public class DefaultObjectEntryManagerImplTest
 			objectDefinitionLocalService,
 			new String[] {"C_A", "C_AA", "C_AB", "C_AAA", "C_AAB"},
 			_objectEntryLocalService, _objectRelationshipLocalService);
-
-		ObjectDefinitionTreeUtil.invalidate();
 	}
 
 	@Test
@@ -1711,13 +1706,13 @@ public class DefaultObjectEntryManagerImplTest
 						properties = HashMapBuilder.<String, Object>put(
 							"attachmentObjectFieldName",
 							HashMapBuilder.<String, Object>put(
-								"id", fileEntryId
+								"externalReferenceCode",
+								dlFileEntryExternalReferenceCode
 							).build()
 						).build();
 					}
 				},
 				String.valueOf(group.getGroupId())));
-
 		Assert.assertNotNull(
 			_defaultObjectEntryManager.addObjectEntry(
 				_simpleDTOConverterContext, objectDefinition,
@@ -1726,8 +1721,7 @@ public class DefaultObjectEntryManagerImplTest
 						properties = HashMapBuilder.<String, Object>put(
 							"attachmentObjectFieldName",
 							HashMapBuilder.<String, Object>put(
-								"externalReferenceCode",
-								dlFileEntryExternalReferenceCode
+								"id", fileEntryId
 							).build()
 						).build();
 					}
@@ -1755,8 +1749,7 @@ public class DefaultObjectEntryManagerImplTest
 						() -> {
 							com.liferay.portal.kernel.repository.model.FileEntry
 								fileEntry = TempFileEntryUtil.addTempFileEntry(
-									group.getGroupId(),
-									TestPropsValues.getUserId(),
+									group.getGroupId(), _user.getUserId(),
 									objectDefinition.getPortletId(),
 									TempFileEntryUtil.getTempFileName(fileName),
 									FileUtil.createTempFile(
@@ -1790,13 +1783,13 @@ public class DefaultObjectEntryManagerImplTest
 						properties = HashMapBuilder.<String, Object>put(
 							"attachmentObjectFieldName",
 							HashMapBuilder.<String, Object>put(
-								"id", fileEntryId
+								"externalReferenceCode",
+								dlFileEntryExternalReferenceCode
 							).build()
 						).build();
 					}
 				},
 				String.valueOf(group.getGroupId())));
-
 		Assert.assertThrows(
 			PrincipalException.class,
 			() -> _defaultObjectEntryManager.addObjectEntry(
@@ -1806,9 +1799,33 @@ public class DefaultObjectEntryManagerImplTest
 						properties = HashMapBuilder.<String, Object>put(
 							"attachmentObjectFieldName",
 							HashMapBuilder.<String, Object>put(
-								"externalReferenceCode",
-								dlFileEntryExternalReferenceCode
+								"id", fileEntryId
 							).build()
+						).build();
+					}
+				},
+				String.valueOf(group.getGroupId())));
+		Assert.assertThrows(
+			PrincipalException.class,
+			() -> _defaultObjectEntryManager.addObjectEntry(
+				_simpleDTOConverterContext, objectDefinition,
+				new ObjectEntry() {
+					{
+						properties = HashMapBuilder.<String, Object>put(
+							"attachmentObjectFieldName",
+							String.valueOf(fileEntryId)
+						).build();
+					}
+				},
+				String.valueOf(group.getGroupId())));
+		Assert.assertThrows(
+			PrincipalException.class,
+			() -> _defaultObjectEntryManager.addObjectEntry(
+				_simpleDTOConverterContext, objectDefinition,
+				new ObjectEntry() {
+					{
+						properties = HashMapBuilder.<String, Object>put(
+							"attachmentObjectFieldName", fileEntryId
 						).build();
 					}
 				},

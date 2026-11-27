@@ -913,6 +913,13 @@ public class CPDefinitionLocalServiceImpl
 		CPDefinition sourceCPDefinition =
 			cpDefinitionPersistence.findByPrimaryKey(sourceCPDefinitionId);
 
+		if (sourceCPDefinition.getGroupId() != groupId) {
+			throw new CPDefinitionGroupIdException(
+				StringBundler.concat(
+					"Commerce product definition ", sourceCPDefinitionId,
+					" does not belong to group ", groupId));
+		}
+
 		CProduct sourceCProduct = _cProductPersistence.fetchByPrimaryKey(
 			sourceCPDefinition.getCProductId());
 
@@ -1870,28 +1877,6 @@ public class CPDefinitionLocalServiceImpl
 		throws PortalException {
 
 		return cpDefinitionPersistence.findByC_V(cProductId, version);
-	}
-
-	@Override
-	public List<CPDefinition> getCProductCPDefinitions(
-		long cProductId, int status, int start, int end) {
-
-		return cpDefinitionPersistence.findByC_S(
-			cProductId, status, start, end);
-	}
-
-	@Override
-	public List<CPDefinition> getCProductCPDefinitions(
-		long cProductId, int status, int start, int end,
-		OrderByComparator<CPDefinition> orderByComparator) {
-
-		return cpDefinitionPersistence.findByC_S(
-			cProductId, status, start, end, orderByComparator);
-	}
-
-	@Override
-	public int getCProductCPDefinitionsCount(long cProductId, int status) {
-		return cpDefinitionPersistence.countByC_S(cProductId, status);
 	}
 
 	@Override
