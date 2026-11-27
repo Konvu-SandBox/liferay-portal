@@ -12,8 +12,6 @@ import {Segment} from 'shared/util/records';
 import {SegmentCategories, SegmentStates} from 'shared/util/constants';
 import {MemoryRouter} from 'react-router';
 
-jest.unmock('react-dom');
-
 type FakeFilter = {
 	id: string;
 	preloadedData?: {
@@ -90,7 +88,7 @@ describe('AccountProfile', () => {
 		renderAccountProfile();
 
 		expect(screen.getByRole('heading', {name: 'Seattle0'})).toBeTruthy();
-		expect(screen.getByText('Account Batch Segment')).toBeTruthy();
+		expect(screen.getByText(/^account batch segment$/i)).toBeTruthy();
 		expect(screen.getByText('ERC: my-erc')).toBeTruthy();
 	});
 
@@ -99,7 +97,7 @@ describe('AccountProfile', () => {
 
 		expect(
 			screen.getByText(
-				'Segment data is processing, please check back later.'
+				/^segment data is processing, please check back later\.$/i
 			)
 		).toBeTruthy();
 	});
@@ -109,7 +107,7 @@ describe('AccountProfile', () => {
 
 		expect(
 			screen.getByText(
-				'This segment is disabled because some criteria has been affected by removal of a data source. To continue using this segment please update the criteria.'
+				/^this segment is disabled because some criteria has been affected by removal of a data source\. to continue using this segment please update the criteria\.$/i
 			)
 		).toBeTruthy();
 	});
@@ -123,11 +121,11 @@ describe('AccountProfile', () => {
 	it('should link to the segment editor', () => {
 		renderAccountProfile();
 
-		fireEvent.click(screen.getByRole('button', {name: 'Menu'}));
+		fireEvent.click(screen.getByRole('button', {name: /^menu$/i}));
 
 		expect(
 			screen
-				.getByRole('menuitem', {name: 'Edit Segment'})
+				.getByRole('menuitem', {name: /^edit segment$/i})
 				.getAttribute('href')
 		).toMatch(/\/segments\/0\/edit$/);
 	});
@@ -178,10 +176,10 @@ describe('AccountProfile', () => {
 	it('should offer the segment membership as a CSV download', () => {
 		renderAccountProfile();
 
-		fireEvent.click(screen.getByRole('button', {name: 'Menu'}));
+		fireEvent.click(screen.getByRole('button', {name: /^menu$/i}));
 
 		expect(
-			screen.getByRole('menuitem', {name: 'Download CSV'})
+			screen.getByRole('menuitem', {name: /^download csv$/i})
 		).toBeTruthy();
 	});
 
@@ -191,22 +189,22 @@ describe('AccountProfile', () => {
 				"accounts.filter(filter='industry eq ''Technology''')",
 		});
 
-		expect(screen.getByText('Industry')).toBeTruthy();
-		expect(screen.getByText('Segment Criteria')).toBeTruthy();
+		expect(screen.getByText(/^industry$/i)).toBeTruthy();
+		expect(screen.getByText(/^segment criteria$/i)).toBeTruthy();
 		expect(screen.getByText('"Technology"')).toBeTruthy();
 	});
 
 	it('should open the manage notifications modal with the workspace and segment IDs', async () => {
 		renderAccountProfile({id: '456'});
 
-		fireEvent.click(screen.getByRole('button', {name: 'Menu'}));
+		fireEvent.click(screen.getByRole('button', {name: /^menu$/i}));
 
 		fireEvent.click(
-			screen.getByRole('menuitem', {name: 'Manage Notifications'})
+			screen.getByRole('menuitem', {name: /^manage notifications$/i})
 		);
 
 		expect(
-			await screen.findByText('Manage Segment Notifications')
+			await screen.findByText(/^manage segment notifications$/i)
 		).toBeInTheDocument();
 
 		expect(API.preferences.fetchSegmentNotifications).toHaveBeenCalledWith({
