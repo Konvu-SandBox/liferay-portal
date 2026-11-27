@@ -7,6 +7,8 @@ package com.liferay.osb.faro.web.internal.fragment.renderer;
 
 import com.liferay.fragment.renderer.FragmentRenderer;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.osgi.service.component.annotations.Component;
 
 /**
@@ -22,8 +24,8 @@ public class FaroLifecyclesSectionFragmentRenderer
 	}
 
 	@Override
-	protected String getSection() {
-		return "lifecycle";
+	protected String getModule(HttpServletRequest httpServletRequest) {
+		return "{Lifecycles} from osb-faro-web/lifecycles";
 	}
 
 }

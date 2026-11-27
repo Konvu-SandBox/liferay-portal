@@ -157,7 +157,9 @@ export class GlobalMenuPage {
 			}
 		}).toPass();
 
-		const sidebar = this.page.getByTestId('sideNavigation');
+		const sidebarHeader = this.page
+			.getByTestId('sideNavigation')
+			.locator('.sidebar-header', {hasText: categoryName});
 
 		let forceToReload = false;
 
@@ -168,8 +170,7 @@ export class GlobalMenuPage {
 
 			forceToReload = true;
 
-			await expect(sidebar).toBeAttached();
-			await expect(sidebar.locator('.sidebar-header')).toBeAttached();
+			await expect(sidebarHeader).toBeAttached();
 		}).toPass();
 
 		await openProductMenu(this.page);
@@ -250,12 +251,20 @@ export class GlobalMenuPage {
 
 		await input.press('Tab');
 
+		// Subentries load after the filter and can share the entry's name.
+		// Their lists sit next to the parent entry's link, while section lists
+		// sit next to a button, so excluding them keeps every top-level entry.
+
 		await this.page
 			.getByRole('menuitem', {
 				exact: true,
 				name: menuItem as string,
 			})
-			.and(this.page.locator('.nav-link[href]'))
+			.and(
+				this.page.locator(
+					'.nav-link[href]:not(a[href] ~ [role="menu"] *)'
+				)
+			)
 			.click();
 	}
 

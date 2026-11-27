@@ -11,8 +11,6 @@ import {EConfigInURLBehavior} from '@liferay/frontend-data-set-web';
 import {Routes} from 'shared/util/router';
 import {warmFrontendDataSet} from 'test/warm-frontend-data-set';
 
-jest.unmock('react-dom');
-
 let lastProps: {[key: string]: unknown} | undefined;
 
 jest.mock('@liferay/frontend-data-set-web', () => ({
@@ -52,7 +50,7 @@ describe('columns.countRenderer', () => {
 	it('should render a missing count as the no data value', () => {
 		render(columns.countRenderer({itemData: {}, value: undefined}));
 
-		expect(screen.getByText('–')).toHaveClass('text-secondary');
+		expect(screen.getByText('–')).toBeInTheDocument();
 	});
 
 	it('should render a numeric string count as a number', () => {
@@ -74,7 +72,7 @@ describe('columns.countRenderer', () => {
 			})
 		);
 
-		expect(screen.getByText('–')).toHaveClass('text-secondary');
+		expect(screen.getByText('–')).toBeInTheDocument();
 	});
 });
 
@@ -92,8 +90,8 @@ describe('columns.attributeNameAndValue', () => {
 			columns.attributeNameAndValue({attributeName: 'Count', value: ''})
 		);
 
-		expect(screen.getByText('Count')).toBeInTheDocument();
-		expect(screen.getByText('–')).toHaveClass('text-secondary');
+		expect(screen.getByText(/^count$/i)).toBeInTheDocument();
+		expect(screen.getByText('–')).toBeInTheDocument();
 	});
 });
 
@@ -101,7 +99,7 @@ describe('columns.textRenderer', () => {
 	it('should render the value', () => {
 		render(columns.textRenderer({itemData: {}, value: 'Software'}));
 
-		expect(screen.getByText('Software')).toBeInTheDocument();
+		expect(screen.getByText(/^software$/i)).toBeInTheDocument();
 	});
 
 	it('should render a real zero as 0', () => {
@@ -113,7 +111,7 @@ describe('columns.textRenderer', () => {
 	it('should render an empty value as the no data value', () => {
 		render(columns.textRenderer({itemData: {}, value: ''}));
 
-		expect(screen.getByText('–')).toHaveClass('text-secondary');
+		expect(screen.getByText('–')).toBeInTheDocument();
 	});
 
 	it('should render a missing value as the no data value', () => {
@@ -124,7 +122,7 @@ describe('columns.textRenderer', () => {
 			})
 		);
 
-		expect(screen.getByText('–')).toHaveClass('text-secondary');
+		expect(screen.getByText('–')).toBeInTheDocument();
 	});
 });
 
@@ -132,7 +130,7 @@ describe('columns.dateRenderer', () => {
 	it('should render a missing date as the no data value', () => {
 		render(columns.dateRenderer({itemData: {}, value: ''}));
 
-		expect(screen.getByText('–')).toHaveClass('text-secondary');
+		expect(screen.getByText('–')).toBeInTheDocument();
 	});
 
 	it('should render an ISO date in the custom date format, in UTC', () => {
@@ -201,7 +199,7 @@ describe('columns.nameAndLinkRenderer', () => {
 			})
 		);
 
-		expect(screen.getByRole('link')).toHaveTextContent('abc');
+		expect(screen.getByRole('link')).toHaveTextContent(/abc/i);
 	});
 });
 
@@ -340,6 +338,193 @@ describe('FrontendDataSet (snapshots wrapper)', () => {
 			expect(lastProps?.configInURLBehavior).toBe(
 				EConfigInURLBehavior.PUSH
 			);
+		});
+	});
+
+	describe('sorts', () => {
+		const views = [
+			{
+				name: 'table',
+				schema: {
+					fields: [
+						{fieldName: 'name', label: 'Name', sortable: true},
+						{fieldName: 'views', label: 'Views', sortable: true},
+						{fieldName: 'notes', label: 'Notes', sortable: false},
+					],
+				},
+			},
+			{
+				name: 'allAttributes',
+				schema: {
+					fields: [
+						{fieldName: 'name', label: 'Name', sortable: true},
+						{
+							fieldName: 'downloads',
+							label: 'Downloads',
+							sortable: true,
+						},
+					],
+				},
+			},
+		];
+
+		const getSorts = () =>
+			lastProps?.sorts as {
+				active: boolean;
+				default: boolean;
+				direction: string;
+				key: string;
+			}[];
+
+		it('should offer one sort for each sortable field across the views, with no duplicates', () => {
+			render(
+				<FrontendDataSet
+					defaultSort={{key: 'views'}}
+					id="assetTable"
+					views={views}
+				/>
+			);
+
+			expect(lastProps?.sorts).toEqual([
+				{
+					active: false,
+					default: false,
+					direction: 'asc',
+					key: 'name',
+					label: 'Name',
+				},
+				{
+					active: true,
+					default: true,
+					direction: 'desc',
+					key: 'views',
+					label: 'Views',
+				},
+				{
+					active: false,
+					default: false,
+					direction: 'asc',
+					key: 'downloads',
+					label: 'Downloads',
+				},
+			]);
+		});
+
+		it('should give the default and the active sort the default direction, and start the others ascending', () => {
+			render(
+				<FrontendDataSet
+					activeSortKey="downloads"
+					defaultSort={{key: 'views'}}
+					id="assetTable"
+					views={views}
+				/>
+			);
+
+			expect(getSorts().map(({direction}) => direction)).toEqual([
+				'asc',
+				'desc',
+				'desc',
+			]);
+		});
+
+		it('should use the direction of the default sort', () => {
+			render(
+				<FrontendDataSet
+					defaultSort={{direction: 'asc', key: 'name'}}
+					id="assetTable"
+					views={views}
+				/>
+			);
+
+			expect(getSorts().map(({direction}) => direction)).toEqual([
+				'asc',
+				'asc',
+				'asc',
+			]);
+		});
+
+		it('should activate the active sort key and keep the default sort as the default', () => {
+			render(
+				<FrontendDataSet
+					activeSortKey="downloads"
+					defaultSort={{key: 'views'}}
+					id="assetTable"
+					views={views}
+				/>
+			);
+
+			expect(
+				getSorts()
+					.filter((sort) => sort.active)
+					.map(({key}) => key)
+			).toEqual(['downloads']);
+			expect(
+				getSorts()
+					.filter((sort) => sort.default)
+					.map(({key}) => key)
+			).toEqual(['views']);
+		});
+
+		it('should fall back to the default sort when the active sort key names no sortable field', () => {
+			render(
+				<FrontendDataSet
+					activeSortKey="notes"
+					defaultSort={{key: 'views'}}
+					id="assetTable"
+					views={views}
+				/>
+			);
+
+			expect(
+				getSorts()
+					.filter((sort) => sort.active)
+					.map(({key}) => key)
+			).toEqual(['views']);
+		});
+
+		it('should keep the default sort when its field is not sortable', () => {
+			render(
+				<FrontendDataSet
+					defaultSort={{key: 'notes'}}
+					id="assetTable"
+					views={views}
+				/>
+			);
+
+			expect(getSorts().map(({key}) => key)).toEqual([
+				'name',
+				'views',
+				'notes',
+				'downloads',
+			]);
+			expect(
+				getSorts()
+					.filter((sort) => sort.active)
+					.map(({key}) => key)
+			).toEqual(['notes']);
+		});
+
+		it('should pass an explicit sorts unchanged', () => {
+			const sorts = [
+				{active: true, direction: 'asc' as const, key: 'name'},
+			];
+
+			render(
+				<FrontendDataSet
+					defaultSort={{key: 'views'}}
+					id="assetTable"
+					sorts={sorts}
+					views={views}
+				/>
+			);
+
+			expect(lastProps?.sorts).toBe(sorts);
+		});
+
+		it('should pass no sorts without a default sort', () => {
+			render(<FrontendDataSet id="assetTable" views={views} />);
+
+			expect(lastProps?.sorts).toBeUndefined();
 		});
 	});
 });

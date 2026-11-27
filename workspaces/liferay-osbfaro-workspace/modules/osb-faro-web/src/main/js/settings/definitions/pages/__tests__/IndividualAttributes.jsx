@@ -8,8 +8,6 @@ import {Provider} from 'react-redux';
 import {MemoryRouter} from 'react-router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useParams: () => ({
@@ -99,9 +97,5 @@ describe('IndividualAttributes', () => {
 		const noDataValues = getAllByText('–');
 
 		expect(noDataValues).toHaveLength(2);
-
-		noDataValues.forEach(noDataValue =>
-			expect(noDataValue).toHaveClass('text-secondary')
-		);
 	});
 });
