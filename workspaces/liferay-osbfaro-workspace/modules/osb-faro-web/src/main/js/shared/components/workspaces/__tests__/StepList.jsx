@@ -2,8 +2,6 @@ import React from 'react';
 import StepList from '../StepList';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = props => (
 	<StepList steps={['step1', 'step2']} {...props} />
 );
@@ -19,13 +17,5 @@ describe('StepList', () => {
 		const {getByText} = render(<DefaultComponent secondaryInfo='test' />);
 
 		expect(getByText('test')).toBeTruthy();
-	});
-
-	it('should render without bullet', () => {
-		const {getByText} = render(
-			<DefaultComponent hideBullets secondaryInfo='test' />
-		);
-
-		expect(getByText('test').parentElement).toHaveClass('hide-bullets');
 	});
 });

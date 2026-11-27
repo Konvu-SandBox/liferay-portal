@@ -2635,7 +2635,6 @@ public class ObjectActionLocalServiceTest {
 		}
 	}
 
-	@FeatureFlag("LPD-11388")
 	@Test
 	public void testExecuteObjectActionWithLocationObjectField()
 		throws Exception {
@@ -2710,6 +2709,128 @@ public class ObjectActionLocalServiceTest {
 
 			_objectActionLocalService.deleteObjectAction(objectAction);
 		}
+	}
+
+	@Test
+	public void testExecuteObjectActionWithManyToManySystemObjectRelationship()
+		throws Exception {
+
+		_publishCustomObjectDefinition();
+
+		ObjectDefinition commerceProductObjectDefinition =
+			_objectDefinitionLocalService.fetchObjectDefinitionByClassName(
+				TestPropsValues.getCompanyId(), CPDefinition.class.getName());
+
+		ObjectRelationship objectRelationship =
+			ObjectRelationshipTestUtil.addObjectRelationship(
+				_objectRelationshipLocalService,
+				commerceProductObjectDefinition, _objectDefinition,
+				ObjectRelationshipConstants.DELETION_TYPE_DISASSOCIATE,
+				StringUtil.randomId(),
+				ObjectRelationshipConstants.TYPE_MANY_TO_MANY);
+
+		ObjectAction objectAction = _addObjectAction(
+			commerceProductObjectDefinition.getObjectDefinitionId(),
+			ObjectActionExecutorConstants.KEY_ADD_OBJECT_ENTRY,
+			ObjectActionTriggerConstants.KEY_ON_AFTER_ADD,
+			UnicodePropertiesBuilder.put(
+				"objectDefinitionId", _objectDefinition.getObjectDefinitionId()
+			).put(
+				"predefinedValues",
+				JSONUtil.putAll(
+					JSONUtil.put(
+						"inputAsValue", true
+					).put(
+						"name", "firstName"
+					).put(
+						"value", RandomTestUtil.randomString()
+					)
+				).toString()
+			).put(
+				"relatedObjectEntries", "true"
+			).build());
+
+		CPDefinition cpDefinition = CPTestUtil.addCPDefinition(
+			_group.getGroupId());
+
+		List<ObjectEntry> objectEntries =
+			_objectEntryLocalService.getManyToManyObjectEntries(
+				0, objectRelationship.getObjectRelationshipId(),
+				cpDefinition.getCProductId(), true, false, null,
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS);
+
+		Assert.assertEquals(objectEntries.toString(), 1, objectEntries.size());
+
+		_objectActionLocalService.deleteObjectAction(objectAction);
+	}
+
+	@FeatureFlag("LPD-108620")
+	@Test
+	public void testExecuteObjectActionWithOneToOneObjectRelationship()
+		throws Exception {
+
+		ObjectRelationship objectRelationship =
+			ObjectRelationshipTestUtil.addObjectRelationship(
+				_objectRelationshipLocalService,
+				ObjectDefinitionTestUtil.publishObjectDefinition(),
+				ObjectDefinitionTestUtil.publishObjectDefinition(
+					Collections.singletonList(
+						new TextObjectFieldBuilder(
+						).labelMap(
+							RandomTestUtil.randomLocaleStringMap()
+						).name(
+							"firstName"
+						).build())),
+				ObjectRelationshipConstants.DELETION_TYPE_PREVENT,
+				StringUtil.randomId(),
+				ObjectRelationshipConstants.TYPE_ONE_TO_ONE);
+
+		_addObjectAction(
+			objectRelationship.getObjectDefinitionId1(),
+			ObjectActionExecutorConstants.KEY_ADD_OBJECT_ENTRY,
+			ObjectActionTriggerConstants.KEY_ON_AFTER_ADD,
+			UnicodePropertiesBuilder.put(
+				"objectDefinitionId",
+				objectRelationship.getObjectDefinitionId2()
+			).put(
+				"predefinedValues",
+				JSONUtil.putAll(
+					JSONUtil.put(
+						"inputAsValue", true
+					).put(
+						"name", "firstName"
+					).put(
+						"value", RandomTestUtil.randomString()
+					)
+				).toString()
+			).put(
+				"relatedObjectEntries", "true"
+			).build());
+
+		ObjectEntry parentObjectEntry = _objectEntryLocalService.addObjectEntry(
+			0, TestPropsValues.getUserId(),
+			objectRelationship.getObjectDefinitionId1(),
+			ObjectEntryFolderConstants.PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+			null, Collections.emptyMap(),
+			ServiceContextTestUtil.getServiceContext());
+
+		List<ObjectEntry> childObjectEntries =
+			_objectEntryLocalService.getObjectEntries(
+				0, objectRelationship.getObjectDefinitionId2(),
+				QueryUtil.ALL_POS, QueryUtil.ALL_POS);
+
+		ObjectEntry childObjectEntry = childObjectEntries.get(0);
+
+		ObjectField objectField = _objectFieldLocalService.getObjectField(
+			objectRelationship.getObjectFieldId2());
+
+		Assert.assertEquals(
+			parentObjectEntry.getObjectEntryId(),
+			MapUtil.getLong(
+				childObjectEntry.getValues(), objectField.getName()));
+
+		Assert.assertEquals(
+			childObjectEntries.toString(), 1, childObjectEntries.size());
 	}
 
 	@Test

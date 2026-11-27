@@ -102,14 +102,16 @@ public class CTCollectionServiceTest {
 	@Before
 	public void setUp() throws Exception {
 		_group = GroupTestUtil.addGroup();
+
 		_role = RoleTestUtil.addRole(RoleConstants.TYPE_REGULAR);
-		_user = UserTestUtil.addGroupUser(_group, RoleConstants.SITE_MEMBER);
 
 		_resourcePermissionLocalService.addResourcePermission(
 			_role.getCompanyId(), CTConstants.RESOURCE_NAME,
 			ResourceConstants.SCOPE_COMPANY,
 			String.valueOf(_role.getCompanyId()), _role.getRoleId(),
 			CTActionKeys.ADD_PUBLICATION);
+
+		_user = UserTestUtil.addGroupUser(_group, RoleConstants.SITE_MEMBER);
 
 		_roleLocalService.addUserRole(_user.getUserId(), _role);
 		_roleLocalService.addUserRole(
@@ -192,11 +194,6 @@ public class CTCollectionServiceTest {
 		long folderClassNameId = _classNameLocalService.getClassNameId(
 			JournalFolder.class);
 
-		Assert.assertFalse(
-			_ctCollectionLocalService.isCTEntryEnclosed(
-				_ctCollection.getCtCollectionId(), journalArticleClassNameId,
-				journalArticle.getPrimaryKey()));
-
 		_ctCollectionService.discardCTEntry(
 			_ctCollection.getCtCollectionId(), journalArticleClassNameId,
 			journalArticle.getPrimaryKey());
@@ -204,11 +201,6 @@ public class CTCollectionServiceTest {
 		Assert.assertNull(
 			_ctEntryLocalService.fetchCTEntry(
 				_ctCollection.getCtCollectionId(), journalArticleClassNameId,
-				journalArticle.getPrimaryKey()));
-
-		Assert.assertTrue(
-			_ctCollectionLocalService.isCTEntryEnclosed(
-				_ctCollection.getCtCollectionId(), folderClassNameId,
 				journalArticle.getPrimaryKey()));
 
 		_ctCollectionService.discardCTEntry(

@@ -15,6 +15,7 @@ import com.liferay.object.definition.util.ObjectDefinitionThreadLocal;
 import com.liferay.object.definition.util.ObjectDefinitionUtil;
 import com.liferay.object.exception.DuplicateObjectRelationshipException;
 import com.liferay.object.exception.DuplicateObjectRelationshipExternalReferenceCodeException;
+import com.liferay.object.exception.NoSuchObjectEntryException;
 import com.liferay.object.exception.NoSuchObjectRelationshipException;
 import com.liferay.object.exception.ObjectDefinitionScopeException;
 import com.liferay.object.exception.ObjectEntryGroupIdException;
@@ -30,6 +31,7 @@ import com.liferay.object.exception.ObjectRelationshipTypeException;
 import com.liferay.object.internal.dao.db.ObjectDBManagerUtil;
 import com.liferay.object.internal.info.collection.provider.ManyToManyObjectRelationshipRelatedInfoCollectionProvider;
 import com.liferay.object.internal.info.collection.provider.OneToManyObjectRelationshipRelatedInfoCollectionProvider;
+import com.liferay.object.internal.info.collection.provider.OneToOneObjectRelationshipRelatedInfoCollectionProvider;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectEntryTable;
@@ -74,12 +76,16 @@ import com.liferay.petra.string.StringPool;
 import com.liferay.portal.aop.AopService;
 import com.liferay.portal.kernel.dao.jdbc.CurrentConnection;
 import com.liferay.portal.kernel.dao.orm.FinderCacheUtil;
+import com.liferay.portal.kernel.exception.NoSuchModelException;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.license.util.App;
 import com.liferay.portal.kernel.license.util.LicenseManagerUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.model.PersistedModel;
+import com.liferay.portal.kernel.model.ShardedModel;
 import com.liferay.portal.kernel.model.SystemEventConstants;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.model.WorkflowInstanceLink;
@@ -172,6 +178,25 @@ public class ObjectRelationshipLocalServiceImpl
 			externalReferenceCode, 0L, user.getCompanyId(),
 			objectDefinitionId1);
 
+		String objectFieldRelationshipType = objectField.getRelationshipType();
+
+		if (Validator.isNull(objectFieldRelationshipType)) {
+			objectFieldRelationshipType =
+				ObjectRelationshipConstants.TYPE_ONE_TO_MANY;
+		}
+		else if (!Objects.equals(
+					objectFieldRelationshipType,
+					ObjectRelationshipConstants.TYPE_ONE_TO_MANY) &&
+				 (!Objects.equals(
+					 objectFieldRelationshipType,
+					 ObjectRelationshipConstants.TYPE_ONE_TO_ONE) ||
+				  !FeatureFlagManagerUtil.isEnabled(
+					  user.getCompanyId(), "LPD-108620"))) {
+
+			throw new ObjectRelationshipTypeException(
+				"Invalid type " + objectFieldRelationshipType);
+		}
+
 		String objectFieldName = objectField.getName();
 
 		return _addObjectRelationship(
@@ -181,8 +206,7 @@ public class ObjectRelationshipLocalServiceImpl
 			0, ObjectRelationshipConstants.DELETION_TYPE_PREVENT, null, false,
 			LocalizedMapUtil.getLocalizedMap(externalReferenceCode),
 			objectFieldName.split(StringPool.UNDERLINE)[1], false,
-			objectField.isSystem(),
-			ObjectRelationshipConstants.TYPE_ONE_TO_MANY, objectField);
+			objectField.isSystem(), objectFieldRelationshipType, objectField);
 	}
 
 	@Override
@@ -204,6 +228,8 @@ public class ObjectRelationshipLocalServiceImpl
 		ObjectDefinition objectDefinition2 =
 			_objectDefinitionPersistence.findByPrimaryKey(
 				objectRelationship.getObjectDefinitionId2());
+
+		_validateObjectEntryId(objectDefinition2, primaryKey2);
 
 		if (Objects.equals(
 				objectDefinition1.getScope(), objectDefinition2.getScope()) &&
@@ -1493,6 +1519,14 @@ public class ObjectRelationshipLocalServiceImpl
 				_language, objectDefinition1, objectDefinition2,
 				_objectEntryLocalService, objectRelationship);
 		}
+		else if (Objects.equals(
+					objectRelationship.getType(),
+					ObjectRelationshipConstants.TYPE_ONE_TO_ONE)) {
+
+			return new OneToOneObjectRelationshipRelatedInfoCollectionProvider(
+				_language, objectDefinition1, objectDefinition2,
+				_objectEntryLocalService, objectRelationship);
+		}
 
 		return null;
 	}
@@ -2143,11 +2177,32 @@ public class ObjectRelationshipLocalServiceImpl
 					getSystemObjectDefinitionManager(
 						objectDefinition.getName());
 
-			systemObjectDefinitionManager.getBaseModelExternalReferenceCode(
-				primaryKey);
+			PersistedModel persistedModel =
+				systemObjectDefinitionManager.getPersistedModel(primaryKey);
+
+			if ((persistedModel instanceof ShardedModel shardedModel) &&
+				(shardedModel.getCompanyId() !=
+					objectDefinition.getCompanyId())) {
+
+				throw new NoSuchModelException(
+					StringBundler.concat(
+						"No ", objectDefinition.getShortName(),
+						" exists with the primary key ", primaryKey));
+			}
 		}
 		else {
-			_objectEntryPersistence.findByPrimaryKey(primaryKey);
+			ObjectEntry objectEntry = _objectEntryPersistence.findByPrimaryKey(
+				primaryKey);
+
+			if (objectEntry.getObjectDefinitionId() !=
+					objectDefinition.getObjectDefinitionId()) {
+
+				throw new NoSuchObjectEntryException(
+					StringBundler.concat(
+						"No ", objectDefinition.getShortName(),
+						" object entry exists with the primary key ",
+						primaryKey));
+			}
 		}
 	}
 
@@ -2273,6 +2328,18 @@ public class ObjectRelationshipLocalServiceImpl
 					"Parameter object field ID " + parameterObjectFieldId +
 						" does not belong to a relationship object field");
 			}
+			else if (FeatureFlagManagerUtil.isEnabled(
+						objectField.getCompanyId(), "LPD-108620") &&
+					 !Objects.equals(
+						 objectField.getRelationshipType(),
+						 ObjectRelationshipConstants.TYPE_ONE_TO_MANY)) {
+
+				throw new ObjectRelationshipParameterObjectFieldIdException(
+					StringBundler.concat(
+						"Parameter object field ID ", parameterObjectFieldId,
+						" does not belong to a one to many relationship ",
+						"object field"));
+			}
 		}
 	}
 
@@ -2326,6 +2393,14 @@ public class ObjectRelationshipLocalServiceImpl
 			ObjectDefinition objectDefinition2, String name,
 			long parameterObjectFieldId, String type)
 		throws PortalException {
+
+		if (StringUtil.equals(
+				type, ObjectRelationshipConstants.TYPE_ONE_TO_ONE) &&
+			!FeatureFlagManagerUtil.isEnabled(
+				objectDefinition1.getCompanyId(), "LPD-108620")) {
+
+			throw new ObjectRelationshipTypeException("Invalid type " + type);
+		}
 
 		Set<String> defaultObjectRelationshipTypes =
 			ObjectRelationshipUtil.getDefaultObjectRelationshipTypes();

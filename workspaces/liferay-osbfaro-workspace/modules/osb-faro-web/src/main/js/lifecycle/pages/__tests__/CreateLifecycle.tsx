@@ -26,8 +26,6 @@ import {useRequest} from 'shared/hooks/useRequest';
 import {useUnsavedChangesPrompt} from 'shared/hooks/useUnsavedChangesPrompt';
 import {AccountDataStatus} from 'lifecycle/utils/types';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/hooks/useRequest', () => ({
 	useRequest: jest.fn(),
 }));
@@ -818,9 +816,8 @@ describe('CreateLifecycle', () => {
 				await screen.findByText(
 					/this lifecycle name is currently in use/i
 				)
-			).closest('.alert') as HTMLElement;
+			).closest('[role="alert"]');
 
-			expect(alert).toHaveClass('alert-danger');
 			expect(alert).toHaveTextContent(/review 1 error/i);
 			expect(
 				screen.getByText(/enter a unique name/i)

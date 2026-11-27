@@ -8,12 +8,15 @@ package com.liferay.site.pim.site.initializer.internal.feature.flag.test;
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
 import com.liferay.depot.model.DepotEntry;
 import com.liferay.object.constants.ObjectDefinitionConstants;
+import com.liferay.object.constants.ObjectEntryFolderConstants;
 import com.liferay.object.entry.folder.util.ObjectEntryFolderThreadLocal;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectDefinitionSetting;
+import com.liferay.object.model.ObjectField;
 import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectDefinitionSettingLocalService;
 import com.liferay.object.service.ObjectEntryFolderLocalService;
+import com.liferay.object.service.ObjectFieldLocalService;
 import com.liferay.object.service.ObjectFolderLocalService;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.portal.kernel.feature.flag.FeatureFlagListener;
@@ -25,10 +28,10 @@ import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
 import com.liferay.site.pim.site.initializer.constants.PIMObjectDefinitionConstants;
-import com.liferay.site.pim.site.initializer.constants.PIMObjectEntryFolderConstants;
 import com.liferay.site.pim.site.initializer.constants.PIMObjectFolderConstants;
 import com.liferay.site.pim.site.initializer.test.util.PIMTestUtil;
 
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -49,6 +52,11 @@ public class PIMFeatureFlagListenerTest {
 		new AggregateTestRule(
 			new LiferayIntegrationTestRule(),
 			PermissionCheckerMethodTestRule.INSTANCE);
+
+	@AfterClass
+	public static void tearDownClass() throws Exception {
+		PIMTestUtil.deleteBasicProductObjectDefinitionTree();
+	}
 
 	@Before
 	public void setUp() throws Exception {
@@ -81,6 +89,9 @@ public class PIMFeatureFlagListenerTest {
 
 		_assertObjectDefinitionSetting(
 			"domain", pimBasicProductObjectDefinition, "space");
+		_assertObjectFieldLocalized(
+			"description", pimBasicProductObjectDefinition);
+		_assertObjectFieldLocalized("title", pimBasicProductObjectDefinition);
 
 		ObjectDefinition pimLinkObjectDefinition =
 			_objectDefinitionLocalService.
@@ -110,16 +121,14 @@ public class PIMFeatureFlagListenerTest {
 
 			_objectEntryFolderLocalService.
 				deleteObjectEntryFolderByExternalReferenceCode(
-					PIMObjectEntryFolderConstants.
-						EXTERNAL_REFERENCE_CODE_PRODUCTS,
+					ObjectEntryFolderConstants.EXTERNAL_REFERENCE_CODE_PRODUCTS,
 					depotEntry.getGroupId(), companyId);
 		}
 
 		Assert.assertNull(
 			_objectEntryFolderLocalService.
 				fetchObjectEntryFolderByExternalReferenceCode(
-					PIMObjectEntryFolderConstants.
-						EXTERNAL_REFERENCE_CODE_PRODUCTS,
+					ObjectEntryFolderConstants.EXTERNAL_REFERENCE_CODE_PRODUCTS,
 					depotEntry.getGroupId(), companyId));
 
 		_featureFlagListener.onValue(companyId, "LPD-96666", true);
@@ -127,8 +136,7 @@ public class PIMFeatureFlagListenerTest {
 		Assert.assertNotNull(
 			_objectEntryFolderLocalService.
 				fetchObjectEntryFolderByExternalReferenceCode(
-					PIMObjectEntryFolderConstants.
-						EXTERNAL_REFERENCE_CODE_PRODUCTS,
+					ObjectEntryFolderConstants.EXTERNAL_REFERENCE_CODE_PRODUCTS,
 					depotEntry.getGroupId(), companyId));
 	}
 
@@ -140,6 +148,15 @@ public class PIMFeatureFlagListenerTest {
 				objectDefinition.getObjectDefinitionId(), name);
 
 		Assert.assertEquals(value, objectDefinitionSetting.getValue());
+	}
+
+	private void _assertObjectFieldLocalized(
+		String name, ObjectDefinition objectDefinition) {
+
+		ObjectField objectField = _objectFieldLocalService.fetchObjectField(
+			objectDefinition.getObjectDefinitionId(), name);
+
+		Assert.assertTrue(objectField.isLocalized());
 	}
 
 	@Inject(filter = "feature.flag.key=LPD-96666")
@@ -154,6 +171,9 @@ public class PIMFeatureFlagListenerTest {
 
 	@Inject
 	private ObjectEntryFolderLocalService _objectEntryFolderLocalService;
+
+	@Inject
+	private ObjectFieldLocalService _objectFieldLocalService;
 
 	@Inject
 	private ObjectFolderLocalService _objectFolderLocalService;
