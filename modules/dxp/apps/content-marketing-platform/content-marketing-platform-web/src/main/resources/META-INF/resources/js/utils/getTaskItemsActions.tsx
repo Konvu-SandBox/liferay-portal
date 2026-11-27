@@ -23,6 +23,8 @@ import {
 	postUnsubscribeTaskByExternalReferenceCode,
 } from './api';
 import {openCMPModal} from './openCMPModal';
+import {isSubtask} from './subtaskWatchActions';
+import {getSubtasksCount} from './subtasksUtil';
 import {
 	displayAssignSuccessToast,
 	displayDeleteSuccessToast,
@@ -109,7 +111,9 @@ export default function getTaskItemsActions(
 
 	if (task.actions?.subscribe) {
 		middleItems.push({
-			label: Liferay.Language.get('watch-task'),
+			label: isSubtask(task.embedded)
+				? Liferay.Language.get('watch-subtask')
+				: Liferay.Language.get('watch-task'),
 			onClick: async () => {
 				const {error} = await postSubscribeTaskByExternalReferenceCode({
 					externalReferenceCode: task.embedded.externalReferenceCode,
@@ -131,7 +135,9 @@ export default function getTaskItemsActions(
 
 	if (task.actions?.unsubscribe) {
 		middleItems.push({
-			label: Liferay.Language.get('stop-watching-task'),
+			label: isSubtask(task.embedded)
+				? Liferay.Language.get('stop-watching-subtask')
+				: Liferay.Language.get('stop-watching-task'),
 			onClick: async () => {
 				const {error} =
 					await postUnsubscribeTaskByExternalReferenceCode({
@@ -263,6 +269,8 @@ export default function getTaskItemsActions(
 			className: 'text-danger',
 			label: Liferay.Language.get('delete'),
 			onClick: async () => {
+				const subtasksCount = await getSubtasksCount(task.embedded);
+
 				await openCMPModal({
 					center: true,
 					contentComponent: ({
@@ -288,6 +296,7 @@ export default function getTaskItemsActions(
 								}
 								closeModal();
 							}}
+							subtasksCount={subtasksCount}
 							title={task.embedded.title}
 						/>
 					),

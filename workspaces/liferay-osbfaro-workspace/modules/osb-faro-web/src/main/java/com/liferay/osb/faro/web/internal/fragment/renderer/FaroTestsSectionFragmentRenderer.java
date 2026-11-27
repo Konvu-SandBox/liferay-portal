@@ -7,6 +7,8 @@ package com.liferay.osb.faro.web.internal.fragment.renderer;
 
 import com.liferay.fragment.renderer.FragmentRenderer;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.osgi.service.component.annotations.Component;
 
 /**
@@ -22,8 +24,8 @@ public class FaroTestsSectionFragmentRenderer
 	}
 
 	@Override
-	protected String getSection() {
-		return "tests";
+	protected String getModule(HttpServletRequest httpServletRequest) {
+		return "{Tests} from osb-faro-web/tests";
 	}
 
 }

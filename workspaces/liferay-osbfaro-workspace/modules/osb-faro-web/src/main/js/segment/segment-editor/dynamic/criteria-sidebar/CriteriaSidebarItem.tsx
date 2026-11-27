@@ -20,6 +20,7 @@ import {sub} from 'shared/util/lang';
 const TYPE_ICON_MAP = {
 	[PropertyTypes.Behavior]: 'click',
 	[PropertyTypes.Boolean]: 'check',
+	[PropertyTypes.Campaign]: 'check',
 	[PropertyTypes.AccountDate]: 'date',
 	[PropertyTypes.AccountSelectText]: 'text',
 	[PropertyTypes.AccountNumber]: 'integer',
@@ -80,6 +81,9 @@ export const beginDrag = ({
 		// an asset type (or Page) before the segment can be saved.
 
 		valid = {asset: false, dateFilter: true, occurenceCount: true};
+	}
+	else if (type === PropertyTypes.Campaign) {
+		valid = !!property.id;
 	}
 	else if (type === PropertyTypes.Event) {
 		touched = {occurenceCount: false};

@@ -6,6 +6,7 @@
 package com.liferay.content.marketing.platform.web.internal.fragment.renderer.test;
 
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
+import com.liferay.content.marketing.platform.test.util.CMPTestUtil;
 import com.liferay.fragment.renderer.FragmentRenderer;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
@@ -18,15 +19,26 @@ import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.model.GroupConstants;
+import com.liferay.portal.kernel.model.ResourceConstants;
+import com.liferay.portal.kernel.model.Role;
+import com.liferay.portal.kernel.model.User;
+import com.liferay.portal.kernel.model.role.RoleConstants;
+import com.liferay.portal.kernel.security.permission.ActionKeys;
+import com.liferay.portal.kernel.service.ResourcePermissionLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
+import com.liferay.portal.kernel.service.UserLocalService;
+import com.liferay.portal.kernel.test.context.ContextUserReplace;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
+import com.liferay.portal.kernel.test.util.RoleTestUtil;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
+import com.liferay.portal.kernel.test.util.UserTestUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
+import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
@@ -90,6 +102,7 @@ public class TaskBreadcrumbComponentSectionFragmentRendererTest
 			_cmpTaskObjectDefinition, _cmpTaskObjectEntry);
 	}
 
+	@FeatureFlag("LPD-107678")
 	@Test
 	public void testGetProps() throws Exception {
 		Map<String, Object> props = getProps();
@@ -241,11 +254,156 @@ public class TaskBreadcrumbComponentSectionFragmentRendererTest
 
 		Assert.assertTrue((Boolean)props.get("hideSpace"));
 		Assert.assertEquals("lg", props.get("size"));
+
+		_addCMPTaskObjectEntry(
+			_cmpTaskObjectEntry, WorkflowConstants.ACTION_SAVE_DRAFT);
+
+		ObjectEntry cmpTaskObjectEntry1 = _addCMPTaskObjectEntry(
+			_cmpTaskObjectEntry, WorkflowConstants.ACTION_PUBLISH);
+
+		_assertDeleteConfirmationMessage(
+			_language.format(
+				mockHttpServletRequest,
+				"delete-task-and-one-subtask-confirmation-body",
+				_cmpTaskObjectEntryTitle));
+
+		ObjectEntry cmpTaskObjectEntry2 = _addCMPTaskObjectEntry(
+			cmpTaskObjectEntry1, WorkflowConstants.ACTION_PUBLISH);
+
+		_assertDeleteConfirmationMessage(
+			_language.format(
+				mockHttpServletRequest,
+				"delete-task-and-x-subtasks-confirmation-body",
+				new Object[] {_cmpTaskObjectEntryTitle, 2}));
+
+		mockHttpServletRequest = getMockHttpServletRequest(
+			_cmpTaskObjectDefinition, cmpTaskObjectEntry2);
+
+		props = getProps();
+
+		jsonArray = (JSONArray)props.get("actionItems");
+
+		jsonObject = jsonArray.getJSONObject(1);
+
+		Assert.assertEquals("Watch Subtask", jsonObject.getString("label"));
+
+		jsonArray = (JSONArray)props.get("breadcrumbItems");
+
+		Assert.assertEquals(jsonArray.toString(), 5, jsonArray.length());
+
+		jsonObject = jsonArray.getJSONObject(2);
+
+		JSONAssert.assertEquals(
+			JSONUtil.put(
+				"active", false
+			).put(
+				"href",
+				StringBundler.concat(
+					themeDisplay.getPathFriendlyURLPublic(),
+					GroupConstants.CMS_FRIENDLY_URL, "/e/task/",
+					PortalUtil.getClassNameId(
+						_cmpTaskObjectDefinition.getClassName()),
+					StringPool.SLASH, _cmpTaskObjectEntry.getObjectEntryId())
+			).put(
+				"label", _cmpTaskObjectEntryTitle
+			).toString(),
+			jsonObject.toString(), true);
+
+		jsonObject = jsonArray.getJSONObject(3);
+
+		JSONAssert.assertEquals(
+			JSONUtil.put(
+				"active", false
+			).put(
+				"href",
+				StringBundler.concat(
+					themeDisplay.getPathFriendlyURLPublic(),
+					GroupConstants.CMS_FRIENDLY_URL, "/e/task/",
+					PortalUtil.getClassNameId(
+						_cmpTaskObjectDefinition.getClassName()),
+					StringPool.SLASH, cmpTaskObjectEntry1.getObjectEntryId())
+			).put(
+				"label",
+				MapUtil.getString(cmpTaskObjectEntry1.getValues(), "title")
+			).toString(),
+			jsonObject.toString(), true);
+
+		jsonObject = jsonArray.getJSONObject(4);
+
+		JSONAssert.assertEquals(
+			JSONUtil.put(
+				"active", true
+			).put(
+				"href", StringPool.BLANK
+			).put(
+				"label",
+				MapUtil.getString(cmpTaskObjectEntry2.getValues(), "title")
+			).toString(),
+			jsonObject.toString(), true);
+
+		Role role = RoleTestUtil.addRole(RoleConstants.TYPE_REGULAR);
+
+		_setViewResourcePermission(_cmpTaskObjectEntry, role);
+		_setViewResourcePermission(cmpProjectObjectEntry, role);
+		_setViewResourcePermission(cmpTaskObjectEntry2, role);
+
+		User user = UserTestUtil.addUser();
+
+		_userLocalService.addRoleUser(role.getRoleId(), user);
+
+		try (ContextUserReplace contextUserReplace = new ContextUserReplace(
+				user)) {
+
+			props = getProps();
+		}
+
+		jsonArray = (JSONArray)props.get("breadcrumbItems");
+
+		Assert.assertEquals(jsonArray.toString(), 3, jsonArray.length());
+
+		jsonObject = jsonArray.getJSONObject(1);
+
+		Assert.assertEquals(
+			cmpProjectObjectEntryTitle, jsonObject.getString("label"));
 	}
 
 	@Override
 	protected FragmentRenderer getFragmentRenderer() {
 		return _fragmentRenderer;
+	}
+
+	private ObjectEntry _addCMPTaskObjectEntry(
+			ObjectEntry parentCMPTaskObjectEntry, int workflowAction)
+		throws Exception {
+
+		return CMPTestUtil.addCMPTaskObjectEntry(
+			cmpProjectObjectEntry,
+			HashMapBuilder.<String, Serializable>put(
+				"r_cmpTaskToCMPTasks_c_cmpTaskId",
+				parentCMPTaskObjectEntry.getObjectEntryId()
+			).build(),
+			workflowAction);
+	}
+
+	private void _assertDeleteConfirmationMessage(String confirmationMessage) {
+		Map<String, Object> props = getProps();
+
+		JSONArray jsonArray = (JSONArray)props.get("actionItems");
+
+		JSONObject jsonObject = jsonArray.getJSONObject(2);
+
+		Assert.assertEquals(
+			confirmationMessage, jsonObject.getString("confirmationMessage"));
+	}
+
+	private void _setViewResourcePermission(ObjectEntry objectEntry, Role role)
+		throws Exception {
+
+		_resourcePermissionLocalService.setResourcePermissions(
+			objectEntry.getCompanyId(), objectEntry.getModelClassName(),
+			ResourceConstants.SCOPE_INDIVIDUAL,
+			String.valueOf(objectEntry.getObjectEntryId()), role.getRoleId(),
+			new String[] {ActionKeys.VIEW});
 	}
 
 	private ObjectDefinition _cmpTaskObjectDefinition;
@@ -265,5 +423,11 @@ public class TaskBreadcrumbComponentSectionFragmentRendererTest
 
 	@Inject
 	private Portal _portal;
+
+	@Inject
+	private ResourcePermissionLocalService _resourcePermissionLocalService;
+
+	@Inject
+	private UserLocalService _userLocalService;
 
 }

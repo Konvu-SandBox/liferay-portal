@@ -33,6 +33,7 @@ import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
+import com.liferay.portal.kernel.test.util.UserNotificationEventTestUtil;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
 import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.PortalUtil;
@@ -91,18 +92,11 @@ public class CheckKBArticleSchedulerJobConfigurationTest {
 		Assert.assertEquals(
 			WorkflowConstants.STATUS_PENDING, kbArticle.getStatus());
 
-		kbArticle.setExpirationDate(
-			new Date(System.currentTimeMillis() - (Time.MINUTE * 10)));
-
-		kbArticle = _kbArticleLocalService.updateKBArticle(kbArticle);
+		kbArticle = _updateExpirationDate(kbArticle);
 
 		_kbArticleLocalService.checkKBArticles(_group.getCompanyId());
 
-		kbArticle = _kbArticleLocalService.getLatestKBArticle(
-			kbArticle.getResourcePrimKey(), WorkflowConstants.STATUS_ANY);
-
-		Assert.assertEquals(
-			WorkflowConstants.STATUS_PENDING, kbArticle.getStatus());
+		_assertStatus(kbArticle, WorkflowConstants.STATUS_PENDING);
 
 		WorkflowInstanceLink workflowInstanceLink =
 			_workflowInstanceLinkLocalService.getWorkflowInstanceLink(
@@ -126,19 +120,11 @@ public class CheckKBArticleSchedulerJobConfigurationTest {
 				StringPool.BLANK, null);
 		}
 
-		kbArticle = _kbArticleLocalService.getLatestKBArticle(
-			kbArticle.getResourcePrimKey(), WorkflowConstants.STATUS_ANY);
-
-		Assert.assertEquals(
-			WorkflowConstants.STATUS_APPROVED, kbArticle.getStatus());
+		_assertStatus(kbArticle, WorkflowConstants.STATUS_APPROVED);
 
 		_kbArticleLocalService.checkKBArticles(_group.getCompanyId());
 
-		kbArticle = _kbArticleLocalService.getLatestKBArticle(
-			kbArticle.getResourcePrimKey(), WorkflowConstants.STATUS_ANY);
-
-		Assert.assertEquals(
-			WorkflowConstants.STATUS_EXPIRED, kbArticle.getStatus());
+		_assertStatus(kbArticle, WorkflowConstants.STATUS_EXPIRED);
 	}
 
 	@Test
@@ -159,10 +145,7 @@ public class CheckKBArticleSchedulerJobConfigurationTest {
 			ServiceContextTestUtil.getServiceContext(
 				_group, _user.getUserId()));
 
-		kbArticle.setExpirationDate(
-			new Date(System.currentTimeMillis() - (Time.MINUTE * 10)));
-
-		kbArticle = _kbArticleLocalService.updateKBArticle(kbArticle);
+		kbArticle = _updateExpirationDate(kbArticle);
 
 		_kbArticleLocalService.checkKBArticles(_group.getCompanyId());
 
@@ -200,39 +183,13 @@ public class CheckKBArticleSchedulerJobConfigurationTest {
 
 		_kbArticleLocalService.checkKBArticles(_group.getCompanyId());
 
-		kbArticle = _kbArticleLocalService.getLatestKBArticle(
-			kbArticle.getResourcePrimKey(), WorkflowConstants.STATUS_ANY);
-
-		Assert.assertEquals(
-			WorkflowConstants.STATUS_DRAFT, kbArticle.getStatus());
+		_assertStatus(kbArticle, WorkflowConstants.STATUS_DRAFT);
 	}
 
 	@Test
 	public void testExpireKBArticle() throws Exception {
-		Date expirationDate = new Date(
-			System.currentTimeMillis() + (Time.MINUTE * 5));
-
-		KBArticle kbArticle = _kbArticleLocalService.addKBArticle(
-			null, UserLocalServiceUtil.getGuestUserId(_group.getCompanyId()),
-			PortalUtil.getClassNameId(KBFolder.class.getName()), 0,
-			RandomTestUtil.randomString(), RandomTestUtil.randomString(),
-			RandomTestUtil.randomString(), RandomTestUtil.randomString(), null,
-			null, RandomTestUtil.nextDate(), expirationDate, null, null,
-			ServiceContextTestUtil.getServiceContext(
-				_group, _user.getUserId()));
-
-		kbArticle.setExpirationDate(
-			new Date(System.currentTimeMillis() - (Time.MINUTE * 10)));
-
-		kbArticle = _kbArticleLocalService.updateKBArticle(kbArticle);
-
-		_kbArticleLocalService.checkKBArticles(_group.getCompanyId());
-
-		kbArticle = _kbArticleLocalService.getLatestKBArticle(
-			kbArticle.getResourcePrimKey(), WorkflowConstants.STATUS_ANY);
-
-		Assert.assertEquals(
-			WorkflowConstants.STATUS_EXPIRED, kbArticle.getStatus());
+		_testExpireKBArticle();
+		_testExpireKBArticleWhenKBArticleIsInTrash();
 	}
 
 	@Test
@@ -243,18 +200,11 @@ public class CheckKBArticleSchedulerJobConfigurationTest {
 			new Date(System.currentTimeMillis() + (Time.MINUTE * 5)), null,
 			_getServiceContext(user));
 
-		kbArticle.setExpirationDate(
-			new Date(System.currentTimeMillis() - (Time.MINUTE * 10)));
-
-		kbArticle = _kbArticleLocalService.updateKBArticle(kbArticle);
+		kbArticle = _updateExpirationDate(kbArticle);
 
 		_kbArticleLocalService.checkKBArticles(_group.getCompanyId());
 
-		kbArticle = _kbArticleLocalService.getLatestKBArticle(
-			kbArticle.getResourcePrimKey(), WorkflowConstants.STATUS_ANY);
-
-		Assert.assertEquals(
-			WorkflowConstants.STATUS_EXPIRED, kbArticle.getStatus());
+		_assertStatus(kbArticle, WorkflowConstants.STATUS_EXPIRED);
 
 		_assertUserNotificationEvent(
 			kbArticle, "A knowledge base article has expired.", user);
@@ -287,18 +237,11 @@ public class CheckKBArticleSchedulerJobConfigurationTest {
 		Assert.assertEquals(
 			WorkflowConstants.STATUS_APPROVED, kbArticle.getStatus());
 
-		kbArticle.setExpirationDate(
-			new Date(System.currentTimeMillis() - (Time.MINUTE * 10)));
-
-		kbArticle = _kbArticleLocalService.updateKBArticle(kbArticle);
+		kbArticle = _updateExpirationDate(kbArticle);
 
 		_kbArticleLocalService.checkKBArticles(_group.getCompanyId());
 
-		kbArticle = _kbArticleLocalService.getLatestKBArticle(
-			kbArticle.getResourcePrimKey(), WorkflowConstants.STATUS_ANY);
-
-		Assert.assertEquals(
-			WorkflowConstants.STATUS_EXPIRED, kbArticle.getStatus());
+		_assertStatus(kbArticle, WorkflowConstants.STATUS_EXPIRED);
 
 		_assertUserNotificationEvent(
 			kbArticle, "A knowledge base article has expired.", user);
@@ -328,11 +271,7 @@ public class CheckKBArticleSchedulerJobConfigurationTest {
 
 		_kbArticleLocalService.checkKBArticles(_group.getCompanyId());
 
-		kbArticle = _kbArticleLocalService.getLatestKBArticle(
-			kbArticle.getResourcePrimKey(), WorkflowConstants.STATUS_ANY);
-
-		Assert.assertEquals(
-			WorkflowConstants.STATUS_APPROVED, kbArticle.getStatus());
+		_assertStatus(kbArticle, WorkflowConstants.STATUS_APPROVED);
 	}
 
 	@Test
@@ -421,12 +360,21 @@ public class CheckKBArticleSchedulerJobConfigurationTest {
 		return user;
 	}
 
+	private void _assertStatus(KBArticle kbArticle, int status)
+		throws Exception {
+
+		kbArticle = _kbArticleLocalService.getLatestKBArticle(
+			kbArticle.getResourcePrimKey(), WorkflowConstants.STATUS_ANY);
+
+		Assert.assertEquals(status, kbArticle.getStatus());
+	}
+
 	private void _assertUserNotificationEvent(
 			KBArticle kbArticle, String title, User user)
 		throws Exception {
 
 		List<UserNotificationEvent> userNotificationEvents =
-			_userNotificationEventLocalService.getUserNotificationEvents(
+			UserNotificationEventTestUtil.getUserNotificationEvents(
 				user.getUserId());
 
 		Assert.assertEquals(
@@ -457,6 +405,62 @@ public class CheckKBArticleSchedulerJobConfigurationTest {
 		serviceContext.setPortletId(KBPortletKeys.KNOWLEDGE_BASE_ADMIN);
 
 		return serviceContext;
+	}
+
+	private void _testExpireKBArticle() throws Exception {
+		Date expirationDate = new Date(
+			System.currentTimeMillis() + (Time.MINUTE * 5));
+
+		KBArticle kbArticle = _kbArticleLocalService.addKBArticle(
+			null, UserLocalServiceUtil.getGuestUserId(_group.getCompanyId()),
+			PortalUtil.getClassNameId(KBFolder.class.getName()), 0,
+			RandomTestUtil.randomString(), RandomTestUtil.randomString(),
+			RandomTestUtil.randomString(), RandomTestUtil.randomString(), null,
+			null, RandomTestUtil.nextDate(), expirationDate, null, null,
+			ServiceContextTestUtil.getServiceContext(
+				_group, _user.getUserId()));
+
+		kbArticle = _updateExpirationDate(kbArticle);
+
+		_kbArticleLocalService.checkKBArticles(_group.getCompanyId());
+
+		_assertStatus(kbArticle, WorkflowConstants.STATUS_EXPIRED);
+	}
+
+	private void _testExpireKBArticleWhenKBArticleIsInTrash() throws Exception {
+		ServiceContext serviceContext = _getServiceContext(_user);
+
+		KBArticle approvedKBArticle = _addKBArticle(
+			new Date(System.currentTimeMillis() + (Time.MINUTE * 5)), null,
+			serviceContext);
+
+		serviceContext.setWorkflowAction(WorkflowConstants.ACTION_SAVE_DRAFT);
+
+		KBArticle draftKBArticle = _addKBArticle(
+			new Date(System.currentTimeMillis() + (Time.MINUTE * 5)), null,
+			serviceContext);
+
+		approvedKBArticle = _updateExpirationDate(approvedKBArticle);
+
+		_kbArticleLocalService.moveKBArticleToTrash(
+			_user.getUserId(), approvedKBArticle.getResourcePrimKey());
+
+		draftKBArticle = _updateExpirationDate(draftKBArticle);
+
+		_kbArticleLocalService.moveKBArticleToTrash(
+			_user.getUserId(), draftKBArticle.getResourcePrimKey());
+
+		_kbArticleLocalService.checkKBArticles(_group.getCompanyId());
+
+		_assertStatus(approvedKBArticle, WorkflowConstants.STATUS_IN_TRASH);
+		_assertStatus(draftKBArticle, WorkflowConstants.STATUS_IN_TRASH);
+	}
+
+	private KBArticle _updateExpirationDate(KBArticle kbArticle) {
+		kbArticle.setExpirationDate(
+			new Date(System.currentTimeMillis() - (Time.MINUTE * 10)));
+
+		return _kbArticleLocalService.updateKBArticle(kbArticle);
 	}
 
 	@DeleteAfterTestRun

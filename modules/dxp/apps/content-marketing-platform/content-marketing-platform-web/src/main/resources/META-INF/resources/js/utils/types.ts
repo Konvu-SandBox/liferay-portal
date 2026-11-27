@@ -71,6 +71,15 @@ export interface IProjectObjectEntry {
 	title: string;
 }
 
+export interface ISubtaskObjectEntry {
+	id: number;
+	r_cmpTaskToCMPTasks_c_cmpTaskId: number;
+	state: {
+		key: string;
+		name: string;
+	};
+}
+
 export interface ITaskObjectEntry {
 	actions?: {
 		[action: string]: {
@@ -95,6 +104,7 @@ export interface ITaskObjectEntry {
 	r_cmpProjectToCMPTasks_c_cmpProject: any;
 	r_cmpProjectToCMPTasks_c_cmpProjectERC: string;
 	r_cmpProjectToCMPTasks_c_cmpProjectId: number;
+	r_cmpTaskToCMPTasks_c_cmpTaskId?: number;
 	scopeId: number;
 	scopeKey: string;
 	state: {
@@ -150,6 +160,7 @@ export interface ProjectTaskItemData {
 		externalReferenceCode: string;
 		id: number;
 		r_cmpProjectToCMPTasks_c_cmpProjectId?: number;
+		scopeKey: string;
 		title: string;
 	};
 	entryClassName: string;

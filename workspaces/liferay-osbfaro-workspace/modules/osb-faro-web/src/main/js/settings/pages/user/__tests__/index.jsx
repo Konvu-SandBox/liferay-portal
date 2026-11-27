@@ -8,8 +8,6 @@ import {useCurrentUser} from 'shared/hooks/useCurrentUser';
 import {User} from 'shared/util/records';
 import {User as UserRoutes} from '../index';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/hooks/useCurrentUser', () => ({
 	useCurrentUser: jest.fn()
 }));
@@ -49,8 +47,8 @@ describe('UserRoutes', () => {
 
 		const {queryAllByText, queryByText} = render(<DefaultComponent />);
 
-		expect(queryAllByText('Manage Users')).toBeTruthy();
-		expect(queryByText('Requests')).toBeTruthy();
+		expect(queryAllByText(/^manage users$/i)).toBeTruthy();
+		expect(queryByText(/^requests$/i)).toBeTruthy();
 	});
 
 	it('if the user is NOT an AC Admin, then the tabs for toggling between users and user requests should NOT render', () => {
@@ -65,6 +63,6 @@ describe('UserRoutes', () => {
 		);
 
 		expect(queryByText('Manager Users')).toBeNull();
-		expect(queryByText('Requests')).toBeNull();
+		expect(queryByText(/^requests$/i)).toBeNull();
 	});
 });
