@@ -38,6 +38,7 @@ import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.model.CompanyConstants;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.Role;
@@ -69,9 +70,7 @@ import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.SubscriptionSender;
 import com.liferay.portal.kernel.util.TimeZoneThreadLocal;
 import com.liferay.portal.kernel.util.Validator;
-import com.liferay.portal.kernel.xml.Document;
-import com.liferay.portal.kernel.xml.Element;
-import com.liferay.portal.kernel.xml.SAXReaderUtil;
+import com.liferay.portal.kernel.xml.XMLUtil;
 import com.liferay.portlet.asset.service.permission.AssetEntryPermission;
 import com.liferay.portlet.configuration.kernel.util.PortletConfigurationUtil;
 import com.liferay.segments.configuration.provider.SegmentsConfigurationProvider;
@@ -310,8 +309,10 @@ public class AssetEntriesCheckerHelper {
 			long[] segmentsEntryIds = {SegmentsEntryConstants.ID_DEFAULT};
 
 			try {
-				if (!FeatureFlagManagerUtil.isEnabled(
-						layout.getCompanyId(), "LPD-109242") &&
+				if ((!FeatureFlagManagerUtil.isEnabled(
+						layout.getCompanyId(), "LPD-109242") ||
+					 FeatureFlagManagerUtil.isEnabled(
+						 CompanyConstants.SYSTEM, "LPD-78863")) &&
 					_segmentsConfigurationProvider.isSegmentationEnabled(
 						layout.getGroupId())) {
 
@@ -471,12 +472,8 @@ public class AssetEntriesCheckerHelper {
 					groupId = group.getLiveGroupId();
 				}
 
-				Document document = SAXReaderUtil.read(assetEntryXml);
-
-				Element rootElement = document.getRootElement();
-
-				String assetEntryUuid = rootElement.elementText(
-					"asset-entry-uuid");
+				String assetEntryUuid = XMLUtil.getElementText(
+					assetEntryXml, "asset-entry-uuid");
 
 				AssetEntry assetEntry = _assetEntryLocalService.fetchEntry(
 					groupId, assetEntryUuid);

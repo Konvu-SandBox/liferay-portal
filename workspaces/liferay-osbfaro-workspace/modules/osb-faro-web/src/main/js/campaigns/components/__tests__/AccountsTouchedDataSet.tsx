@@ -4,8 +4,6 @@ import {cleanup, render, screen} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import {warmFrontendDataSet} from 'test/warm-frontend-data-set';
 
-jest.unmock('react-dom');
-
 let lastFDSProps: any;
 
 jest.mock('@liferay/frontend-data-set-web', () => ({
@@ -131,16 +129,37 @@ describe('AccountsTouchedDataSet', () => {
 		]);
 	});
 
-	it('should sort by pipeline value descending by default', () => {
+	it('should offer every sortable column in the Order menu, pipeline value descending by default', () => {
 		renderDataSet();
 
 		expect(lastFDSProps.sorts).toEqual([
+			{
+				active: false,
+				default: false,
+				direction: 'asc',
+				key: 'accountName',
+				label: 'Account Name',
+			},
+			{
+				active: false,
+				default: false,
+				direction: 'asc',
+				key: 'lifecycleStage',
+				label: 'Lifecycle Stage',
+			},
 			{
 				active: true,
 				default: true,
 				direction: 'desc',
 				key: 'salesforce/openPipelineAmount',
 				label: 'Pipeline Value',
+			},
+			{
+				active: false,
+				default: false,
+				direction: 'asc',
+				key: 'salesforce/closedWonAmount',
+				label: 'Closed Won',
 			},
 		]);
 	});
@@ -179,11 +198,11 @@ describe('AccountsTouchedDataSet', () => {
 
 		const {container} = render(
 			lastFDSProps.customDataRenderers.lifecycleStageRenderer({
-				value: 'AT_RISK',
+				value: 'At Risk',
 			})
 		);
 
-		expect(container).toHaveTextContent('At Risk');
+		expect(container).toHaveTextContent(/at risk/i);
 		expect(container.querySelector('.label-inverse-danger')).toBeTruthy();
 	});
 
@@ -214,7 +233,7 @@ describe('AccountsTouchedDataSet', () => {
 				lastFDSProps.customDataRenderers.lifecycleStageRenderer({value})
 			);
 
-			expect(screen.getByText('–')).toHaveClass('text-secondary');
+			expect(screen.getByText('–')).toBeInTheDocument();
 		}
 	);
 

@@ -118,7 +118,15 @@ public class BackgroundTaskUtil {
 			!StringUtil.equals(
 				taskExecutorClassName,
 				BackgroundTaskExecutorNames.
-					PORTLET_IMPORT_BACKGROUND_TASK_EXECUTOR)) {
+					PORTLET_IMPORT_BACKGROUND_TASK_EXECUTOR) &&
+			!StringUtil.equals(
+				taskExecutorClassName,
+				BackgroundTaskExecutorNames.
+					PORTLET_REMOTE_STAGING_BACKGROUND_TASK_EXECUTOR) &&
+			!StringUtil.equals(
+				taskExecutorClassName,
+				BackgroundTaskExecutorNames.
+					PORTLET_STAGING_BACKGROUND_TASK_EXECUTOR)) {
 
 			return name;
 		}

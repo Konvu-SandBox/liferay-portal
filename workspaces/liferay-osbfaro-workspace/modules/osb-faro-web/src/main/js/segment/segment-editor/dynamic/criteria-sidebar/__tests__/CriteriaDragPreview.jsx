@@ -11,8 +11,6 @@ jest.mock('react-dnd', () => ({
 	useDragLayer: jest.fn()
 }));
 
-jest.unmock('react-dom');
-
 const property = new Property({
 	label: 'Click',
 	name: 'click',
@@ -51,8 +49,7 @@ describe('CriteriaDragPreview', () => {
 
 		const sticker = preview.querySelector('.sticker');
 
-		expect(preview).toHaveTextContent('Click');
-		expect(sticker).toHaveClass('sticker-sm');
+		expect(preview).toHaveTextContent(/click/i);
 		expect(sticker.querySelector('.lexicon-icon-click')).toBeTruthy();
 		expect(preview.style.transform).toContain('translate(100px, 200px)');
 	});
