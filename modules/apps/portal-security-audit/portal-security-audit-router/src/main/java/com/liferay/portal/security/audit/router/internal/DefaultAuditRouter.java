@@ -15,11 +15,9 @@ import com.liferay.portal.configuration.metatype.bnd.util.ConfigurableUtil;
 import com.liferay.portal.kernel.audit.AuditException;
 import com.liferay.portal.kernel.audit.AuditMessage;
 import com.liferay.portal.kernel.audit.AuditRouter;
-import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
-import com.liferay.portal.kernel.model.CompanyConstants;
 import com.liferay.portal.kernel.model.Role;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.service.UserLocalService;
@@ -28,10 +26,12 @@ import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.security.audit.AuditMessageProcessor;
 import com.liferay.portal.security.audit.configuration.AuditConfiguration;
 import com.liferay.portal.security.audit.constants.AuditEventConstants;
+import com.liferay.portal.security.audit.event.generators.constants.EventTypes;
 import com.liferay.portal.security.audit.router.internal.constants.AuditConstants;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -65,7 +65,10 @@ public class DefaultAuditRouter implements AuditRouter {
 
 	@Override
 	public void route(AuditMessage auditMessage) throws AuditException {
-		if (!_auditEnabled) {
+		if (!_auditEnabled &&
+			!Objects.equals(
+				auditMessage.getEventType(), EventTypes.AUDIT_CONFIG_CHANGE)) {
+
 			if (_log.isDebugEnabled()) {
 				_log.debug(
 					"Audit disabled, not processing message: " + auditMessage);
@@ -127,17 +130,9 @@ public class DefaultAuditRouter implements AuditRouter {
 	private void _populateAuditMessage(AuditMessage auditMessage)
 		throws AuditException {
 
-		long companyId = auditMessage.getCompanyId();
-
-		if ((companyId == CompanyConstants.SYSTEM) ||
-			!FeatureFlagManagerUtil.isEnabled(companyId, "LPD-6417")) {
-
-			auditMessage.setAction(null);
-			auditMessage.setResourceAction(null);
-			auditMessage.setResourceType(null);
-			auditMessage.setRoles(null);
-
-			return;
+		if (Validator.isNull(auditMessage.getContextName())) {
+			auditMessage.setContextName(
+				AuditEventConstants.CONTEXT_NAME_INSTANCE);
 		}
 
 		if (Validator.isNull(auditMessage.getRoles()) &&
@@ -200,16 +195,10 @@ public class DefaultAuditRouter implements AuditRouter {
 				StringUtil.toLowerCase(eventType);
 		}
 
-		String contextName = auditMessage.getContextName();
-
-		if (Validator.isNull(contextName)) {
-			contextName = AuditEventConstants.CONTEXT_NAME_INSTANCE;
-		}
-
 		auditMessage.setResourceAction(
 			StringBundler.concat(
-				StringUtil.toLowerCase(contextName), StringPool.PERIOD,
-				resourceType, StringPool.PERIOD, action));
+				StringUtil.toLowerCase(auditMessage.getContextName()),
+				StringPool.PERIOD, resourceType, StringPool.PERIOD, action));
 	}
 
 	private void _validateResourceAction(String resourceAction)

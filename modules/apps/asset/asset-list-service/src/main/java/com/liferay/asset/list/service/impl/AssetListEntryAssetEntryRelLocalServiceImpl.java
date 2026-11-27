@@ -227,14 +227,6 @@ public class AssetListEntryAssetEntryRelLocalServiceImpl
 	}
 
 	@Override
-	public List<AssetListEntryAssetEntryRel>
-		getAssetListEntryAssetEntryRelByAssetEntryId(long assetEntryId) {
-
-		return assetListEntryAssetEntryRelPersistence.findByAssetEntryId(
-			assetEntryId);
-	}
-
-	@Override
 	public List<AssetListEntryAssetEntryRel> getAssetListEntryAssetEntryRels(
 		long assetListEntryId, int start, int end) {
 
@@ -271,22 +263,6 @@ public class AssetListEntryAssetEntryRelLocalServiceImpl
 	public int getAssetListEntryAssetEntryRelsCount(long assetListEntryId) {
 		return assetListEntryAssetEntryRelPersistence.countByAssetListEntryId(
 			assetListEntryId);
-	}
-
-	@Override
-	public int getAssetListEntryAssetEntryRelsCount(
-		long assetListEntryId, long segmentsEntryId) {
-
-		return getAssetListEntryAssetEntryRelsCount(
-			assetListEntryId, StringPool.BLANK, segmentsEntryId);
-	}
-
-	@Override
-	public int getAssetListEntryAssetEntryRelsCount(
-		long assetListEntryId, long[] segmentsEntryIds) {
-
-		return assetListEntryAssetEntryRelPersistence.countByA_AEERC_S(
-			assetListEntryId, StringPool.BLANK, segmentsEntryIds);
 	}
 
 	@Override

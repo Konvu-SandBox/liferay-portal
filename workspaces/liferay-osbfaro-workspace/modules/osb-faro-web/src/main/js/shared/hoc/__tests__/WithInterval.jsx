@@ -3,8 +3,6 @@ import React from 'react';
 import withInterval from '../WithInterval';
 import {cleanup, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('WithInterval', () => {
 	afterEach(cleanup);
 
@@ -21,6 +19,6 @@ describe('WithInterval', () => {
 
 		const {getByText} = render(<WrappedComponent activeInterval='W' />);
 
-		expect(getByText('W').classList.contains('active')).toBe(true);
+		expect(getByText(/^w$/i).classList.contains('active')).toBe(true);
 	});
 });

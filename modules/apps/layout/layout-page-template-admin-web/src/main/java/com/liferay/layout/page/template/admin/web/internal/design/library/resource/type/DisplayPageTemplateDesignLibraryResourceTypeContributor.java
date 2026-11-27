@@ -64,6 +64,27 @@ public class DisplayPageTemplateDesignLibraryResourceTypeContributor
 
 		Group depotGroup = depotEntry.getGroup();
 
+		if (FeatureFlagManagerUtil.isEnabled(
+				depotEntry.getCompanyId(), "LPD-81022")) {
+
+			return Collections.singletonList(
+				new DesignLibraryResourceCreationItem(
+					PortletURLBuilder.create(
+						PortalUtil.getControlPanelPortletURL(
+							httpServletRequest, depotGroup,
+							LayoutPageTemplateAdminPortletKeys.
+								LAYOUT_PAGE_TEMPLATES,
+							0, 0, PortletRequest.RENDER_PHASE)
+					).setMVCPath(
+						"/select_display_page_master_layout.jsp"
+					).setRedirect(
+						backURL
+					).buildString(),
+					"add-display-page-template",
+					LanguageUtil.get(
+						httpServletRequest, "new-display-page-template")));
+		}
+
 		ThemeDisplay themeDisplay =
 			(ThemeDisplay)httpServletRequest.getAttribute(
 				WebKeys.THEME_DISPLAY);
@@ -139,6 +160,7 @@ public class DisplayPageTemplateDesignLibraryResourceTypeContributor
 				).buildString(),
 				"pencil", "edit", LanguageUtil.get(httpServletRequest, "edit"),
 				null, "get", "link"),
+			_getRenameFDSActionDropdownItem(httpServletRequest),
 			new FDSActionDropdownItem(
 				"{actions.markAsDefault.href}", "star", "markAsDefault",
 				LanguageUtil.get(httpServletRequest, "mark-as-default"), "post",
@@ -223,12 +245,6 @@ public class DisplayPageTemplateDesignLibraryResourceTypeContributor
 	public boolean hasViewPermission(
 		PermissionChecker permissionChecker, DepotEntry depotEntry) {
 
-		if (!FeatureFlagManagerUtil.isEnabled(
-				depotEntry.getCompanyId(), "LPD-81651")) {
-
-			return false;
-		}
-
 		return _portletResourcePermission.contains(
 			permissionChecker, depotEntry.getGroupId(), ActionKeys.VIEW);
 	}
@@ -258,6 +274,30 @@ public class DisplayPageTemplateDesignLibraryResourceTypeContributor
 		copyMenuFDSActionDropdownItem.setType("contextual");
 
 		return copyMenuFDSActionDropdownItem;
+	}
+
+	private FDSActionDropdownItem _getRenameFDSActionDropdownItem(
+		HttpServletRequest httpServletRequest) {
+
+		FDSActionDropdownItem renameFDSActionDropdownItem =
+			new FDSActionDropdownItem(
+				null, null, "rename",
+				LanguageUtil.get(httpServletRequest, "rename"), null, "update",
+				null);
+
+		renameFDSActionDropdownItem.putData(
+			"module",
+			"{RenameLayoutPageTemplateEntryDesignLibraryModalContent} from " +
+				"layout-page-template-admin-web");
+		renameFDSActionDropdownItem.putData(
+			"moduleProps",
+			HashMapBuilder.<String, Object>put(
+				"title",
+				LanguageUtil.get(
+					httpServletRequest, "rename-display-page-template")
+			).build());
+
+		return renameFDSActionDropdownItem;
 	}
 
 	@Reference

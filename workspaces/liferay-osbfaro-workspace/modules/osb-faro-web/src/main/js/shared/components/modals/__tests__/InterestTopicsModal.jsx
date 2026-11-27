@@ -4,8 +4,6 @@ import {cleanup, fireEvent, screen} from '@testing-library/react';
 import {noop} from 'lodash';
 import {renderModal} from 'test/render-modal';
 
-jest.unmock('react-dom');
-
 describe('InterestTopicsModal', () => {
 	afterEach(cleanup);
 
@@ -24,7 +22,7 @@ describe('InterestTopicsModal', () => {
 			<InterestTopicsModal observer={observer} onClose={onClose} />
 		));
 
-		fireEvent.click(screen.getByText('Cancel'));
+		fireEvent.click(screen.getByText(/^cancel$/i));
 
 		expect(onClose).toHaveBeenCalledTimes(1);
 	});

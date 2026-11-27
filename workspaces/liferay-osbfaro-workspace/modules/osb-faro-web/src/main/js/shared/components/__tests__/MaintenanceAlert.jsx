@@ -6,8 +6,6 @@ import {mockStoreData} from 'test/mock-store';
 import {Project, RemoteData} from 'shared/util/records';
 import {ProjectStates} from 'shared/util/constants';
 
-jest.unmock('react-dom');
-
 const store = mockStoreData.setIn(
 	['projects', '23'],
 	new RemoteData({
@@ -35,7 +33,7 @@ describe('MaintenanceAlert', () => {
 		expect(
 			container.querySelector('.maintenance-alert-root')
 		).toBeInTheDocument();
-		expect(queryByText('Scheduled Maintenance')).toBeNull();
+		expect(queryByText(/^scheduled maintenance$/i)).toBeNull();
 	});
 
 	it('should render w/ maintenance alert', () => {
