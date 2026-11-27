@@ -7,8 +7,6 @@ import {Individual} from 'shared/util/records';
 import {Provider} from 'react-redux';
 import {MemoryRouter} from 'react-router';
 
-jest.unmock('react-dom');
-
 jest.mock('../../components/ContextualInformation', () => ({
 	__esModule: true,
 	default: () => <div>{'ContextualInformation'}</div>
@@ -46,6 +44,6 @@ describe('IndividualOverview', () => {
 		const {queryByText} = renderComponent();
 
 		expect(queryByText('No Site Data Synced')).not.toBeInTheDocument();
-		expect(queryByText('Connect Data Source')).not.toBeInTheDocument();
+		expect(queryByText(/^connect data source$/i)).not.toBeInTheDocument();
 	});
 });

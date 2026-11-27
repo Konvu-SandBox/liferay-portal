@@ -2,8 +2,6 @@ import Main from '../Main';
 import React from 'react';
 import {render, screen} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('BaseEditPage.Main', () => {
 	it('holds the editor content in a centered container', () => {
 		render(
@@ -12,7 +10,7 @@ describe('BaseEditPage.Main', () => {
 			</Main>
 		);
 
-		const main = screen.getByText('Editor').parentElement;
+		const main = screen.getByText(/^editor$/i).parentElement;
 
 		expect(main).toHaveClass(
 			'base-edit-page-main',

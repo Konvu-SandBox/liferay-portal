@@ -2,8 +2,6 @@ import React from 'react';
 import SyncedStripe, {getTitle} from '../SyncedStripe';
 import {cleanup, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('SyncedStripe', () => {
 	afterEach(cleanup);
 
@@ -27,7 +25,7 @@ describe('SyncedStripe', () => {
 
 			if (sitesSyncedCount === 1) {
 				expect(
-					queryByText('There is 1 site synced to this property.')
+					queryByText(/^there is 1 site synced to this property\.$/i)
 				).toBeInTheDocument();
 			} else {
 				expect(

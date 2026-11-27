@@ -11,8 +11,6 @@ import {MemoryRouter} from 'react-router-dom';
 import {useRequest} from 'shared/hooks/useRequest';
 import {warmFrontendDataSet} from 'test/warm-frontend-data-set';
 
-jest.unmock('react-dom');
-
 jest.mock('@liferay/frontend-data-set-web', () => ({
 	...jest.requireActual('@liferay/frontend-data-set-web'),
 	FrontendDataSet: (props: any) => (
@@ -57,14 +55,14 @@ describe('MembershipsCard', () => {
 	it('should title the card Membership', () => {
 		renderCard();
 
-		expect(screen.getByText('Membership')).toBeInTheDocument();
+		expect(screen.getByText(/^membership$/i)).toBeInTheDocument();
 	});
 
 	it('should render both tabs with Accounts Touched active', () => {
 		renderCard();
 
-		expect(screen.getByText('Accounts Touched')).toHaveClass('active');
-		expect(screen.getByText('Individuals Touched')).not.toHaveClass(
+		expect(screen.getByText(/^accounts touched$/i)).toHaveClass('active');
+		expect(screen.getByText(/^individuals touched$/i)).not.toHaveClass(
 			'active'
 		);
 	});
@@ -118,16 +116,20 @@ describe('MembershipsCard', () => {
 	it('should select the Individuals Touched tab when it is clicked', () => {
 		renderCard();
 
-		fireEvent.click(screen.getByText('Individuals Touched'));
+		fireEvent.click(screen.getByText(/^individuals touched$/i));
 
-		expect(screen.getByText('Individuals Touched')).toHaveClass('active');
-		expect(screen.getByText('Accounts Touched')).not.toHaveClass('active');
+		expect(screen.getByText(/^individuals touched$/i)).toHaveClass(
+			'active'
+		);
+		expect(screen.getByText(/^accounts touched$/i)).not.toHaveClass(
+			'active'
+		);
 	});
 
 	it('should show the individuals table under Individuals Touched', async () => {
 		renderCard();
 
-		fireEvent.click(screen.getByText('Individuals Touched'));
+		fireEvent.click(screen.getByText(/^individuals touched$/i));
 
 		await expectActivePane('campaign-individuals-dataset');
 	});
@@ -140,11 +142,11 @@ describe('MembershipsCard', () => {
 		const accountsDataSet = getDataSet('campaign-accounts-dataset');
 		const individualsDataSet = getDataSet('campaign-individuals-dataset');
 
-		fireEvent.click(screen.getByText('Individuals Touched'));
+		fireEvent.click(screen.getByText(/^individuals touched$/i));
 
 		await expectActivePane('campaign-individuals-dataset');
 
-		fireEvent.click(screen.getByText('Accounts Touched'));
+		fireEvent.click(screen.getByText(/^accounts touched$/i));
 
 		await expectActivePane('campaign-accounts-dataset');
 
