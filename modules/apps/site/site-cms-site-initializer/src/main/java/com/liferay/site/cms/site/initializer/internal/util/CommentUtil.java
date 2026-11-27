@@ -5,6 +5,12 @@
 
 package com.liferay.site.cms.site.initializer.internal.util;
 
+import com.liferay.comment.constants.CommentConstants;
+import com.liferay.depot.constants.DepotConstants;
+import com.liferay.depot.model.DepotEntry;
+import com.liferay.depot.service.DepotEntryLocalServiceUtil;
+import com.liferay.object.model.ObjectEntry;
+import com.liferay.object.service.ObjectEntryLocalServiceUtil;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.comment.Comment;
@@ -17,18 +23,25 @@ import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.language.LanguageUtil;
+import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.GroupConstants;
 import com.liferay.portal.kernel.model.User;
+import com.liferay.portal.kernel.model.UserGroup;
 import com.liferay.portal.kernel.portlet.RequestBackedPortletURLFactoryUtil;
 import com.liferay.portal.kernel.security.permission.PermissionCheckerFactoryUtil;
+import com.liferay.portal.kernel.service.ClassNameLocalServiceUtil;
+import com.liferay.portal.kernel.service.GroupLocalServiceUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextFunction;
+import com.liferay.portal.kernel.service.UserGroupLocalServiceUtil;
 import com.liferay.portal.kernel.service.UserLocalServiceUtil;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
-import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.HashMapBuilder;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.WebKeys;
+import com.liferay.ratings.kernel.model.RatingsEntry;
 import com.liferay.ratings.kernel.model.RatingsStats;
+import com.liferay.ratings.kernel.service.RatingsEntryLocalServiceUtil;
 import com.liferay.ratings.kernel.service.RatingsStatsLocalServiceUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,6 +49,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -64,8 +78,11 @@ public class CommentUtil {
 				httpServletRequest,
 				System.currentTimeMillis() - modifiedDate.getTime(), true));
 
+		RatingsEntry ratingsEntry = RatingsEntryLocalServiceUtil.fetchEntry(
+			themeDisplay.getUserId(), CommentConstants.getDiscussionClassName(),
+			comment.getCommentId());
 		RatingsStats ratingsStats = RatingsStatsLocalServiceUtil.fetchStats(
-			comment.getClassName(), comment.getCommentId());
+			CommentConstants.getDiscussionClassName(), comment.getCommentId());
 
 		return JSONUtil.put(
 			"author", _getAuthorJSONObject(comment, httpServletRequest)
@@ -107,12 +124,32 @@ public class CommentUtil {
 				return 0;
 			}
 		).put(
+			"ratingsClassName", CommentConstants.getDiscussionClassName()
+		).put(
 			"rootComment",
 			() -> {
 				Comment parentComment = CommentManagerUtil.fetchComment(
 					comment.getParentCommentId());
 
 				return parentComment.isRoot();
+			}
+		).put(
+			"thumbDown",
+			() -> {
+				if (ratingsEntry != null) {
+					return ratingsEntry.getScore() < 0.5;
+				}
+
+				return false;
+			}
+		).put(
+			"thumbUp",
+			() -> {
+				if (ratingsEntry != null) {
+					return ratingsEntry.getScore() >= 0.5;
+				}
+
+				return false;
 			}
 		);
 	}
@@ -190,25 +227,50 @@ public class CommentUtil {
 
 		StringBundler sb = new StringBundler();
 
-		Matcher matcher = _mentionUserPattern.matcher(body);
+		Matcher matcher = _mentionPattern.matcher(body);
 		int end = 0;
+
+		long groupId = _getGroupId(
+			className, classPK, themeDisplay.getCompanyId());
 
 		while (matcher.find()) {
 			sb.append(body.substring(end, matcher.start()));
 
-			User user = UserLocalServiceUtil.fetchUserByExternalReferenceCode(
-				matcher.group(1), themeDisplay.getCompanyId());
+			boolean mentionable = false;
 
-			if ((user != null) &&
-				discussionPermission.hasViewPermission(
-					PermissionCheckerFactoryUtil.create(user),
-					themeDisplay.getCompanyId(), themeDisplay.getScopeGroupId(),
-					className, classPK)) {
+			if (Objects.equals(matcher.group(1), "user")) {
+				User user =
+					UserLocalServiceUtil.fetchUserByExternalReferenceCode(
+						matcher.group(2), themeDisplay.getCompanyId());
 
+				if ((user != null) &&
+					discussionPermission.hasViewPermission(
+						PermissionCheckerFactoryUtil.create(user),
+						themeDisplay.getCompanyId(),
+						themeDisplay.getScopeGroupId(), className, classPK)) {
+
+					mentionable = true;
+				}
+			}
+			else {
+				UserGroup userGroup =
+					UserGroupLocalServiceUtil.
+						fetchUserGroupByExternalReferenceCode(
+							matcher.group(2), themeDisplay.getCompanyId());
+
+				if ((userGroup != null) &&
+					GroupLocalServiceUtil.hasUserGroupGroup(
+						userGroup.getUserGroupId(), groupId)) {
+
+					mentionable = true;
+				}
+			}
+
+			if (mentionable) {
 				sb.append(matcher.group());
 			}
 			else {
-				sb.append(matcher.group(2));
+				sb.append(matcher.group(3));
 			}
 
 			end = matcher.end();
@@ -220,7 +282,8 @@ public class CommentUtil {
 	}
 
 	public static Function<String, ServiceContext> getServiceContextFunction(
-		long classPK, HttpServletRequest httpServletRequest) {
+		String className, long classPK, String previousBody,
+		HttpServletRequest httpServletRequest) {
 
 		ThemeDisplay themeDisplay =
 			(ThemeDisplay)httpServletRequest.getAttribute(
@@ -235,16 +298,17 @@ public class CommentUtil {
 			return serviceContextFunction;
 		}
 
-		String contentURL = StringBundler.concat(
-			themeDisplay.getPortalURL(), themeDisplay.getPathMain(),
-			GroupConstants.CMS_FRIENDLY_URL,
-			"/edit_content_item?objectEntryId=", classPK, "&p_l_mode=",
-			Constants.READ);
+		String contentURL = _getContentURL(classPK, themeDisplay);
 
 		return serviceContextFunction.andThen(
 			serviceContext -> {
 				serviceContext.setAttribute("contentURL", contentURL);
+				serviceContext.setAttribute(
+					"discussionClassNameId",
+					PortalUtil.getClassNameId(className));
+				serviceContext.setAttribute("discussionClassPK", classPK);
 				serviceContext.setAttribute("namespace", StringPool.BLANK);
+				serviceContext.setAttribute("previousBody", previousBody);
 
 				return serviceContext;
 			});
@@ -285,7 +349,70 @@ public class CommentUtil {
 		);
 	}
 
-	private static final Pattern _mentionUserPattern = Pattern.compile(
-		"<span class=\"mention mention-user-([^\"\\s]+)\">([^<]*)</span>");
+	private static String _getContentURL(
+		long objectEntryId, ThemeDisplay themeDisplay) {
+
+		ObjectEntry objectEntry = ObjectEntryLocalServiceUtil.fetchObjectEntry(
+			objectEntryId);
+
+		if (objectEntry != null) {
+			DepotEntry depotEntry =
+				DepotEntryLocalServiceUtil.fetchGroupDepotEntry(
+					objectEntry.getGroupId());
+
+			if ((depotEntry != null) &&
+				(depotEntry.getType() == DepotConstants.TYPE_SPACE)) {
+
+				return StringBundler.concat(
+					themeDisplay.getPortalURL(),
+					themeDisplay.getPathFriendlyURLPublic(),
+					GroupConstants.CMS_FRIENDLY_URL,
+					"/view-asset?objectEntryId=", objectEntryId);
+			}
+
+			Group group = GroupLocalServiceUtil.fetchGroup(
+				objectEntry.getCompanyId(),
+				PortalUtil.getClassNameId(objectEntry.getModelClassName()),
+				objectEntryId);
+
+			if (group != null) {
+				return StringBundler.concat(
+					themeDisplay.getPortalURL(),
+					themeDisplay.getPathFriendlyURLPublic(),
+					group.getFriendlyURL());
+			}
+		}
+
+		return StringBundler.concat(
+			themeDisplay.getPortalURL(), themeDisplay.getPathMain(),
+			GroupConstants.CMS_FRIENDLY_URL,
+			"/edit_content_item?objectEntryId=", objectEntryId);
+	}
+
+	private static long _getGroupId(
+			String className, long classPK, long companyId)
+		throws PortalException {
+
+		ObjectEntry objectEntry = ObjectEntryLocalServiceUtil.getObjectEntry(
+			classPK);
+
+		if (objectEntry.getGroupId() != 0) {
+			return objectEntry.getGroupId();
+		}
+
+		Group group = GroupLocalServiceUtil.fetchGroup(
+			companyId, ClassNameLocalServiceUtil.getClassNameId(className),
+			classPK);
+
+		if (group == null) {
+			return 0;
+		}
+
+		return group.getGroupId();
+	}
+
+	private static final Pattern _mentionPattern = Pattern.compile(
+		"<span class=\"mention mention-(user|usergroup)-([^\"\\s]+)\">" +
+			"([^<]*)</span>");
 
 }

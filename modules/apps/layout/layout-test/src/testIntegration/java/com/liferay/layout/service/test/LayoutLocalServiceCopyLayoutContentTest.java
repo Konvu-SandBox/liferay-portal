@@ -594,7 +594,7 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 			2, mainDraftFragmentEntryLink1.getExternalReferenceCode(),
 			mainDraftLayout);
 
-		Layout launchDraftLayout = _addLaunchDraftLayout(
+		Layout launchDraftLayout = LayoutTestUtil.addLaunchDraftLayout(
 			RandomTestUtil.randomLong(), layout);
 
 		_testCopyLayoutContentPreservesLineage(
@@ -620,7 +620,9 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 				mainDraftFragmentEntryLink1.getExternalReferenceCode(),
 				mainDraftFragmentEntryLink2.getExternalReferenceCode()
 			},
-			layout, _addLaunchDraftLayout(RandomTestUtil.randomLong(), layout));
+			layout,
+			LayoutTestUtil.addLaunchDraftLayout(
+				RandomTestUtil.randomLong(), layout));
 	}
 
 	@Test
@@ -739,13 +741,13 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 		_layoutLocalService.copyLayoutContent(draftLayout, layout);
 
 		FragmentEntryLink fragmentEntryLink1 =
-			_fragmentEntryLinkLocalService.getFragmentEntryLink(
+			_fragmentEntryLinkLocalService.fetchFragmentEntryLink(
 				_group.getGroupId(),
 				draftFragmentEntryLink1.getExternalReferenceCode(),
 				layout.getPlid());
 
 		FragmentEntryLink fragmentEntryLink2 =
-			_fragmentEntryLinkLocalService.getFragmentEntryLink(
+			_fragmentEntryLinkLocalService.fetchFragmentEntryLink(
 				_group.getGroupId(),
 				draftFragmentEntryLink2.getExternalReferenceCode(),
 				layout.getPlid());
@@ -775,13 +777,13 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 		_layoutLocalService.copyLayoutContent(draftLayout, layout);
 
 		FragmentEntryLink updatedFragmentEntryLink1 =
-			_fragmentEntryLinkLocalService.getFragmentEntryLink(
+			_fragmentEntryLinkLocalService.fetchFragmentEntryLink(
 				_group.getGroupId(),
 				draftFragmentEntryLink1.getExternalReferenceCode(),
 				layout.getPlid());
 
 		FragmentEntryLink updatedFragmentEntryLink2 =
-			_fragmentEntryLinkLocalService.getFragmentEntryLink(
+			_fragmentEntryLinkLocalService.fetchFragmentEntryLink(
 				_group.getGroupId(),
 				draftFragmentEntryLink2.getExternalReferenceCode(),
 				layout.getPlid());
@@ -1745,26 +1747,6 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 				layout.getPlid()));
 
 		return _layoutLocalService.getLayout(layout.getPlid());
-	}
-
-	private Layout _addLaunchDraftLayout(long launchSetId, Layout layout)
-		throws Exception {
-
-		Layout launchDraftLayout = _layoutLocalService.addLayout(
-			StringBundler.concat(
-				layout.getExternalReferenceCode(), "-launch-", launchSetId),
-			TestPropsValues.getUserId(), layout.getGroupId(),
-			layout.isPrivateLayout(), layout.getParentLayoutId(),
-			_portal.getClassNameId(Layout.class), layout.getPlid(),
-			layout.getNameMap(), layout.getTitleMap(),
-			layout.getDescriptionMap(), layout.getKeywordsMap(),
-			layout.getRobotsMap(), layout.getType(), layout.getTypeSettings(),
-			true, true, Collections.emptyMap(),
-			layout.getMasterLayoutPageTemplateEntryERC(), _serviceContext);
-
-		launchDraftLayout.setLaunchSetId(launchSetId);
-
-		return _layoutLocalService.updateLayout(launchDraftLayout);
 	}
 
 	private void _addLayoutPageTemplateStructureRel(

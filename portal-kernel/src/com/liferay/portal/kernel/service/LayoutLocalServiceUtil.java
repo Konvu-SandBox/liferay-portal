@@ -654,6 +654,10 @@ public class LayoutLocalServiceUtil {
 		return getService().fetchDraftLayouts(layouts);
 	}
 
+	public static List<Layout> fetchDraftLayouts(long plid) {
+		return getService().fetchDraftLayouts(plid);
+	}
+
 	public static Layout fetchFirstLayout(
 		long groupId, boolean privateLayout, long parentLayoutId) {
 
@@ -746,6 +750,12 @@ public class LayoutLocalServiceUtil {
 
 	public static Layout getBrowsableLayout(Layout layout) {
 		return getService().getBrowsableLayout(layout);
+	}
+
+	public static long[] getClassPKsByLaunchSetId(
+		long groupId, long launchSetId) {
+
+		return getService().getClassPKsByLaunchSetId(groupId, launchSetId);
 	}
 
 	/**
@@ -1317,6 +1327,12 @@ public class LayoutLocalServiceUtil {
 	}
 
 	public static int getLayoutsCount(
+		long groupId, boolean privateLayout, int[] statuses) {
+
+		return getService().getLayoutsCount(groupId, privateLayout, statuses);
+	}
+
+	public static int getLayoutsCount(
 		long groupId, boolean privateLayout, long parentLayoutId) {
 
 		return getService().getLayoutsCount(
@@ -1559,6 +1575,17 @@ public class LayoutLocalServiceUtil {
 	}
 
 	public static List<Layout> search(
+			long groupId, boolean privateLayout, String keywords,
+			boolean searchOnlyByTitle, String[] types, int[] statuses,
+			int start, int end, OrderByComparator<Layout> orderByComparator)
+		throws PortalException {
+
+		return getService().search(
+			groupId, privateLayout, keywords, searchOnlyByTitle, types,
+			statuses, start, end, orderByComparator);
+	}
+
+	public static List<Layout> search(
 			long groupId, long userId, boolean privateLayout, String keywords,
 			boolean searchOnlyByTitle, String[] types, int start, int end,
 			OrderByComparator<Layout> orderByComparator)
@@ -1590,12 +1617,32 @@ public class LayoutLocalServiceUtil {
 	}
 
 	public static int searchCount(
+			com.liferay.portal.kernel.model.Group group, boolean privateLayout,
+			String keywords, boolean searchOnlyByTitle, String[] types,
+			int[] statuses)
+		throws PortalException {
+
+		return getService().searchCount(
+			group, privateLayout, keywords, searchOnlyByTitle, types, statuses);
+	}
+
+	public static int searchCount(
 			long groupId, long userId, boolean privateLayout, String keywords,
 			boolean searchOnlyByTitle, String[] types)
 		throws PortalException {
 
 		return getService().searchCount(
 			groupId, userId, privateLayout, keywords, searchOnlyByTitle, types);
+	}
+
+	public static int searchCount(
+			long groupId, long userId, boolean privateLayout, String keywords,
+			boolean searchOnlyByTitle, String[] types, int[] statuses)
+		throws PortalException {
+
+		return getService().searchCount(
+			groupId, userId, privateLayout, keywords, searchOnlyByTitle, types,
+			statuses);
 	}
 
 	/**
@@ -1821,6 +1868,17 @@ public class LayoutLocalServiceUtil {
 
 		return getService().updateLookAndFeel(
 			groupId, privateLayout, layoutId, themeId, colorSchemeId, css);
+	}
+
+	public static Layout updateMasterLayoutPageTemplateEntry(
+			long groupId, boolean privateLayout, long layoutId,
+			String masterLayoutPageTemplateEntryERC,
+			String masterLayoutPageTemplateEntryScopeERC)
+		throws PortalException {
+
+		return getService().updateMasterLayoutPageTemplateEntry(
+			groupId, privateLayout, layoutId, masterLayoutPageTemplateEntryERC,
+			masterLayoutPageTemplateEntryScopeERC);
 	}
 
 	/**
@@ -2102,4 +2160,4 @@ public class LayoutLocalServiceUtil {
 	private static volatile LayoutLocalService _service;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-695842840
+// LIFERAY-SERVICE-BUILDER-HASH:-1651792520
