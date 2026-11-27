@@ -47,7 +47,6 @@ import com.liferay.portal.kernel.notifications.UserNotificationFeedEntry;
 import com.liferay.portal.kernel.notifications.UserNotificationHandler;
 import com.liferay.portal.kernel.service.ClassNameLocalServiceUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
-import com.liferay.portal.kernel.service.UserNotificationEventLocalService;
 import com.liferay.portal.kernel.service.WorkflowDefinitionLinkLocalServiceUtil;
 import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
@@ -56,6 +55,7 @@ import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
+import com.liferay.portal.kernel.test.util.UserNotificationEventTestUtil;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Time;
@@ -476,6 +476,46 @@ public class KBArticleLocalServiceTest {
 		Assert.assertEquals(displayDate, kbArticle.getDisplayDate());
 		Assert.assertEquals(expirationDate, kbArticle.getExpirationDate());
 		Assert.assertEquals(reviewDate, kbArticle.getReviewDate());
+	}
+
+	@Test
+	public void testAddKBArticleWithDuplicateTitleAsDraft() throws Exception {
+		_testAddKBArticleWithDuplicateTitleAsDraft(
+			KBFolderConstants.DEFAULT_PARENT_FOLDER_ID,
+			KBFolderConstants.DEFAULT_PARENT_FOLDER_ID);
+
+		KBFolder kbFolder1 = _kbFolderLocalService.addKBFolder(
+			null, _user.getUserId(), _group.getGroupId(), _kbFolderClassNameId,
+			KBFolderConstants.DEFAULT_PARENT_FOLDER_ID,
+			StringUtil.randomString(), StringUtil.randomString(),
+			_serviceContext);
+
+		_testAddKBArticleWithDuplicateTitleAsDraft(
+			kbFolder1.getKbFolderId(), kbFolder1.getKbFolderId());
+
+		String name = StringUtil.randomString();
+
+		KBFolder childKBFolder1 = _kbFolderLocalService.addKBFolder(
+			null, _user.getUserId(), _group.getGroupId(), _kbFolderClassNameId,
+			kbFolder1.getKbFolderId(), name, StringUtil.randomString(),
+			_serviceContext);
+
+		KBFolder kbFolder2 = _kbFolderLocalService.addKBFolder(
+			null, _user.getUserId(), _group.getGroupId(), _kbFolderClassNameId,
+			KBFolderConstants.DEFAULT_PARENT_FOLDER_ID,
+			StringUtil.randomString(), StringUtil.randomString(),
+			_serviceContext);
+
+		KBFolder childKBFolder2 = _kbFolderLocalService.addKBFolder(
+			null, _user.getUserId(), _group.getGroupId(), _kbFolderClassNameId,
+			kbFolder2.getKbFolderId(), name, StringUtil.randomString(),
+			_serviceContext);
+
+		Assert.assertEquals(
+			childKBFolder1.getUrlTitle(), childKBFolder2.getUrlTitle());
+
+		_testAddKBArticleWithDuplicateTitleAsDraft(
+			childKBFolder1.getKbFolderId(), childKBFolder2.getKbFolderId());
 	}
 
 	@Test(expected = KBArticleUrlTitleException.class)
@@ -1123,7 +1163,7 @@ public class KBArticleLocalServiceTest {
 			WorkflowConstants.STATUS_EXPIRED, kbArticle.getStatus());
 
 		List<UserNotificationEvent> userNotificationEvents =
-			_userNotificationEventLocalService.getUserNotificationEvents(
+			UserNotificationEventTestUtil.getUserNotificationEvents(
 				user.getUserId());
 
 		Assert.assertEquals(
@@ -1613,61 +1653,6 @@ public class KBArticleLocalServiceTest {
 	}
 
 	@Test
-	public void testPreviousAndNextKBArticles() throws Exception {
-		KBArticle parentKBArticle = _addKBArticle();
-
-		KBArticle childKBArticle1 = _kbArticleLocalService.addKBArticle(
-			null, _user.getUserId(), parentKBArticle.getClassNameId(),
-			parentKBArticle.getResourcePrimKey(), StringUtil.randomString(),
-			StringUtil.randomString(), StringUtil.randomString(),
-			StringUtil.randomString(), null, null, new Date(), null, null, null,
-			_serviceContext);
-
-		KBArticle childKBArticle2 = _kbArticleLocalService.addKBArticle(
-			null, _user.getUserId(), parentKBArticle.getClassNameId(),
-			parentKBArticle.getResourcePrimKey(), StringUtil.randomString(),
-			StringUtil.randomString(), StringUtil.randomString(),
-			StringUtil.randomString(), null, null, new Date(), null, null, null,
-			_serviceContext);
-
-		KBArticle topLevelKBArticle = _addKBArticle();
-
-		KBArticle[] parentPreviousAndNextKBArticles =
-			_kbArticleLocalService.getPreviousAndNextKBArticles(
-				parentKBArticle.getKbArticleId());
-
-		Assert.assertNull(parentPreviousAndNextKBArticles[0]);
-		Assert.assertEquals(
-			childKBArticle1, parentPreviousAndNextKBArticles[2]);
-
-		KBArticle[] child1PreviousAndNextKBArticles =
-			_kbArticleLocalService.getPreviousAndNextKBArticles(
-				childKBArticle1.getKbArticleId());
-
-		Assert.assertEquals(
-			parentKBArticle, child1PreviousAndNextKBArticles[0]);
-		Assert.assertEquals(
-			childKBArticle2, child1PreviousAndNextKBArticles[2]);
-
-		KBArticle[] child2PreviousAndNextKBArticles =
-			_kbArticleLocalService.getPreviousAndNextKBArticles(
-				childKBArticle2.getKbArticleId());
-
-		Assert.assertEquals(
-			childKBArticle1, child2PreviousAndNextKBArticles[0]);
-		Assert.assertEquals(
-			topLevelKBArticle, child2PreviousAndNextKBArticles[2]);
-
-		KBArticle[] topLevelPreviousAndNextKBArticles =
-			_kbArticleLocalService.getPreviousAndNextKBArticles(
-				topLevelKBArticle.getKbArticleId());
-
-		Assert.assertEquals(
-			childKBArticle2, topLevelPreviousAndNextKBArticles[0]);
-		Assert.assertNull(topLevelPreviousAndNextKBArticles[2]);
-	}
-
-	@Test
 	public void testRemoveExpirationReviewDate() throws Exception {
 		_serviceContext.setWorkflowAction(WorkflowConstants.ACTION_PUBLISH);
 
@@ -2100,6 +2085,39 @@ public class KBArticleLocalServiceTest {
 			displayDate, null, null, null, _serviceContext);
 	}
 
+	private void _testAddKBArticleWithDuplicateTitleAsDraft(
+			long kbFolderId1, long kbFolderId2)
+		throws Exception {
+
+		_serviceContext.setWorkflowAction(WorkflowConstants.ACTION_SAVE_DRAFT);
+
+		String title = StringUtil.randomString();
+
+		KBArticle kbArticle1 = _kbArticleLocalService.addKBArticle(
+			null, _user.getUserId(), _kbFolderClassNameId, kbFolderId1, title,
+			StringPool.BLANK, StringUtil.randomString(),
+			StringUtil.randomString(), null, null, new Date(), null, null, null,
+			_serviceContext);
+		KBArticle kbArticle2 = _kbArticleLocalService.addKBArticle(
+			null, _user.getUserId(), _kbFolderClassNameId, kbFolderId2, title,
+			StringPool.BLANK, StringUtil.randomString(),
+			StringUtil.randomString(), null, null, new Date(), null, null, null,
+			_serviceContext);
+
+		_serviceContext.setWorkflowAction(WorkflowConstants.ACTION_PUBLISH);
+
+		KBArticle kbArticle3 = _kbArticleLocalService.addKBArticle(
+			null, _user.getUserId(), _kbFolderClassNameId, kbFolderId2, title,
+			StringPool.BLANK, StringUtil.randomString(),
+			StringUtil.randomString(), null, null, new Date(), null, null, null,
+			_serviceContext);
+
+		Assert.assertEquals(
+			kbArticle1.getUrlTitle() + "-1", kbArticle2.getUrlTitle());
+		Assert.assertEquals(
+			kbArticle1.getUrlTitle() + "-2", kbArticle3.getUrlTitle());
+	}
+
 	private void _testKBArticleLock(
 			long resourcePrimKey,
 			UnsafeRunnable<PortalException> unsafeRunnable)
@@ -2180,10 +2198,6 @@ public class KBArticleLocalServiceTest {
 
 	private ServiceContext _serviceContext;
 	private User _user;
-
-	@Inject
-	private UserNotificationEventLocalService
-		_userNotificationEventLocalService;
 
 	@Inject(
 		filter = "jakarta.portlet.name=" + KBPortletKeys.KNOWLEDGE_BASE_ADMIN

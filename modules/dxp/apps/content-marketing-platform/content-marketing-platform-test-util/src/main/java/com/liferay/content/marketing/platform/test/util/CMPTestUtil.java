@@ -22,6 +22,7 @@ import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.GroupConstants;
+import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.module.service.Snapshot;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
@@ -57,7 +58,8 @@ public class CMPTestUtil {
 
 		return _addObjectEntry(
 			null, "L_CMP_PROJECT_LINK", cmpProjectObjectEntry,
-			"r_cmpProjectToCMPProjectLinks_c_cmpProjectId");
+			"r_cmpProjectToCMPProjectLinks_c_cmpProjectId",
+			cmpProjectObjectEntry.getUserId());
 	}
 
 	public static ObjectEntry addCMPProjectLinkObjectEntry(
@@ -66,7 +68,8 @@ public class CMPTestUtil {
 
 		return _addObjectEntry(
 			linkedObjectEntry, "L_CMP_PROJECT_LINK", cmpProjectObjectEntry,
-			"r_cmpProjectToCMPProjectLinks_c_cmpProjectId");
+			"r_cmpProjectToCMPProjectLinks_c_cmpProjectId",
+			cmpProjectObjectEntry.getUserId());
 	}
 
 	public static ObjectEntry addCMPProjectObjectEntry()
@@ -129,7 +132,8 @@ public class CMPTestUtil {
 
 		return _addObjectEntry(
 			null, "L_CMP_TASK_LINK", cmpTaskObjectEntry,
-			"r_cmpTaskToCMPTaskLinks_c_cmpTaskId");
+			"r_cmpTaskToCMPTaskLinks_c_cmpTaskId",
+			cmpTaskObjectEntry.getUserId());
 	}
 
 	public static ObjectEntry addCMPTaskLinkObjectEntry(
@@ -138,7 +142,18 @@ public class CMPTestUtil {
 
 		return _addObjectEntry(
 			linkedObjectEntry, "L_CMP_TASK_LINK", cmpTaskObjectEntry,
-			"r_cmpTaskToCMPTaskLinks_c_cmpTaskId");
+			"r_cmpTaskToCMPTaskLinks_c_cmpTaskId",
+			cmpTaskObjectEntry.getUserId());
+	}
+
+	public static ObjectEntry addCMPTaskLinkObjectEntry(
+			ObjectEntry cmpTaskObjectEntry, ObjectEntry linkedObjectEntry,
+			long userId)
+		throws PortalException {
+
+		return _addObjectEntry(
+			linkedObjectEntry, "L_CMP_TASK_LINK", cmpTaskObjectEntry,
+			"r_cmpTaskToCMPTaskLinks_c_cmpTaskId", userId);
 	}
 
 	public static ObjectEntry addCMPTaskObjectEntry() throws PortalException {
@@ -155,6 +170,15 @@ public class CMPTestUtil {
 
 	public static ObjectEntry addCMPTaskObjectEntry(
 			ObjectEntry cmpProjectObjectEntry, int workflowAction)
+		throws PortalException {
+
+		return addCMPTaskObjectEntry(
+			cmpProjectObjectEntry, Collections.emptyMap(), workflowAction);
+	}
+
+	public static ObjectEntry addCMPTaskObjectEntry(
+			ObjectEntry cmpProjectObjectEntry, Map<String, Serializable> values,
+			int workflowAction)
 		throws PortalException {
 
 		ObjectDefinition cmpTaskObjectDefinition =
@@ -176,6 +200,8 @@ public class CMPTestUtil {
 				cmpProjectObjectEntry.getObjectEntryId()
 			).put(
 				"title", RandomTestUtil.randomString()
+			).putAll(
+				values
 			).build(),
 			serviceContext);
 	}
@@ -242,7 +268,8 @@ public class CMPTestUtil {
 	private static ObjectEntry _addObjectEntry(
 			ObjectEntry linkedObjectEntry,
 			String objectDefinitionExternalReferenceCode,
-			ObjectEntry objectEntry, String relationshipObjectFieldName)
+			ObjectEntry objectEntry, String relationshipObjectFieldName,
+			long userId)
 		throws PortalException {
 
 		String classExternalReferenceCode = RandomTestUtil.randomString();
@@ -267,7 +294,7 @@ public class CMPTestUtil {
 					TestPropsValues.getCompanyId());
 
 		return ObjectEntryLocalServiceUtil.addObjectEntry(
-			objectEntry.getGroupId(), objectEntry.getUserId(),
+			objectEntry.getGroupId(), userId,
 			objectDefinition.getObjectDefinitionId(), 0, null,
 			HashMapBuilder.<String, Serializable>put(
 				relationshipObjectFieldName, objectEntry.getObjectEntryId()
@@ -290,42 +317,42 @@ public class CMPTestUtil {
 
 		String originalName = PrincipalThreadLocal.getName();
 
-		try {
-			PermissionThreadLocal.setPermissionChecker(
-				PermissionCheckerFactoryUtil.create(TestPropsValues.getUser()));
+		User user = TestPropsValues.getUser();
 
-			PrincipalThreadLocal.setName(TestPropsValues.getUserId());
+		PermissionThreadLocal.setPermissionChecker(
+			PermissionCheckerFactoryUtil.create(user));
 
-			ServiceContextThreadLocal.pushServiceContext(
-				ServiceContextTestUtil.getServiceContext(group.getGroupId()));
+		PrincipalThreadLocal.setName(user.getUserId());
 
-			try (SafeCloseable safeCloseable =
-					CompanyThreadLocal.setCompanyIdWithSafeCloseable(
-						group.getCompanyId())) {
+		ServiceContextThreadLocal.pushServiceContext(
+			ServiceContextTestUtil.getServiceContext(group.getGroupId()));
 
-				SiteInitializerRegistry siteInitializerRegistry =
-					_siteInitializerRegistrySnapshot.get();
+		try (SafeCloseable safeCloseable =
+				CompanyThreadLocal.setCompanyIdWithSafeCloseable(
+					group.getCompanyId())) {
 
-				SiteInitializer siteInitializer =
-					siteInitializerRegistry.getSiteInitializer(
-						_BUNDLE_SYMBOLIC_NAME);
+			SiteInitializerRegistry siteInitializerRegistry =
+				_siteInitializerRegistrySnapshot.get();
 
-				siteInitializer.initialize(group.getGroupId());
+			SiteInitializer siteInitializer =
+				siteInitializerRegistry.getSiteInitializer(
+					_BUNDLE_SYMBOLIC_NAME);
 
-				if (processBatchEngine) {
-					BatchEngineTestUtil.processBatchEngineUnits(
-						_BUNDLE_SYMBOLIC_NAME, clazz,
-						new String[] {
-							"." + _BUNDLE_SYMBOLIC_NAME +
-								".internal.batch.00.list.type.definition",
-							"." + _BUNDLE_SYMBOLIC_NAME +
-								".internal.batch.01.notification.template",
-							"." + _BUNDLE_SYMBOLIC_NAME +
-								".internal.batch.02.object.folder",
-							"." + _BUNDLE_SYMBOLIC_NAME +
-								".internal.batch.03.object.definition"
-						});
-				}
+			siteInitializer.initialize(group.getGroupId());
+
+			if (processBatchEngine) {
+				BatchEngineTestUtil.processBatchEngineUnits(
+					_BUNDLE_SYMBOLIC_NAME, clazz,
+					new String[] {
+						"." + _BUNDLE_SYMBOLIC_NAME +
+							".internal.batch.00.list.type.definition",
+						"." + _BUNDLE_SYMBOLIC_NAME +
+							".internal.batch.01.notification.template",
+						"." + _BUNDLE_SYMBOLIC_NAME +
+							".internal.batch.02.object.folder",
+						"." + _BUNDLE_SYMBOLIC_NAME +
+							".internal.batch.03.object.definition"
+					});
 			}
 		}
 		finally {

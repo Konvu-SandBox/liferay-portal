@@ -3,8 +3,6 @@ import Welcome from '../Welcome';
 import {cleanup, fireEvent, render} from '@testing-library/react';
 import {noop} from 'lodash';
 
-jest.unmock('react-dom');
-
 describe('Welcome', () => {
 	afterEach(cleanup);
 
@@ -21,7 +19,7 @@ describe('Welcome', () => {
 
 		expect(spy).not.toBeCalled();
 
-		fireEvent.click(queryByText('Next'));
+		fireEvent.click(queryByText(/^next$/i));
 
 		expect(spy).toBeCalled();
 	});

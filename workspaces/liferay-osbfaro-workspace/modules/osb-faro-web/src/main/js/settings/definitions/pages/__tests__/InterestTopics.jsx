@@ -9,8 +9,6 @@ import {Provider} from 'react-redux';
 import {Routes} from 'shared/util/router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const defaultProps = {
 	groupId: '23'
 };
@@ -84,7 +82,7 @@ describe('InterestTopics', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(queryByText('Add Keyword')).toBeNull();
+		expect(queryByText(/^add keyword$/i)).toBeNull();
 	});
 
 	it('should render with an empty state', async () => {

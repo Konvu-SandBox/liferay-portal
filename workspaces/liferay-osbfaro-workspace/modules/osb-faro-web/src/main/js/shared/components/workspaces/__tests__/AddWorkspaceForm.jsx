@@ -8,8 +8,6 @@ import {Project, User} from 'shared/util/records';
 import {Provider} from 'react-redux';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useBlocker: () => ({state: 'unblocked'}),
@@ -50,7 +48,7 @@ describe('AddWorkspaceForm', () => {
 		).toBeNull();
 
 		expect(container.querySelector('.select-root')).toBeDisabled();
-		expect(queryByText('Save')).not.toBeNull();
+		expect(queryByText(/^save$/i)).not.toBeNull();
 		expect(getByTestId('server-location-input')).toBeDisabled();
 	});
 
