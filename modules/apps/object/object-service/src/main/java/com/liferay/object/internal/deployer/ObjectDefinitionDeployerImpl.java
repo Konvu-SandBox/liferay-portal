@@ -17,12 +17,11 @@ import com.liferay.frontend.taglib.servlet.taglib.ScreenNavigationEntry;
 import com.liferay.notification.handler.NotificationHandler;
 import com.liferay.notification.term.evaluator.NotificationTermEvaluator;
 import com.liferay.object.constants.ObjectActionTriggerConstants;
-import com.liferay.object.constants.ObjectDefinitionSettingConstants;
 import com.liferay.object.definition.security.permission.resource.util.ObjectDefinitionResourcePermissionUtil;
-import com.liferay.object.definition.tree.util.ObjectDefinitionTreeUtil;
 import com.liferay.object.deployer.ObjectDefinitionDeployer;
 import com.liferay.object.field.business.type.ObjectFieldBusinessTypeRegistry;
 import com.liferay.object.internal.layout.tab.screen.navigation.category.ObjectLayoutTabScreenNavigationCategory;
+import com.liferay.object.internal.layout.tab.screen.navigation.entry.ObjectLayoutTabScreenNavigationEntry;
 import com.liferay.object.internal.notification.handler.ObjectDefinitionNotificationHandler;
 import com.liferay.object.internal.notification.term.contributor.ObjectDefinitionNotificationTermEvaluator;
 import com.liferay.object.internal.related.models.ObjectEntry1to1ObjectRelatedModelsProviderImpl;
@@ -46,7 +45,6 @@ import com.liferay.object.internal.uad.exporter.ObjectEntryUADExporter;
 import com.liferay.object.internal.workflow.ObjectEntryWorkflowHandler;
 import com.liferay.object.model.ObjectAction;
 import com.liferay.object.model.ObjectDefinition;
-import com.liferay.object.model.ObjectDefinitionSetting;
 import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectField;
 import com.liferay.object.model.ObjectLayout;
@@ -57,7 +55,6 @@ import com.liferay.object.rest.context.path.RESTContextPathResolver;
 import com.liferay.object.scope.ObjectScopeProviderRegistry;
 import com.liferay.object.service.ObjectActionLocalService;
 import com.liferay.object.service.ObjectDefinitionLocalService;
-import com.liferay.object.service.ObjectDefinitionSettingLocalService;
 import com.liferay.object.service.ObjectEntryFolderLocalService;
 import com.liferay.object.service.ObjectEntryLocalService;
 import com.liferay.object.service.ObjectEntryService;
@@ -112,6 +109,7 @@ import com.liferay.user.associated.data.display.UADDisplay;
 import com.liferay.user.associated.data.exporter.UADExporter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -144,7 +142,6 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 		ListTypeLocalService listTypeLocalService,
 		ObjectActionLocalService objectActionLocalService,
 		ObjectDefinitionLocalService objectDefinitionLocalService,
-		ObjectDefinitionSettingLocalService objectDefinitionSettingLocalService,
 		ObjectEntryFolderLocalService objectEntryFolderLocalService,
 		ObjectEntryLocalService objectEntryLocalService,
 		ObjectEntryService objectEntryService,
@@ -183,8 +180,6 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 		_listTypeLocalService = listTypeLocalService;
 		_objectActionLocalService = objectActionLocalService;
 		_objectDefinitionLocalService = objectDefinitionLocalService;
-		_objectDefinitionSettingLocalService =
-			objectDefinitionSettingLocalService;
 		_objectEntryFolderLocalService = objectEntryFolderLocalService;
 		_objectEntryLocalService = objectEntryLocalService;
 		_objectEntryService = objectEntryService;
@@ -227,25 +222,6 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 		Map<Long, List<ObjectRelationship>> objectRelationshipsMap =
 			_objectRelationshipLocalService.getObjectRelationshipsMap(
 				companyId);
-
-		// A root object definition IDs setting only holds a value while an edge
-		// object relationship exists, so skip the setting table read and pass
-		// an empty map when the company has no edge
-
-		Map<Long, ObjectDefinitionSetting> objectDefinitionSettingsMap =
-			Collections.emptyMap();
-
-		if (_hasEdgeObjectRelationship(objectRelationshipsMap)) {
-			objectDefinitionSettingsMap =
-				_objectDefinitionSettingLocalService.
-					getObjectDefinitionSettingsMap(
-						companyId,
-						ObjectDefinitionSettingConstants.
-							NAME_ROOT_OBJECT_DEFINITION_IDS);
-		}
-
-		ObjectDefinitionTreeUtil.populateRootObjectDefinitionIds(
-			objectDefinitions, objectDefinitionSettingsMap);
 
 		Map<Long, List<ObjectAction>> objectActionsMap =
 			_objectActionLocalService.getObjectActionsMap(
@@ -601,22 +577,6 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 			objectRelationship.getObjectRelationshipId());
 	}
 
-	private boolean _hasEdgeObjectRelationship(
-		Map<Long, List<ObjectRelationship>> objectRelationshipsMap) {
-
-		for (List<ObjectRelationship> objectRelationships :
-				objectRelationshipsMap.values()) {
-
-			for (ObjectRelationship objectRelationship : objectRelationships) {
-				if (objectRelationship.isEdge()) {
-					return true;
-				}
-			}
-		}
-
-		return false;
-	}
-
 	private void _registerObjectRelationshipsRelatedInfoCollectionProviders(
 		ObjectDefinition objectDefinition,
 		Map<Long, List<ObjectRelationship>> objectRelationshipsMap) {
@@ -675,21 +635,37 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 
 		_serviceRegistrations.computeIfAbsent(
 			_getServiceRegistrationKey(objectDefinition, objectRelationship),
-			serviceRegistrationKey -> _bundleContext.registerService(
-				new String[] {
-					ScreenNavigationCategory.class.getName(),
-					ScreenNavigationEntry.class.getName()
-				},
-				new ObjectLayoutTabScreenNavigationCategory(
-					objectDefinition, null, objectRelationship),
-				null));
+			serviceRegistrationKey -> {
+				ObjectLayoutTabScreenNavigationCategory
+					objectLayoutTabScreenNavigationCategory =
+						new ObjectLayoutTabScreenNavigationCategory(
+							objectDefinition, null, objectRelationship);
+
+				return Arrays.asList(
+					_bundleContext.registerService(
+						ScreenNavigationCategory.class,
+						objectLayoutTabScreenNavigationCategory, null),
+					_bundleContext.registerService(
+						ScreenNavigationEntry.class,
+						new ObjectLayoutTabScreenNavigationEntry(
+							objectDefinition, null,
+							objectLayoutTabScreenNavigationCategory,
+							objectRelationship),
+						null));
+			});
 	}
 
 	private void _unregister(String serviceRegistrationKey) {
-		ServiceRegistration<?> serviceRegistration =
+		List<ServiceRegistration<?>> serviceRegistrations =
 			_serviceRegistrations.remove(serviceRegistrationKey);
 
-		if (serviceRegistration != null) {
+		if (serviceRegistrations == null) {
+			return;
+		}
+
+		for (ServiceRegistration<?> serviceRegistration :
+				serviceRegistrations) {
+
 			serviceRegistration.unregister();
 		}
 	}
@@ -709,8 +685,6 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 	private final ListTypeLocalService _listTypeLocalService;
 	private final ObjectActionLocalService _objectActionLocalService;
 	private final ObjectDefinitionLocalService _objectDefinitionLocalService;
-	private final ObjectDefinitionSettingLocalService
-		_objectDefinitionSettingLocalService;
 	private final ObjectDefinitionTreeFactory _objectDefinitionTreeFactory;
 	private final ObjectEntryFolderLocalService _objectEntryFolderLocalService;
 	private final ObjectEntryLocalService _objectEntryLocalService;
@@ -732,8 +706,8 @@ public class ObjectDefinitionDeployerImpl implements ObjectDefinitionDeployer {
 	private final ResourcePermissionLocalService
 		_resourcePermissionLocalService;
 	private final SearchLocalizationHelper _searchLocalizationHelper;
-	private final Map<String, ServiceRegistration<?>> _serviceRegistrations =
-		new ConcurrentHashMap<>();
+	private final Map<String, List<ServiceRegistration<?>>>
+		_serviceRegistrations = new ConcurrentHashMap<>();
 	private final SharingModelResourcePermissionConfigurator
 		_sharingModelResourcePermissionConfigurator;
 	private final SystemEventLocalService _systemEventLocalService;

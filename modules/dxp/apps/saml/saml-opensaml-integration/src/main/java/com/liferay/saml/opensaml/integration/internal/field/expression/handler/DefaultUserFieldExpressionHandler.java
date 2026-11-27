@@ -92,7 +92,12 @@ public class DefaultUserFieldExpressionHandler
 			});
 		userBind.mapString("uuid", User::setUuid);
 
-		processorContext.bind(_processingIndex, this::_updateUser);
+		processorContext.bind(
+			_processingIndex,
+			(currentUser, newUser, serviceContext) -> _updateUser(
+				currentUser,
+				processorContext.isDefined(String.class, "emailAddress"),
+				newUser, serviceContext));
 	}
 
 	@Override
@@ -224,7 +229,8 @@ public class DefaultUserFieldExpressionHandler
 	}
 
 	private User _updateUser(
-			User currentUser, User newUser, ServiceContext serviceContext)
+			User currentUser, boolean emailAddressDefined, User newUser,
+			ServiceContext serviceContext)
 		throws PortalException {
 
 		if (newUser.isNew()) {
@@ -234,13 +240,17 @@ public class DefaultUserFieldExpressionHandler
 		currentUser = _userLocalService.getUserById(currentUser.getUserId());
 
 		if (!StringUtil.equals(
-				currentUser.getEmailAddress(), newUser.getEmailAddress())) {
+				currentUser.getEmailAddress(),
+				StringUtil.toLowerCase(
+					StringUtil.trim(newUser.getEmailAddress())))) {
 
 			currentUser = _userLocalService.updateEmailAddress(
 				currentUser.getUserId(), StringPool.BLANK,
 				newUser.getEmailAddress(), newUser.getEmailAddress());
+		}
 
-			_userLocalService.updateEmailAddressVerified(
+		if (emailAddressDefined && !currentUser.isEmailAddressVerified()) {
+			currentUser = _userLocalService.updateEmailAddressVerified(
 				currentUser.getUserId(), true);
 		}
 

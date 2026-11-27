@@ -11,8 +11,6 @@ import {RangeKeyTimeRanges} from 'shared/util/constants';
 import {RangeSelectors} from 'shared/types';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const PREVIOUS_PATH_NODES = [
 	{
 		__typename: 'PagePathNode',
@@ -199,14 +197,14 @@ describe('PagePathCard', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(getByText('Path Analysis')).toBeInTheDocument();
-		expect(getByText('No data was found.')).toBeInTheDocument();
+		expect(getByText(/^path analysis$/i)).toBeInTheDocument();
+		expect(getByText(/^no data was found\.$/i)).toBeInTheDocument();
 		expect(
 			getByText(
-				'Check back later to verify if data has been received from your data sources.'
+				/^check back later to verify if data has been received from your data sources\.$/i
 			)
 		).toBeInTheDocument();
-		expect(getByText('Learn more about path.')).toHaveAttribute(
+		expect(getByText(/^learn more about path\.$/i)).toHaveAttribute(
 			'href',
 			'https://learn.liferay.com/w/dxp/personalization/analytics-cloud/touchpoints/sites-analytics/pages-analytics/paths-analytics'
 		);

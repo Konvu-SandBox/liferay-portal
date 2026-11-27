@@ -2,8 +2,6 @@ import CompositionChart, {CompositionLegend} from '../CompositionChart';
 import React from 'react';
 import {cleanup, render, screen} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('CompositionChart', () => {
 	afterEach(cleanup);
 
@@ -100,10 +98,10 @@ describe('CompositionLegend', () => {
 		);
 
 		expect(screen.getByTestId('active-count')).toHaveTextContent(
-			'Processing'
+			/processing/i
 		);
 		expect(screen.getByTestId('active-porcentage')).toHaveTextContent(
-			'Processing'
+			/processing/i
 		);
 	});
 });

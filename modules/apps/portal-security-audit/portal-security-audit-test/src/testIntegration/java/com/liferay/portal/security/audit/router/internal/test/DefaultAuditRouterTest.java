@@ -9,6 +9,7 @@ import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
+import com.liferay.portal.configuration.test.util.ConfigurationTemporarySwapper;
 import com.liferay.portal.kernel.audit.AuditException;
 import com.liferay.portal.kernel.audit.AuditMessage;
 import com.liferay.portal.kernel.audit.AuditRouter;
@@ -36,6 +37,9 @@ import com.liferay.portal.kernel.test.util.UserGroupTestUtil;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
 import com.liferay.portal.kernel.util.HashMapDictionaryBuilder;
 import com.liferay.portal.security.audit.AuditMessageProcessor;
+import com.liferay.portal.security.audit.configuration.AuditConfiguration;
+import com.liferay.portal.security.audit.constants.AuditEventConstants;
+import com.liferay.portal.security.audit.event.generators.constants.EventTypes;
 import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
@@ -86,17 +90,23 @@ public class DefaultAuditRouterTest {
 		_serviceRegistration.unregister();
 	}
 
-	@FeatureFlag("LPD-6417")
+	@FeatureFlag("LPD-96921")
 	@Test
 	public void testRoute() throws Exception {
 		_testRoute(
-			User.class.getName(), "AI_HUB", "ADD", "ai_hub.user.add", "user");
+			User.class.getName(), "AI_HUB", "ADD", "AI_HUB", "ai_hub.user.add",
+			"user");
 		_testRoute(
-			User.class.getName(), null, "LOGIN", "instance.user.login", "user");
+			User.class.getName(), null, "LOGIN",
+			AuditEventConstants.CONTEXT_NAME_INSTANCE, "instance.user.login",
+			"user");
 		_testRoute(
 			User.class.getName(), null, StringPool.BLANK,
-			"instance.user.unknown", "user");
-		_testRoute(null, null, "ADD", "instance.unknown.add", "unknown");
+			AuditEventConstants.CONTEXT_NAME_INSTANCE, "instance.user.unknown",
+			"user");
+		_testRoute(
+			null, null, "ADD", AuditEventConstants.CONTEXT_NAME_INSTANCE,
+			"instance.unknown.add", "unknown");
 
 		AuditMessage auditMessage = _getAuditMessage(
 			RandomTestUtil.randomString(), null, "ASSIGN",
@@ -284,6 +294,7 @@ public class DefaultAuditRouterTest {
 
 		Assert.assertFalse(_auditMessages.contains(auditMessage));
 
+		_testRouteWhenAuditIsDisabled();
 		_testRouteWhenFeatureFlagIsDisabled();
 	}
 
@@ -300,7 +311,8 @@ public class DefaultAuditRouterTest {
 
 	private void _testRoute(
 			String className, String contextName, String eventType,
-			String expectedResourceAction, String expectedResourceType)
+			String expectedContextName, String expectedResourceAction,
+			String expectedResourceType)
 		throws Exception {
 
 		AuditMessage auditMessage = _getAuditMessage(
@@ -308,16 +320,44 @@ public class DefaultAuditRouterTest {
 
 		_auditRouter.route(auditMessage);
 
+		Assert.assertTrue(_auditMessages.contains(auditMessage));
+		Assert.assertEquals(expectedContextName, auditMessage.getContextName());
 		Assert.assertEquals(
 			expectedResourceAction, auditMessage.getResourceAction());
 		Assert.assertEquals(
 			expectedResourceType, auditMessage.getResourceType());
 	}
 
+	private void _testRouteWhenAuditIsDisabled() throws Exception {
+		try (ConfigurationTemporarySwapper configurationTemporarySwapper =
+				new ConfigurationTemporarySwapper(
+					AuditConfiguration.class.getName(),
+					HashMapDictionaryBuilder.<String, Object>put(
+						"enabled", false
+					).build())) {
+
+			AuditMessage auditMessage = _getAuditMessage(
+				RandomTestUtil.randomString(), null, EventTypes.ADD,
+				RandomTestUtil.randomLong());
+
+			_auditRouter.route(auditMessage);
+
+			Assert.assertFalse(_auditMessages.contains(auditMessage));
+
+			auditMessage = _getAuditMessage(
+				RandomTestUtil.randomString(), null,
+				EventTypes.AUDIT_CONFIG_CHANGE, RandomTestUtil.randomLong());
+
+			_auditRouter.route(auditMessage);
+
+			Assert.assertTrue(_auditMessages.contains(auditMessage));
+		}
+	}
+
 	private void _testRouteWhenFeatureFlagIsDisabled() throws Exception {
 		try (SafeCloseable safeCloseable =
 				FeatureFlagTestUtil.setFeatureFlagsWithSafeCloseable(
-					false, "LPD-6417")) {
+					false, "LPD-96921")) {
 
 			AuditMessage auditMessage = _getAuditMessage(
 				RandomTestUtil.randomString(), null,
@@ -332,6 +372,9 @@ public class DefaultAuditRouterTest {
 
 			Assert.assertTrue(_auditMessages.contains(auditMessage));
 			Assert.assertNull(auditMessage.getAction());
+			Assert.assertEquals(
+				AuditEventConstants.CONTEXT_NAME_INSTANCE,
+				auditMessage.getContextName());
 			Assert.assertNull(auditMessage.getResourceAction());
 			Assert.assertNull(auditMessage.getResourceType());
 			Assert.assertNull(auditMessage.getRoles());

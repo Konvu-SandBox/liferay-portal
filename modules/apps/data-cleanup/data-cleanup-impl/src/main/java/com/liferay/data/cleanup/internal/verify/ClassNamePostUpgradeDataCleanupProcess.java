@@ -21,7 +21,6 @@ import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.ClassName;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.ModelHintsUtil;
-import com.liferay.portal.kernel.module.util.SystemBundleUtil;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.ClassNameLocalService;
 import com.liferay.portal.kernel.service.CompanyLocalService;
@@ -45,6 +44,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.wiring.BundleCapability;
 import org.osgi.framework.wiring.BundleRevision;
 import org.osgi.framework.wiring.BundleWiring;
@@ -82,12 +82,15 @@ public class ClassNamePostUpgradeDataCleanupProcess
 			return;
 		}
 
-		BundleContext bundleContext = SystemBundleUtil.getBundleContext();
+		Bundle bundle = FrameworkUtil.getBundle(
+			ClassNamePostUpgradeDataCleanupProcess.class);
+
+		BundleContext bundleContext = bundle.getBundleContext();
+
 		DBInspector dbInspector = new DBInspector(connection);
 		Map<String, List<Bundle>> packageNameBundlesMap =
 			_packageNameBundlesMapDCLSingleton.getSingleton(
-				ClassNamePostUpgradeDataCleanupProcess::
-					_createPackageNameBundlesMap);
+				() -> _createPackageNameBundlesMap(bundleContext));
 		StringBundler sb = new StringBundler();
 		List<String> tableNames = new ArrayList<>();
 
@@ -205,10 +208,10 @@ public class ClassNamePostUpgradeDataCleanupProcess
 		}
 	}
 
-	private static Map<String, List<Bundle>> _createPackageNameBundlesMap() {
-		Map<String, List<Bundle>> packageNameBundlesMap = new HashMap<>();
+	private Map<String, List<Bundle>> _createPackageNameBundlesMap(
+		BundleContext bundleContext) {
 
-		BundleContext bundleContext = SystemBundleUtil.getBundleContext();
+		Map<String, List<Bundle>> packageNameBundlesMap = new HashMap<>();
 
 		for (Bundle bundle : bundleContext.getBundles()) {
 			BundleWiring bundleWiring = bundle.adapt(BundleWiring.class);
@@ -246,68 +249,81 @@ public class ClassNamePostUpgradeDataCleanupProcess
 		Set<String> models, Map<String, List<Bundle>> packageNameBundlesMap,
 		String value) {
 
+		if ((value.indexOf(CharPool.DASH) == -1) &&
+			_isDefined(
+				bundleContext, value, definedClasses, models,
+				packageNameBundlesMap)) {
+
+			return true;
+		}
+
 		for (String currentValue : value.split("[-_]")) {
-			if (models.contains(currentValue)) {
-				continue;
-			}
+			if (!_isDefined(
+					bundleContext, currentValue, definedClasses, models,
+					packageNameBundlesMap)) {
 
-			Boolean defined = definedClasses.get(currentValue);
-
-			if (defined != null) {
-				if (defined) {
-					continue;
-				}
-
-				return false;
-			}
-
-			Set<Bundle> candidateBundles = new LinkedHashSet<>();
-
-			int index = currentValue.lastIndexOf(CharPool.PERIOD);
-
-			if (index != -1) {
-				List<Bundle> exportingBundles = packageNameBundlesMap.get(
-					currentValue.substring(0, index));
-
-				if (exportingBundles != null) {
-					candidateBundles.addAll(exportingBundles);
-				}
-			}
-
-			Collections.addAll(candidateBundles, bundleContext.getBundles());
-
-			defined = false;
-
-			for (Bundle bundle : candidateBundles) {
-				try {
-					bundle.loadClass(currentValue);
-
-					defined = true;
-
-					break;
-				}
-				catch (ClassNotFoundException | IllegalStateException
-							exception) {
-
-					if (_log.isDebugEnabled()) {
-						_log.debug(exception);
-					}
-				}
-				catch (Exception exception) {
-					_log.error(exception);
-
-					return true;
-				}
-			}
-
-			definedClasses.put(currentValue, defined);
-
-			if (!defined) {
 				return false;
 			}
 		}
 
 		return true;
+	}
+
+	private boolean _isDefined(
+		BundleContext bundleContext, String classNameValue,
+		Map<String, Boolean> definedClasses, Set<String> models,
+		Map<String, List<Bundle>> packageNameBundlesMap) {
+
+		if (models.contains(classNameValue)) {
+			return true;
+		}
+
+		Boolean defined = definedClasses.get(classNameValue);
+
+		if (defined != null) {
+			return defined;
+		}
+
+		Set<Bundle> candidateBundles = new LinkedHashSet<>();
+
+		int index = classNameValue.lastIndexOf(CharPool.PERIOD);
+
+		if (index != -1) {
+			List<Bundle> exportingBundles = packageNameBundlesMap.get(
+				classNameValue.substring(0, index));
+
+			if (exportingBundles != null) {
+				candidateBundles.addAll(exportingBundles);
+			}
+		}
+
+		Collections.addAll(candidateBundles, bundleContext.getBundles());
+
+		for (Bundle bundle : candidateBundles) {
+			try {
+				bundle.loadClass(classNameValue);
+
+				definedClasses.put(classNameValue, true);
+
+				return true;
+			}
+			catch (ClassNotFoundException | IllegalStateException exception) {
+				if (_log.isDebugEnabled()) {
+					_log.debug(exception);
+				}
+			}
+			catch (Exception exception) {
+				if (_log.isDebugEnabled()) {
+					_log.debug(exception);
+				}
+
+				return true;
+			}
+		}
+
+		definedClasses.put(classNameValue, false);
+
+		return false;
 	}
 
 	private static final Log _log = LogFactoryUtil.getLog(

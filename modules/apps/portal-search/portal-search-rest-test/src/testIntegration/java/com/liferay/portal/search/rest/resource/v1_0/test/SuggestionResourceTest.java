@@ -11,11 +11,12 @@ import com.liferay.document.library.kernel.service.DLAppLocalService;
 import com.liferay.journal.model.JournalArticle;
 import com.liferay.journal.test.util.JournalTestUtil;
 import com.liferay.layout.test.util.LayoutTestUtil;
+import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
+import com.liferay.portal.configuration.test.util.CompanyConfigurationTemporarySwapper;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
-import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.repository.model.FileEntry;
@@ -29,6 +30,7 @@ import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.HttpComponentsUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.URLCodec;
@@ -39,8 +41,6 @@ import com.liferay.portal.search.rest.client.pagination.Page;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
-import com.liferay.search.experiences.model.SXPBlueprint;
-import com.liferay.search.experiences.service.SXPBlueprintLocalService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -96,9 +96,7 @@ public class SuggestionResourceTest extends BaseSuggestionResourceTestCase {
 		_testPostSuggestionsPageWithBasicSuggestionsContributorWithSearchResultsPortletWithoutViewInContext();
 		_testPostSuggestionsPageWithBasicSuggestionsContributorWithSearchResultsPortletWithoutViewInContextWithLayout();
 		_testPostSuggestionsPageWithBasicSuggestionsContributorWithThisSiteScope();
-		_testPostSuggestionsPageWithSXPBlueprintSuggestionsContributor();
-		_testPostSuggestionsPageWithSXPBlueprintSuggestionsContributorWithGroupERCScope();
-		_testPostSuggestionsPageWithSXPBlueprintSuggestionsContributorWithSearchExperiencesAttributes();
+		_testPostSuggestionsPageWithSuggestionsSizeLimit();
 	}
 
 	private FileEntry _addFileEntry() throws Exception {
@@ -166,10 +164,52 @@ public class SuggestionResourceTest extends BaseSuggestionResourceTestCase {
 			Arrays.toString(expectedTexts), String.valueOf(texts));
 	}
 
+	private void _assertSuggestionsCounts(
+			int[] expectedCounts, String search, int[] suggestionsSizes)
+		throws Exception {
+
+		SuggestionsContributorConfiguration[]
+			suggestionsContributorConfigurations =
+				new SuggestionsContributorConfiguration
+					[suggestionsSizes.length];
+
+		for (int i = 0; i < suggestionsSizes.length; i++) {
+			int suggestionsSize = suggestionsSizes[i];
+
+			suggestionsContributorConfigurations[i] =
+				new SuggestionsContributorConfiguration() {
+					{
+						contributorName = "basic";
+						displayGroupName = RandomTestUtil.randomString();
+						size = suggestionsSize;
+					}
+				};
+		}
+
+		Page<SuggestionsContributorResults> suggestionsContributorResultsPage =
+			_postSuggestionsPage(
+				"http://localhost:" + PortalUtil.getPortalServerPort(false) +
+					"/web/guest/home",
+				"/search", null, "q", _layout.getPlid(), null, search,
+				suggestionsContributorConfigurations);
+
+		List<Integer> suggestionsCounts = TransformUtil.transform(
+			suggestionsContributorResultsPage.getItems(),
+			suggestionsContributorResults -> {
+				Suggestion[] suggestions =
+					suggestionsContributorResults.getSuggestions();
+
+				return suggestions.length;
+			});
+
+		Assert.assertEquals(
+			Arrays.toString(expectedCounts), suggestionsCounts.toString());
+	}
+
 	private String _getAssetURL(Layout destinationLayout, String search)
 		throws Exception {
 
-		Page<SuggestionsContributorResults> suggestionsPage =
+		Page<SuggestionsContributorResults> suggestionsContributorResultsPage =
 			_postSuggestionsPage(
 				"http://localhost:" + PortalUtil.getPortalServerPort(false) +
 					"/web/guest/home",
@@ -185,7 +225,7 @@ public class SuggestionResourceTest extends BaseSuggestionResourceTestCase {
 				});
 
 		SuggestionsContributorResults suggestionsContributorResults =
-			suggestionsPage.fetchFirstItem();
+			suggestionsContributorResultsPage.fetchFirstItem();
 
 		Suggestion[] suggestions =
 			suggestionsContributorResults.getSuggestions();
@@ -235,12 +275,12 @@ public class SuggestionResourceTest extends BaseSuggestionResourceTestCase {
 
 		String displayGroupName = "Suggestions";
 
-		Page<SuggestionsContributorResults> suggestionsPage =
+		Page<SuggestionsContributorResults> suggestionsContributorResultsPage =
 			_postSuggestionsPageWithBasicSuggestionsContributor(
 				null, _journalArticle.getArticleId(), displayGroupName);
 
 		_assertSuggestionContributorResults(
-			displayGroupName, suggestionsPage,
+			displayGroupName, suggestionsContributorResultsPage,
 			_journalArticle.getTitle(_locale));
 	}
 
@@ -526,120 +566,37 @@ public class SuggestionResourceTest extends BaseSuggestionResourceTestCase {
 		GroupTestUtil.deleteGroup(group);
 	}
 
-	private void _testPostSuggestionsPageWithSXPBlueprintSuggestionsContributor()
+	private void _testPostSuggestionsPageWithSuggestionsSizeLimit()
 		throws Exception {
 
-		String suggestionsDisplayGroupGroupName = "Suggestions";
+		JournalArticle journalArticle1 = JournalTestUtil.addArticle(
+			testGroup.getGroupId(), RandomTestUtil.randomString(),
+			RandomTestUtil.randomString());
+		JournalArticle journalArticle2 = JournalTestUtil.addArticle(
+			testGroup.getGroupId(), RandomTestUtil.randomString(),
+			RandomTestUtil.randomString());
 
-		SXPBlueprint sxpBlueprint = _sxpBlueprintLocalService.addSXPBlueprint(
-			null, TestPropsValues.getUserId(), "{}",
-			Collections.singletonMap(LocaleUtil.US, ""), null, "",
-			Collections.singletonMap(
-				LocaleUtil.US, RandomTestUtil.randomString()),
-			_serviceContext);
+		String search = StringBundler.concat(
+			_journalArticle.getTitle(_locale), StringPool.SPACE,
+			journalArticle1.getTitle(_locale), StringPool.SPACE,
+			journalArticle2.getTitle(_locale));
 
-		Page<SuggestionsContributorResults> page = _postSuggestionsPage(
-			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
-				"/web/guest/home",
-			"/search", testGroup.getGroupId(), "q", _layout.getPlid(), null,
-			_journalArticle.getArticleId(),
-			new SuggestionsContributorConfiguration[] {
-				new SuggestionsContributorConfiguration() {
-					{
-						attributes = JSONUtil.put(
-							"sxpBlueprintExternalReferenceCode",
-							sxpBlueprint.getExternalReferenceCode());
-						contributorName = "sxpBlueprint";
-						displayGroupName = suggestionsDisplayGroupGroupName;
-					}
-				}
-			});
+		try (CompanyConfigurationTemporarySwapper
+				companyConfigurationTemporarySwapper =
+					new CompanyConfigurationTemporarySwapper(
+						TestPropsValues.getCompanyId(),
+						"com.liferay.portal.search.rest.configuration." +
+							"SearchSuggestionsCompanyConfiguration",
+						MapUtil.singletonDictionary(
+							"suggestionsSizeLimit", 2))) {
 
-		_assertSuggestionContributorResults(
-			suggestionsDisplayGroupGroupName, page,
-			_journalArticle.getTitle(_locale));
-	}
+			_assertSuggestionsCounts(new int[] {1}, search, new int[] {1});
+			_assertSuggestionsCounts(
+				new int[] {2, 1, 2}, search, new int[] {3, 1, 3});
+			_assertSuggestionsCounts(new int[] {2}, search, new int[] {3});
+		}
 
-	private void _testPostSuggestionsPageWithSXPBlueprintSuggestionsContributorWithGroupERCScope()
-		throws Exception {
-
-		SXPBlueprint sxpBlueprint = _sxpBlueprintLocalService.addSXPBlueprint(
-			null, TestPropsValues.getUserId(), "{}",
-			Collections.singletonMap(LocaleUtil.US, ""), null, "",
-			Collections.singletonMap(
-				LocaleUtil.US, RandomTestUtil.randomString()),
-			_serviceContext);
-
-		String suggestionsDisplayGroupGroupName = "Suggestions";
-
-		Page<SuggestionsContributorResults> page = _postSuggestionsPage(
-			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
-				"/web/guest/home",
-			"/search", null, "q", _layout.getPlid(),
-			testGroup.getExternalReferenceCode(),
-			_journalArticle.getArticleId(),
-			new SuggestionsContributorConfiguration[] {
-				new SuggestionsContributorConfiguration() {
-					{
-						attributes = JSONUtil.put(
-							"sxpBlueprintExternalReferenceCode",
-							sxpBlueprint.getExternalReferenceCode());
-						contributorName = "sxpBlueprint";
-						displayGroupName = suggestionsDisplayGroupGroupName;
-					}
-				}
-			});
-
-		_assertSuggestionContributorResults(
-			suggestionsDisplayGroupGroupName, page,
-			_journalArticle.getTitle(_locale));
-	}
-
-	private void _testPostSuggestionsPageWithSXPBlueprintSuggestionsContributorWithSearchExperiencesAttributes()
-		throws Exception {
-
-		Class<?> clazz = getClass();
-
-		SXPBlueprint sxpBlueprint = _sxpBlueprintLocalService.addSXPBlueprint(
-			null, TestPropsValues.getUserId(),
-			StringUtil.read(
-				clazz,
-				StringBundler.concat(
-					"dependencies/", clazz.getSimpleName(),
-					"._testPostSuggestionsPageWithSXPBlueprintSuggestions",
-					"ContributorWithSearchExperiencesAttributes.json")),
-			Collections.singletonMap(LocaleUtil.US, StringPool.BLANK), null,
-			StringPool.BLANK,
-			Collections.singletonMap(
-				LocaleUtil.US, RandomTestUtil.randomString()),
-			_serviceContext);
-
-		String suggestionsDisplayGroupGroupName = "Suggestions";
-
-		Page<SuggestionsContributorResults> page = _postSuggestionsPage(
-			"http://localhost:" + PortalUtil.getPortalServerPort(false) +
-				"/web/guest/home",
-			"/search", testGroup.getGroupId(), "q", _layout.getPlid(), null,
-			_journalArticle.getArticleId(),
-			new SuggestionsContributorConfiguration[] {
-				new SuggestionsContributorConfiguration() {
-					{
-						attributes = JSONUtil.put(
-							"search.experiences.entry.class.pk",
-							_journalArticle.getResourcePrimKey()
-						).put(
-							"sxpBlueprintExternalReferenceCode",
-							sxpBlueprint.getExternalReferenceCode()
-						);
-						contributorName = "sxpBlueprint";
-						displayGroupName = suggestionsDisplayGroupGroupName;
-					}
-				}
-			});
-
-		_assertSuggestionContributorResults(
-			suggestionsDisplayGroupGroupName, page,
-			_journalArticle.getTitle(_locale));
+		_assertSuggestionsCounts(new int[] {3}, search, new int[] {3});
 	}
 
 	@Inject
@@ -649,8 +606,5 @@ public class SuggestionResourceTest extends BaseSuggestionResourceTestCase {
 	private Layout _layout;
 	private Locale _locale;
 	private ServiceContext _serviceContext;
-
-	@Inject
-	private SXPBlueprintLocalService _sxpBlueprintLocalService;
 
 }
