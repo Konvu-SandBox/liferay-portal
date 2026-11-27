@@ -5,10 +5,11 @@
 
 import {SidePanel} from '@clayui/core';
 import ClayModal from '@clayui/modal';
-import {addParams, sub} from 'frontend-js-web';
+import {sub} from 'frontend-js-web';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 
 import {SharingPermission} from '../../../common/types/SharingPermission';
+import getAssetCommentsURLs from '../../../common/utils/getAssetCommentsURLs';
 import CommentsPanel from '../../../content_editor/components/panels/CommentsPanel';
 import AssetTypeInfoPanel from '../../info_panel/AssetTypeInfoPanelContent';
 import Carousel from './Carousel';
@@ -37,17 +38,22 @@ const PANELS = {
 const AssetNavigationCommentsPanel = ({
 	additionalProps: {commentsProps},
 	item,
+	readOnly,
 }: {
 	additionalProps: any;
 	item: ISearchAssetObjectEntry;
+	readOnly: boolean;
 }) => {
-	const {addCommentURL, editCommentURL, getCommentsURL} = commentsProps;
 	const {
 		embedded: {id},
 		entryClassName,
 	}: ISearchAssetObjectEntry = item;
 
-	const params = `?className=${encodeURIComponent(entryClassName)}&classPK=${id}`;
+	const commentsURLs = getAssetCommentsURLs(
+		commentsProps,
+		entryClassName,
+		id
+	);
 
 	return (
 		<>
@@ -57,10 +63,10 @@ const AssetNavigationCommentsPanel = ({
 
 			<CommentsPanel
 				{...commentsProps}
-				addCommentURL={addParams(params, addCommentURL)}
-				editCommentURL={addParams(params, editCommentURL)}
-				getCommentsURL={addParams(params, getCommentsURL)}
-			></CommentsPanel>
+				{...commentsURLs}
+				addCommentURL={readOnly ? '' : commentsURLs.addCommentURL}
+				readOnly={readOnly}
+			/>
 		</>
 	);
 };
@@ -153,9 +159,10 @@ export default function AssetNavigationModalContent({
 
 	const activePanel = openSidePanel ? currentPanel : null;
 
-	const showCommentsPanel =
-		!showInfoPanel &&
-		(currentItem.actionIds?.includes(SharingPermission.Comment) ?? true);
+	const showCommentsPanel = !showInfoPanel;
+
+	const canComment =
+		currentItem.actionIds?.includes(SharingPermission.Comment) ?? true;
 
 	return (
 		<>
@@ -195,6 +202,7 @@ export default function AssetNavigationModalContent({
 							<AssetNavigationCommentsPanel
 								additionalProps={additionalProps as any}
 								item={currentItem}
+								readOnly={!canComment}
 							/>
 						) : showInfoPanel ? (
 							<AssetTypeInfoPanel

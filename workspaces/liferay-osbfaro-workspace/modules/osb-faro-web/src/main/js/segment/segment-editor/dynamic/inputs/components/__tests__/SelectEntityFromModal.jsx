@@ -11,8 +11,6 @@ import {cleanup, fireEvent, render} from '@testing-library/react';
 import {Property} from 'shared/util/records';
 import {Provider} from 'react-redux';
 
-jest.unmock('react-dom');
-
 const defaultProps = {
 	columns: [],
 	entity: {name: 'fooEntity'},
@@ -38,7 +36,7 @@ describe('SelectEntityFromModal', () => {
 	it('should trigger modal when pressing Select button', () => {
 		const {getByText} = render(<DefaultComponent />);
 
-		fireEvent.click(getByText('Select'));
+		fireEvent.click(getByText(/^select$/i));
 
 		jest.runAllTimers();
 
