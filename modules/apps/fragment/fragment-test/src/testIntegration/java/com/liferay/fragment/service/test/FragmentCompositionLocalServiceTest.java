@@ -133,29 +133,6 @@ public class FragmentCompositionLocalServiceTest {
 			ServiceContextTestUtil.getServiceContext());
 	}
 
-	@Test
-	public void testDeleteFragmentCompositionByExternalReferenceCode()
-		throws Exception {
-
-		FragmentComposition fragmentComposition =
-			_fragmentCompositionLocalService.addFragmentComposition(
-				RandomTestUtil.randomString(), TestPropsValues.getUserId(),
-				_group.getGroupId(),
-				_fragmentCollection.getFragmentCollectionId(),
-				StringUtil.randomId(), RandomTestUtil.randomString(),
-				StringPool.BLANK, StringPool.BLANK, 0,
-				WorkflowConstants.STATUS_APPROVED,
-				ServiceContextTestUtil.getServiceContext());
-
-		_fragmentCompositionLocalService.deleteFragmentComposition(
-			fragmentComposition.getExternalReferenceCode(),
-			fragmentComposition.getGroupId());
-
-		Assert.assertNull(
-			_fragmentCompositionLocalService.fetchFragmentComposition(
-				fragmentComposition.getFragmentCompositionId()));
-	}
-
 	@Test(expected = FragmentCompositionNameException.class)
 	public void testFragmentCompositionNameRequired() throws Exception {
 		_fragmentCompositionLocalService.addFragmentComposition(
@@ -176,15 +153,14 @@ public class FragmentCompositionLocalServiceTest {
 		String name = RandomTestUtil.randomString();
 		String description = RandomTestUtil.randomString();
 		String data = RandomTestUtil.randomString();
-		long previewFileEntryId = RandomTestUtil.randomLong();
 		int status = WorkflowConstants.STATUS_APPROVED;
 
 		FragmentComposition fragmentComposition =
 			_fragmentCompositionLocalService.addFragmentComposition(
 				null, TestPropsValues.getUserId(), _group.getGroupId(),
 				_fragmentCollection.getFragmentCollectionId(),
-				fragmentCompositionKey, name, description, data,
-				previewFileEntryId, status, serviceContext);
+				fragmentCompositionKey, name, description, data, 0, status,
+				serviceContext);
 
 		_fragmentCompositionLocalService.updateFragmentComposition(
 			fragmentComposition.getUserId(),

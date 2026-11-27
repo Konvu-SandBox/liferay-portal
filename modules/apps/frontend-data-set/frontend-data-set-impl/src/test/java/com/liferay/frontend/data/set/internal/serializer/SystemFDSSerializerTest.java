@@ -6,8 +6,6 @@
 package com.liferay.frontend.data.set.internal.serializer;
 
 import com.liferay.frontend.data.set.SystemFDSEntry;
-import com.liferay.frontend.data.set.action.FDSCreationMenu;
-import com.liferay.frontend.data.set.action.FDSItemsActions;
 import com.liferay.frontend.data.set.constants.FDSConstants;
 import com.liferay.frontend.data.set.constants.FDSEntityFieldTypes;
 import com.liferay.frontend.data.set.filter.BaseClientExtensionFDSFilter;
@@ -20,7 +18,6 @@ import com.liferay.frontend.data.set.filter.GroupedFDSFilters;
 import com.liferay.frontend.data.set.filter.SelectionFDSFilterItem;
 import com.liferay.frontend.data.set.internal.filter.ClientExtensionFDSFilterContextContributor;
 import com.liferay.frontend.data.set.internal.filter.DateRangeFDSFilterContextContributor;
-import com.liferay.frontend.data.set.internal.filter.FDSFilterContextContributorRegistryImpl;
 import com.liferay.frontend.data.set.internal.filter.FDSFilterRegistryImpl;
 import com.liferay.frontend.data.set.internal.filter.SelectionFDSFilterContextContributor;
 import com.liferay.frontend.data.set.internal.url.FDSAPIURLResolverRegistryImpl;
@@ -302,7 +299,7 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 		).build();
 
 		_registerServices(
-			_registerFDSCreationMenu(creationMenu1, FDS_NAMES[0]),
+			registerFDSCreationMenu(creationMenu1, FDS_NAMES[0]),
 			_registerSystemFDSEntry(FDS_NAMES[0]));
 
 		Assert.assertEquals(
@@ -319,7 +316,7 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 		).build();
 
 		_registerServices(
-			_registerFDSCreationMenu(creationMenu2, FDS_NAMES[1]),
+			registerFDSCreationMenu(creationMenu2, FDS_NAMES[1]),
 			_registerSystemFDSEntry(FDS_NAMES[0]));
 
 		Assert.assertEquals(
@@ -357,8 +354,8 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 		).build();
 
 		_registerServices(
-			_registerFDSCreationMenu(creationMenu1, FDS_NAMES[0]),
-			_registerFDSCreationMenu(creationMenu1, FDS_NAMES[1]),
+			registerFDSCreationMenu(creationMenu1, FDS_NAMES[0]),
+			registerFDSCreationMenu(creationMenu1, FDS_NAMES[1]),
 			_registerSystemFDSEntry(FDS_NAMES[0]),
 			_registerSystemFDSEntry(FDS_NAMES[1]));
 
@@ -378,29 +375,14 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 
 		ServiceTrackerMap
 			<String,
-			 List
-				 <ServiceTrackerCustomizerFactory.ServiceWrapper
-					 <FDSFilterContextContributor>>> serviceTrackerMap1 =
-						ServiceTrackerMapFactory.openMultiValueMap(
-							bundleContext, FDSFilterContextContributor.class,
-							"frontend.data.set.filter.type",
-							ServiceTrackerCustomizerFactory.
-								<FDSFilterContextContributor>serviceWrapper(
-									bundleContext));
-
-		systemFDSSerializer.fdsFilterContextContributorRegistry =
-			new FDSFilterContextContributorRegistryImpl(serviceTrackerMap1);
-
-		ServiceTrackerMap
-			<String,
 			 List<ServiceTrackerCustomizerFactory.ServiceWrapper<FDSFilter>>>
-				serviceTrackerMap2 = ServiceTrackerMapFactory.openMultiValueMap(
+				serviceTrackerMap = ServiceTrackerMapFactory.openMultiValueMap(
 					bundleContext, FDSFilter.class, "frontend.data.set.name",
 					ServiceTrackerCustomizerFactory.<FDSFilter>serviceWrapper(
 						bundleContext));
 
 		systemFDSSerializer.fdsFilterRegistry = new FDSFilterRegistryImpl(
-			serviceTrackerMap2);
+			serviceTrackerMap);
 
 		mockLanguage();
 
@@ -775,8 +757,7 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 
 		_unregisterServices();
 
-		serviceTrackerMap1.close();
-		serviceTrackerMap2.close();
+		serviceTrackerMap.close();
 	}
 
 	@Test
@@ -934,8 +915,8 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 					"modal-permissions"));
 
 		_registerServices(
-			_registerFDSItemsActions(fdsActionDropdownItems1, FDS_NAMES[0]),
-			_registerFDSItemsActions(fdsActionDropdownItems2, FDS_NAMES[1]),
+			registerFDSItemsActions(fdsActionDropdownItems1, FDS_NAMES[0]),
+			registerFDSItemsActions(fdsActionDropdownItems2, FDS_NAMES[1]),
 			_registerSystemFDSEntry(FDS_NAMES[0]),
 			_registerSystemFDSEntry(FDS_NAMES[1]));
 
@@ -974,8 +955,8 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 				"headless"));
 
 		_registerServices(
-			_registerFDSItemsActions(fdsActionDropdownItems1, FDS_NAMES[0]),
-			_registerFDSItemsActions(fdsActionDropdownItems1, FDS_NAMES[1]),
+			registerFDSItemsActions(fdsActionDropdownItems1, FDS_NAMES[0]),
+			registerFDSItemsActions(fdsActionDropdownItems1, FDS_NAMES[1]),
 			_registerSystemFDSEntry(FDS_NAMES[0]),
 			_registerSystemFDSEntry(FDS_NAMES[1]));
 
@@ -1244,6 +1225,32 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 		Assert.assertFalse(
 			systemFDSSerializer.serializeSearchSuggestionsEnabled(
 				FDS_NAMES[0], httpServletRequest));
+
+		_unregisterServices();
+	}
+
+	@Test
+	public void testSerializeShowPagination() throws Exception {
+		_registerServices(
+			_registerSystemFDSEntry(
+				SystemFDSEntryFactory.create(
+					FDS_NAMES[0]
+				).withShowPagination(
+					true
+				)),
+			_registerSystemFDSEntry(
+				SystemFDSEntryFactory.create(
+					FDS_NAMES[1]
+				).withShowPagination(
+					false
+				)));
+
+		Assert.assertTrue(
+			systemFDSSerializer.serializeShowPagination(
+				FDS_NAMES[0], httpServletRequest));
+		Assert.assertFalse(
+			systemFDSSerializer.serializeShowPagination(
+				FDS_NAMES[1], httpServletRequest));
 
 		_unregisterServices();
 	}
@@ -1753,6 +1760,8 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 							).put(
 								"fieldName", FIELD_NAMES[0]
 							).put(
+								"hidden", false
+							).put(
 								"label", LABELS[0]
 							).put(
 								"localizeLabel", true
@@ -1766,6 +1775,8 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 							).put(
 								"fieldName", FIELD_NAMES[1]
 							).put(
+								"hidden", false
+							).put(
 								"label", LABELS[1]
 							).put(
 								"localizeLabel", true
@@ -1776,6 +1787,8 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 								"contentRendererClientExtension", false
 							).put(
 								"fieldName", FIELD_NAMES[2]
+							).put(
+								"hidden", false
 							).put(
 								"label", LABELS[2]
 							).put(
@@ -1838,47 +1851,11 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 		};
 	}
 
-	private ServiceRegistration<FDSCreationMenu> _registerFDSCreationMenu(
-		CreationMenu creationMenu, String fdsName) {
-
-		return bundleContext.registerService(
-			FDSCreationMenu.class,
-			new FDSCreationMenu() {
-
-				@Override
-				public CreationMenu getCreationMenu(
-					HttpServletRequest httpServletRequest) {
-
-					return creationMenu;
-				}
-
-			},
-			MapUtil.singletonDictionary("frontend.data.set.name", fdsName));
-	}
-
 	private ServiceRegistration<FDSFilter> _registerFDSFilter(
 		FDSFilter fdsFilter, String fdsName) {
 
 		return bundleContext.registerService(
 			FDSFilter.class, fdsFilter,
-			MapUtil.singletonDictionary("frontend.data.set.name", fdsName));
-	}
-
-	private ServiceRegistration<FDSItemsActions> _registerFDSItemsActions(
-		List<FDSActionDropdownItem> fdsActionDropdownItems, String fdsName) {
-
-		return bundleContext.registerService(
-			FDSItemsActions.class,
-			new FDSItemsActions() {
-
-				@Override
-				public List<FDSActionDropdownItem> getFDSActionDropdownItems(
-					HttpServletRequest httpServletRequest) {
-
-					return fdsActionDropdownItems;
-				}
-
-			},
 			MapUtil.singletonDictionary("frontend.data.set.name", fdsName));
 	}
 
@@ -2037,6 +2014,11 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 					}
 
 					@Override
+					public boolean getShowPagination() {
+						return _showPagination;
+					}
+
+					@Override
 					public boolean getShowSearch() {
 						return _showSearch;
 					}
@@ -2105,6 +2087,14 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 			return this;
 		}
 
+		public SystemFDSEntryWrapper withShowPagination(
+			boolean showPagination) {
+
+			_showPagination = showPagination;
+
+			return this;
+		}
+
 		public SystemFDSEntryWrapper withShowSearch(boolean showSearch) {
 			_showSearch = showSearch;
 
@@ -2127,6 +2117,7 @@ public class SystemFDSSerializerTest extends BaseFDSSerializerTestCase {
 		private String _propsTransformer;
 		private boolean _searchAsYouType;
 		private boolean _searchSuggestionsEnabled;
+		private boolean _showPagination = true;
 		private boolean _showSearch;
 		private boolean _snapshotsEnabled;
 

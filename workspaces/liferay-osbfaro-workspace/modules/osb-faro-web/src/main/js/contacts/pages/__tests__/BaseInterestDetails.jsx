@@ -3,7 +3,8 @@ import BaseInterestDetails from '../BaseInterestDetails';
 import mockDate from 'test/mock-date';
 import React from 'react';
 import {Account, Segment} from 'shared/util/records';
-import {ACCOUNTS, Routes, SEGMENTS} from 'shared/util/router';
+import {ACCOUNTS, SEGMENTS} from 'shared/util/constants';
+import {Routes} from 'shared/util/router';
 import {render} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
@@ -37,7 +38,7 @@ describe('BaseInterestDetails', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(getByText('Back to Interests')).toBeInTheDocument();
+		expect(getByText(/^back to interests$/i)).toBeInTheDocument();
 	});
 
 	it('should render an individuals list tab', () => {
@@ -60,9 +61,9 @@ describe('BaseInterestDetails', () => {
 		jest.runAllTimers();
 
 		const individualsGrandparentElement =
-			getByText('Individuals').parentElement?.parentElement;
+			getByText(/^individuals$/i).parentElement?.parentElement;
 
-		expect(getByText('Individuals')).toBeTruthy();
+		expect(getByText(/^individuals$/i)).toBeTruthy();
 
 		expect(individualsGrandparentElement).toHaveClass('active');
 	});
@@ -88,9 +89,9 @@ describe('BaseInterestDetails', () => {
 		jest.runAllTimers();
 
 		const activePagesGrandparentElement =
-			getByText('Active Pages').parentElement?.parentElement;
+			getByText(/^active pages$/i).parentElement?.parentElement;
 
-		expect(getByText('Active Pages')).toBeTruthy();
+		expect(getByText(/^active pages$/i)).toBeTruthy();
 
 		expect(activePagesGrandparentElement).toHaveClass('active');
 	});
@@ -116,9 +117,9 @@ describe('BaseInterestDetails', () => {
 		jest.runAllTimers();
 
 		const InactivePagesGrandparentElement =
-			getByText('Inactive Pages').parentElement?.parentElement;
+			getByText(/^inactive pages$/i).parentElement?.parentElement;
 
-		expect(getByText('Inactive Pages')).toBeTruthy();
+		expect(getByText(/^inactive pages$/i)).toBeTruthy();
 
 		expect(InactivePagesGrandparentElement).toHaveClass('active');
 	});
