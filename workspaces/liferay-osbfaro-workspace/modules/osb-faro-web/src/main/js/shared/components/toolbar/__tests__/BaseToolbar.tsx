@@ -2,8 +2,6 @@ import BaseToolbar from '../BaseToolbar';
 import React from 'react';
 import {render, screen} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const renderBaseToolbar = (className?: string) =>
 	render(
 		<BaseToolbar className={className}>
@@ -18,7 +16,7 @@ describe('BaseToolbar', () => {
 		renderBaseToolbar();
 
 		expect(screen.getByRole('navigation')).toContainElement(
-			screen.getByText('Settings')
+			screen.getByText(/^settings$/i)
 		);
 	});
 

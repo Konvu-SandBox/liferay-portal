@@ -11,8 +11,6 @@ import {mockDataSourcesReq} from 'test/graphql-data';
 import {MockedProvider} from '@apollo/client/testing';
 import {Provider} from 'react-redux';
 
-jest.unmock('react-dom');
-
 jest.mock('route-middleware/BundleRouter', () => () => {
 	const {Link, useLocation} = jest.requireActual('react-router-dom');
 
@@ -93,7 +91,7 @@ describe('WorkspaceLayout', () => {
 	it('keeps the workspace loaded when opening an editor from a list', async () => {
 		renderWorkspaceLayout('/workspace/23/1/event-analysis');
 
-		fireEvent.click(await screen.findByText('Create Analysis'));
+		fireEvent.click(await screen.findByText(/^create analysis$/i));
 
 		expect(
 			screen.getByText('/workspace/23/1/event-analysis/create')
@@ -107,8 +105,8 @@ describe('WorkspaceLayout', () => {
 	it('keeps the workspace modals loaded when going back to a list', async () => {
 		renderWorkspaceLayout('/workspace/23/1/event-analysis');
 
-		fireEvent.click(await screen.findByText('Create Analysis'));
-		fireEvent.click(screen.getByText('Back to List'));
+		fireEvent.click(await screen.findByText(/^create analysis$/i));
+		fireEvent.click(screen.getByText(/^back to list$/i));
 
 		expect(
 			screen.getByText('/workspace/23/1/event-analysis')
@@ -123,7 +121,7 @@ describe('WorkspaceLayout', () => {
 
 		expect(
 			await screen.findByText(
-				'The page you are looking for does not exist.'
+				/^the page you are looking for does not exist\.$/i
 			)
 		).toBeInTheDocument();
 		expect(screen.queryByTestId('page')).toBeNull();
@@ -134,11 +132,11 @@ describe('WorkspaceLayout', () => {
 
 		expect(
 			await screen.findByText(
-				'The page you are looking for does not exist.'
+				/^the page you are looking for does not exist\.$/i
 			)
 		).toBeInTheDocument();
 		expect(
-			screen.getByRole('combobox', {name: 'Property'})
+			screen.getByRole('combobox', {name: /^property$/i})
 		).toHaveTextContent('Channel 2');
 	});
 
@@ -147,7 +145,7 @@ describe('WorkspaceLayout', () => {
 
 		expect(
 			await screen.findByText(
-				'The page you are looking for does not exist.'
+				/^the page you are looking for does not exist\.$/i
 			)
 		).toBeInTheDocument();
 	});

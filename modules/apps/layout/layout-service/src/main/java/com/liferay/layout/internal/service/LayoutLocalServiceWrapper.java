@@ -28,6 +28,7 @@ import com.liferay.layout.page.template.model.LayoutPageTemplateStructureRelElem
 import com.liferay.layout.page.template.service.LayoutPageTemplateEntryLocalService;
 import com.liferay.layout.page.template.service.LayoutPageTemplateStructureLocalService;
 import com.liferay.layout.page.template.service.LayoutPageTemplateStructureRelElementVariationLocalService;
+import com.liferay.layout.page.template.util.CheckUnlockedLayoutThreadLocal;
 import com.liferay.layout.seo.model.LayoutSEOEntry;
 import com.liferay.layout.seo.service.LayoutSEOEntryLocalService;
 import com.liferay.layout.service.LayoutClassedModelUsageLocalService;
@@ -39,12 +40,14 @@ import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.portal.kernel.change.tracking.CTCollectionThreadLocal;
 import com.liferay.portal.kernel.comment.CommentManager;
+import com.liferay.portal.kernel.exception.LockedLayoutException;
 import com.liferay.portal.kernel.exception.NoSuchLayoutException;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Image;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.LayoutConstants;
@@ -61,6 +64,8 @@ import com.liferay.portal.kernel.portlet.PortletIdCodec;
 import com.liferay.portal.kernel.portlet.PortletPreferencesFactory;
 import com.liferay.portal.kernel.portlet.PortletPreferencesFactoryUtil;
 import com.liferay.portal.kernel.security.auth.GuestOrUserUtil;
+import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
+import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.ImageLocalService;
 import com.liferay.portal.kernel.service.PortletLocalService;
 import com.liferay.portal.kernel.service.PortletPreferencesLocalService;
@@ -75,6 +80,7 @@ import com.liferay.portal.kernel.transaction.Propagation;
 import com.liferay.portal.kernel.transaction.TransactionConfig;
 import com.liferay.portal.kernel.transaction.TransactionInvokerUtil;
 import com.liferay.portal.kernel.util.ArrayUtil;
+import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.CopyLayoutThreadLocal;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.ListUtil;
@@ -395,9 +401,32 @@ public class LayoutLocalServiceWrapper
 			ctCollectionId = CTCollectionThreadLocal.getCTCollectionId();
 		}
 
-		try (SafeCloseable safeCloseable =
+		User principalUser = _userLocalService.fetchUser(
+			PrincipalThreadLocal.getUserId());
+
+		if ((principalUser == null) || principalUser.isGuestUser() ||
+			(principalUser.getCompanyId() != targetLayout.getCompanyId())) {
+
+			principalUser = null;
+		}
+
+		boolean checkUnlockedLayout =
+			CheckUnlockedLayoutThreadLocal.isCheckUnlockedLayout();
+
+		try (SafeCloseable safeCloseable1 =
 				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
-					ctCollectionId)) {
+					ctCollectionId);
+			SafeCloseable safeCloseable2 =
+				CheckUnlockedLayoutThreadLocal.
+					setCheckUnlockedLayoutWithSafeCloseable(
+						checkUnlockedLayout && (principalUser == null))) {
+
+			if (checkUnlockedLayout && (principalUser != null) &&
+				!targetLayout.isUnlocked(
+					Constants.EDIT, principalUser.getUserId())) {
+
+				throw new LockedLayoutException();
+			}
 
 			CopyLayoutThreadLocal.setCopyLayout(true);
 
@@ -1662,6 +1691,9 @@ public class LayoutLocalServiceWrapper
 	private FriendlyURLEntryLocalService _friendlyURLEntryLocalService;
 
 	@Reference
+	private GroupLocalService _groupLocalService;
+
+	@Reference
 	private ImageLocalService _imageLocalService;
 
 	@Reference
@@ -1800,7 +1832,7 @@ public class LayoutLocalServiceWrapper
 				imageBytes = image.getTextObj();
 			}
 
-			return updateLayout(
+			Layout layout = updateLayout(
 				_targetLayout.getGroupId(), _targetLayout.isPrivateLayout(),
 				_targetLayout.getLayoutId(),
 				_getTypeSettings(_sourceLayout, _targetLayout), imageBytes,
@@ -1810,6 +1842,22 @@ public class LayoutLocalServiceWrapper
 				_sourceLayout.getCss(), _sourceLayout.getFaviconFileEntryERC(),
 				_sourceLayout.getFaviconFileEntryScopeERC(),
 				_sourceLayout.getMasterLayoutPageTemplateEntryERC());
+
+			String masterLayoutPageTemplateEntryScopeERC =
+				_getMasterLayoutPageTemplateEntryScopeERC();
+
+			if (StringUtil.equals(
+					GetterUtil.getString(masterLayoutPageTemplateEntryScopeERC),
+					layout.getMasterLayoutPageTemplateEntryScopeERC())) {
+
+				return layout;
+			}
+
+			return updateMasterLayoutPageTemplateEntry(
+				layout.getGroupId(), layout.isPrivateLayout(),
+				layout.getLayoutId(),
+				layout.getMasterLayoutPageTemplateEntryERC(),
+				masterLayoutPageTemplateEntryScopeERC);
 		}
 
 		private CopyLayoutCallable(
@@ -1898,6 +1946,37 @@ public class LayoutLocalServiceWrapper
 					}
 				}
 			}
+		}
+
+		private String _getMasterLayoutPageTemplateEntryScopeERC() {
+			if (_sourceLayout.getGroupId() == _targetLayout.getGroupId()) {
+				return _sourceLayout.getMasterLayoutPageTemplateEntryScopeERC();
+			}
+
+			long masterLayoutPlid = _sourceLayout.getMasterLayoutPlid();
+
+			if (masterLayoutPlid <= 0) {
+				return null;
+			}
+
+			LayoutPageTemplateEntry masterLayoutPageTemplateEntry =
+				_layoutPageTemplateEntryLocalService.
+					fetchLayoutPageTemplateEntryByPlid(masterLayoutPlid);
+
+			if (masterLayoutPageTemplateEntry == null) {
+				return null;
+			}
+
+			Group group = _groupLocalService.fetchGroup(
+				masterLayoutPageTemplateEntry.getGroupId());
+
+			if ((group == null) || !group.isDepot() ||
+				(group.getGroupId() == _targetLayout.getGroupId())) {
+
+				return null;
+			}
+
+			return group.getExternalReferenceCode();
 		}
 
 		private boolean _isMasterLayoutCopy() {

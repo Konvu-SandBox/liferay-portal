@@ -6,6 +6,11 @@
 package com.liferay.object.rest.internal.manager.v1_0;
 
 import com.liferay.account.exception.NoSuchGroupException;
+import com.liferay.asset.entry.rel.service.AssetEntryAssetCategoryRelLocalService;
+import com.liferay.asset.kernel.service.AssetCategoryLocalService;
+import com.liferay.asset.kernel.service.AssetEntryLocalService;
+import com.liferay.asset.kernel.service.AssetTagLocalService;
+import com.liferay.asset.kernel.service.AssetVocabularyLocalService;
 import com.liferay.depot.constants.DepotConstants;
 import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.model.DepotEntryModel;
@@ -13,6 +18,7 @@ import com.liferay.depot.service.DepotEntryLocalService;
 import com.liferay.document.library.kernel.service.DLAppService;
 import com.liferay.exportimport.attachment.ExportImportAttachmentManager;
 import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
+import com.liferay.friendly.url.service.FriendlyURLEntryLocalService;
 import com.liferay.object.action.engine.ObjectActionEngine;
 import com.liferay.object.comment.ObjectEntryComment;
 import com.liferay.object.configuration.ObjectConfiguration;
@@ -59,6 +65,8 @@ import com.liferay.object.rest.filter.factory.FilterFactory;
 import com.liferay.object.rest.filter.parser.ObjectDefinitionFilterParser;
 import com.liferay.object.rest.internal.resource.v1_0.ObjectEntryRelatedObjectsResourceImpl;
 import com.liferay.object.rest.internal.resource.v1_0.ObjectEntryResourceImpl;
+import com.liferay.object.rest.internal.util.AssetCategorizationLoader;
+import com.liferay.object.rest.internal.util.FriendlyURLEntryTitlesLoader;
 import com.liferay.object.rest.internal.util.ObjectEntryValuesUtil;
 import com.liferay.object.rest.internal.util.ServiceContextUtil;
 import com.liferay.object.rest.manager.v1_0.BaseObjectEntryManager;
@@ -189,6 +197,7 @@ import java.net.UnknownHostException;
 import java.text.ParseException;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -710,7 +719,7 @@ public class DefaultObjectEntryManagerImpl
 	}
 
 	@Override
-	public ObjectEntry fetchRelatedManyToOneObjectEntry(
+	public ObjectEntry fetchRelatedObjectEntry(
 			DTOConverterContext dtoConverterContext,
 			ObjectDefinition objectDefinition, Long objectEntryId,
 			String objectRelationshipName)
@@ -804,11 +813,9 @@ public class DefaultObjectEntryManagerImpl
 				companyId, objectDefinition, groupIds, dtoConverterContext,
 				predicate, pagination, search, sorts);
 
-		List<ObjectEntry> objectEntries = TransformUtil.transform(
-			new ArrayList<>(serviceBuilderObjectEntriesPage.getItems()),
-			serviceBuilderObjectEntry -> _getObjectEntry(
-				dtoConverterContext, objectDefinition,
-				serviceBuilderObjectEntry));
+		List<ObjectEntry> objectEntries = _getObjectEntries(
+			dtoConverterContext, objectDefinition,
+			serviceBuilderObjectEntriesPage.getItems());
 
 		return Page.of(
 			HashMapBuilder.put(
@@ -2096,7 +2103,9 @@ public class DefaultObjectEntryManagerImpl
 		throws Exception {
 
 		if (!preferApproved) {
-			_checkHeadObjectEntry(serviceBuilderObjectEntry);
+			if (!serviceBuilderObjectEntry.isTypeDraft()) {
+				_checkHeadObjectEntry(serviceBuilderObjectEntry);
+			}
 
 			return;
 		}
@@ -2218,7 +2227,10 @@ public class DefaultObjectEntryManagerImpl
 			com.liferay.object.model.ObjectEntry serviceBuilderObjectEntry)
 		throws Exception {
 
-		_checkHeadObjectEntry(serviceBuilderObjectEntry);
+		if (!serviceBuilderObjectEntry.isTypeDraft()) {
+			_checkHeadObjectEntry(serviceBuilderObjectEntry);
+		}
+
 		_checkObjectEntryObjectDefinitionId(
 			objectDefinition, serviceBuilderObjectEntry);
 		_checkRootDescendantNode(serviceBuilderObjectEntry, false);
@@ -2226,7 +2238,7 @@ public class DefaultObjectEntryManagerImpl
 		DepotEntry depotEntry = _depotEntryLocalService.fetchGroupDepotEntry(
 			serviceBuilderObjectEntry.getGroupId());
 
-		if ((depotEntry != null) &&
+		if ((depotEntry != null) && !serviceBuilderObjectEntry.isTypeDraft() &&
 			_trashHelper.isTrashEnabled(
 				serviceBuilderObjectEntry.getGroupId()) &&
 			(serviceBuilderObjectEntry.getStatus() !=
@@ -2556,6 +2568,44 @@ public class DefaultObjectEntryManagerImpl
 				return false;
 			},
 			value);
+	}
+
+	private List<ObjectEntry> _getObjectEntries(
+		DTOConverterContext dtoConverterContext,
+		ObjectDefinition objectDefinition,
+		Collection<com.liferay.object.model.ObjectEntry>
+			serviceBuilderObjectEntries) {
+
+		long classNameId = _classNameLocalService.getClassNameId(
+			objectDefinition.getClassName());
+		long[] objectEntryIds = TransformUtil.transformToLongArray(
+			serviceBuilderObjectEntries,
+			com.liferay.object.model.ObjectEntry::getObjectEntryId);
+
+		dtoConverterContext.setAttribute(
+			"assetCategorizationLoader",
+			new AssetCategorizationLoader(
+				_assetCategoryLocalService,
+				_assetEntryAssetCategoryRelLocalService,
+				_assetEntryLocalService, _assetTagLocalService,
+				_assetVocabularyLocalService, classNameId,
+				objectDefinition.getCompanyId(), objectEntryIds));
+		dtoConverterContext.setAttribute(
+			"friendlyURLEntryTitlesLoader",
+			new FriendlyURLEntryTitlesLoader(
+				classNameId, _friendlyURLEntryLocalService, objectEntryIds));
+
+		try {
+			return TransformUtil.transform(
+				serviceBuilderObjectEntries,
+				serviceBuilderObjectEntry -> _getObjectEntry(
+					dtoConverterContext, objectDefinition,
+					serviceBuilderObjectEntry));
+		}
+		finally {
+			dtoConverterContext.removeAttribute("assetCategorizationLoader");
+			dtoConverterContext.removeAttribute("friendlyURLEntryTitlesLoader");
+		}
 	}
 
 	private ObjectEntry _getObjectEntry(
@@ -4456,6 +4506,22 @@ public class DefaultObjectEntryManagerImpl
 	private Aggregations _aggregations;
 
 	@Reference
+	private AssetCategoryLocalService _assetCategoryLocalService;
+
+	@Reference
+	private AssetEntryAssetCategoryRelLocalService
+		_assetEntryAssetCategoryRelLocalService;
+
+	@Reference
+	private AssetEntryLocalService _assetEntryLocalService;
+
+	@Reference
+	private AssetTagLocalService _assetTagLocalService;
+
+	@Reference
+	private AssetVocabularyLocalService _assetVocabularyLocalService;
+
+	@Reference
 	private AttachmentManager _attachmentManager;
 
 	@Reference
@@ -4483,6 +4549,9 @@ public class DefaultObjectEntryManagerImpl
 		target = "(filter.factory.key=" + ObjectDefinitionConstants.STORAGE_TYPE_DEFAULT + ")"
 	)
 	private FilterFactory<Predicate> _filterFactory;
+
+	@Reference
+	private FriendlyURLEntryLocalService _friendlyURLEntryLocalService;
 
 	@Reference
 	private GroupLocalService _groupLocalService;

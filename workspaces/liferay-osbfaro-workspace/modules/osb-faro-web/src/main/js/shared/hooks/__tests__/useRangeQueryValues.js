@@ -1,9 +1,10 @@
 import React from 'react';
 import {MemoryRouter} from 'react-router-dom';
 import {render} from '@testing-library/react';
-import {useRangeQueryValues} from 'shared/hooks/useRangeQueryValues';
-
-jest.unmock('react-dom');
+import {
+	getAPIRangeParams,
+	useRangeQueryValues,
+} from 'shared/hooks/useRangeQueryValues';
 
 const renderRangeQueryValues = (queryString = '') => {
 	let rangeQueryValues;
@@ -51,5 +52,20 @@ describe('useRangeQueryValues', () => {
 		expect(rangeSelectors.rangeKey).toBe('30');
 		expect(apiRangeParams).toEqual({rangeKey: '30'});
 		expect(routeRangeParams).toEqual({rangeKey: '30'});
+	});
+});
+
+describe('getAPIRangeParams', () => {
+	it('should drop the custom range key and the empty bounds', () => {
+		expect(
+			getAPIRangeParams({
+				rangeEnd: '2026-02-20',
+				rangeKey: 'CUSTOM',
+				rangeStart: '2026-02-10',
+			})
+		).toEqual({rangeEnd: '2026-02-20', rangeStart: '2026-02-10'});
+		expect(
+			getAPIRangeParams({rangeEnd: null, rangeKey: '7', rangeStart: null})
+		).toEqual({rangeKey: '7'});
 	});
 });

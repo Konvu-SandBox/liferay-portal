@@ -18,11 +18,16 @@ import com.liferay.headless.admin.fragment.client.pagination.Page;
 import com.liferay.headless.admin.fragment.client.pagination.Pagination;
 import com.liferay.headless.admin.fragment.client.problem.Problem;
 import com.liferay.headless.admin.fragment.client.resource.v1_0.FragmentSetResource;
+import com.liferay.headless.batch.engine.client.dto.v1_0.FailedItem;
+import com.liferay.headless.batch.engine.client.dto.v1_0.ImportTask;
 import com.liferay.petra.function.UnsafeRunnable;
+import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.feature.flag.constants.FeatureFlagConstants;
+import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
+import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Role;
@@ -65,6 +70,7 @@ import java.io.InputStream;
 
 import java.text.DateFormat;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -191,7 +197,7 @@ public class FragmentSetResourceTest extends BaseFragmentSetResourceTestCase {
 
 	@Override
 	@Test
-	@TestInfo("LPD-88395")
+	@TestInfo({"LPD-88395", "LPD-107754", "LPD-117504"})
 	public void testPostSiteFragmentSet() throws Exception {
 		FragmentSet randomFragmentSet = randomFragmentSet();
 
@@ -241,12 +247,13 @@ public class FragmentSetResourceTest extends BaseFragmentSetResourceTestCase {
 				testGroup.getExternalReferenceCode(), invalidNameFragmentSet));
 
 		_testPostSiteFragmentSetBatch();
+		_testPostSiteFragmentSetBatchFailedItems();
 		_testPostSiteFragmentSetWithoutPermissionsProblemException();
 	}
 
 	@Override
 	@Test
-	@TestInfo("LPD-88395")
+	@TestInfo({"LPD-88395", "LPD-117504"})
 	public void testPutSiteFragmentSet() throws Exception {
 		FragmentSet fragmentSet = randomFragmentSet();
 
@@ -284,6 +291,7 @@ public class FragmentSetResourceTest extends BaseFragmentSetResourceTestCase {
 		String originalExternalReferenceCode =
 			fragmentSet.getExternalReferenceCode();
 		String originalKey = fragmentSet.getKey();
+		String originalUuid = fragmentSet.getUuid();
 
 		Boolean originalMarketplace = fragmentSet.getMarketplace();
 
@@ -291,6 +299,7 @@ public class FragmentSetResourceTest extends BaseFragmentSetResourceTestCase {
 		fragmentSet.setExternalReferenceCode(RandomTestUtil.randomString());
 		fragmentSet.setKey(RandomTestUtil.randomString());
 		fragmentSet.setMarketplace(!originalMarketplace);
+		fragmentSet.setUuid(RandomTestUtil.randomString());
 
 		putFragmentSet = fragmentSetResource.putSiteFragmentSet(
 			testGroup.getExternalReferenceCode(), originalExternalReferenceCode,
@@ -303,6 +312,7 @@ public class FragmentSetResourceTest extends BaseFragmentSetResourceTestCase {
 		Assert.assertEquals(originalKey, putFragmentSet.getKey());
 		Assert.assertEquals(
 			originalMarketplace, putFragmentSet.getMarketplace());
+		Assert.assertEquals(originalUuid, putFragmentSet.getUuid());
 
 		FragmentSet duplicateKeyFragmentSet = randomFragmentSet();
 
@@ -341,7 +351,8 @@ public class FragmentSetResourceTest extends BaseFragmentSetResourceTestCase {
 	@Override
 	protected String[] getAdditionalAssertFieldNames() {
 		return new String[] {
-			"description", "externalReferenceCode", "key", "marketplace", "name"
+			"description", "externalReferenceCode", "key", "marketplace",
+			"name", "uuid"
 		};
 	}
 
@@ -501,6 +512,8 @@ public class FragmentSetResourceTest extends BaseFragmentSetResourceTestCase {
 			fragmentSet.getName(), fragmentCollection.getName());
 		Assert.assertEquals(
 			fragmentSet.getDescription(), fragmentCollection.getDescription());
+		Assert.assertEquals(
+			fragmentSet.getUuid(), fragmentCollection.getUuid());
 	}
 
 	private void _assertGetSiteFragmentSetsPageWithFilter(
@@ -889,6 +902,68 @@ public class FragmentSetResourceTest extends BaseFragmentSetResourceTestCase {
 
 		_assertFragmentCollection(fragmentSet1, irrelevantGroup);
 		_assertFragmentCollection(fragmentSet2, irrelevantGroup);
+	}
+
+	private void _testPostSiteFragmentSetBatchFailedItems() throws Exception {
+		FragmentSet postFragmentSet = testPostSiteFragmentSet_addFragmentSet(
+			randomFragmentSet());
+
+		FragmentSet fragmentSet1 = randomFragmentSet();
+
+		fragmentSet1.setExternalReferenceCode(
+			postFragmentSet.getExternalReferenceCode());
+
+		FragmentSet fragmentSet2 = randomFragmentSet();
+
+		fragmentSet2.setKey(postFragmentSet.getKey());
+
+		FragmentSet fragmentSet3 = randomFragmentSet();
+
+		fragmentSet3.setName(
+			RandomTestUtil.randomString() + StringPool.PERIOD +
+				RandomTestUtil.randomString());
+
+		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
+				"com.liferay.batch.engine.internal." +
+					"BatchEngineImportTaskExecutorImpl",
+				LoggerTestUtil.ERROR)) {
+
+			JSONObject jsonObject = waitForFinish(
+				"COMPLETED",
+				HTTPTestUtil.invokeToJSONObject(
+					JSONUtil.putAll(
+						JSONFactoryUtil.createJSONObject(
+							fragmentSet1.toString()),
+						JSONFactoryUtil.createJSONObject(
+							fragmentSet2.toString()),
+						JSONFactoryUtil.createJSONObject(
+							fragmentSet3.toString())
+					).toString(),
+					StringBundler.concat(
+						"headless-admin-fragment/v1.0/sites/",
+						testGroup.getExternalReferenceCode(),
+						"/fragment-sets/batch",
+						"?importStrategy=ON_ERROR_CONTINUE"),
+					Http.Method.POST));
+
+			ImportTask importTask = importTaskResource.getImportTask(
+				jsonObject.getLong("id"));
+
+			Assert.assertEquals(
+				Arrays.asList(
+					_language.get(
+						LocaleUtil.getDefault(),
+						"this-external-reference-code-is-already-in-use"),
+					_language.format(
+						LocaleUtil.getDefault(),
+						"a-fragment-set-with-the-key-x-already-exists",
+						postFragmentSet.getKey()),
+					_language.get(
+						LocaleUtil.getDefault(),
+						"fragment-set-name-is-invalid")),
+				TransformUtil.transformToList(
+					importTask.getFailedItems(), FailedItem::getMessage));
+		}
 	}
 
 	private void _testPostSiteFragmentSetWithoutPermissionsProblemException()

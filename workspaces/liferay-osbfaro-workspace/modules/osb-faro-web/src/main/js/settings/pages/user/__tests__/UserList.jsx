@@ -12,8 +12,6 @@ import {User} from 'shared/util/records';
 import {UserRoleNames} from 'shared/util/constants';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const defaultProps = {
 	currentUser: new User(data.mockUser()),
 	groupId: '23'
@@ -71,6 +69,6 @@ describe('UserList', () => {
 
 		expect(queryByTestId('select-all-checkbox')).not.toBeInTheDocument();
 
-		expect(queryByText('Invite Users')).not.toBeInTheDocument();
+		expect(queryByText(/^invite users$/i)).not.toBeInTheDocument();
 	});
 });
