@@ -8,8 +8,6 @@ import {
 import {Property} from 'shared/util/records';
 import {PropertyTypes} from '../../utils/constants';
 
-jest.unmock('react-dom');
-
 const mockValue = createCustomValueMap([
 	{key: 'criterionGroup', value: [{operatorName: 'eq', value: ''}]}
 ]);
@@ -37,11 +35,11 @@ describe('CustomStringInput', () => {
 		fireEvent.click(getByText('is'));
 
 		expect(getAllByText('is')[1]).toBeTruthy();
-		expect(getByText('is not')).toBeTruthy();
-		expect(getByText('contains')).toBeTruthy();
-		expect(getByText('does not contain')).toBeTruthy();
-		expect(getByText('is known')).toBeTruthy();
-		expect(getByText('is unknown')).toBeTruthy();
+		expect(getByText('is not')).toBeInTheDocument();
+		expect(getByText('contains')).toBeInTheDocument();
+		expect(getByText('does not contain')).toBeInTheDocument();
+		expect(getByText('is known')).toBeInTheDocument();
+		expect(getByText('is unknown')).toBeInTheDocument();
 		expect(container).toMatchSnapshot();
 	});
 
@@ -54,11 +52,11 @@ describe('CustomStringInput', () => {
 		fireEvent.click(getByText('is'));
 
 		expect(getAllByText('is')[1]).toBeTruthy();
-		expect(getByText('is not')).toBeTruthy();
-		expect(getByText('contains')).toBeTruthy();
-		expect(getByText('does not contain')).toBeTruthy();
-		expect(getByText('is known')).toBeTruthy();
-		expect(getByText('is unknown')).toBeTruthy();
+		expect(getByText('is not')).toBeInTheDocument();
+		expect(getByText('contains')).toBeInTheDocument();
+		expect(getByText('does not contain')).toBeInTheDocument();
+		expect(getByText('is known')).toBeInTheDocument();
+		expect(getByText('is unknown')).toBeInTheDocument();
 		expect(container).toMatchSnapshot();
 	});
 
@@ -99,7 +97,7 @@ describe('CustomStringInput', () => {
 			);
 			fireEvent.click(getByText('is'));
 
-			expect(getByText('is not')).toBeTruthy();
+			expect(getByText('is not')).toBeInTheDocument();
 			expect(queryByText('contains')).toBeNull();
 			expect(queryByText('does not contain')).toBeNull();
 			expect(queryByText('is known')).toBeNull();
@@ -118,9 +116,9 @@ describe('CustomStringInput', () => {
 				queryByTestId('attribute-value-string-input')
 			).toBeNull();
 
-			fireEvent.click(getByText('Direct'));
+			fireEvent.click(getByText(/^direct$/i));
 
-			expect(getByText('Organic')).toBeTruthy();
+			expect(getByText(/^organic$/i)).toBeInTheDocument();
 		});
 	});
 });

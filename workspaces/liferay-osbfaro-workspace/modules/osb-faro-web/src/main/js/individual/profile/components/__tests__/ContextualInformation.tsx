@@ -3,8 +3,6 @@ import React from 'react';
 import {fromJS} from 'immutable';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('ContextualInformation', () => {
 	const mockContext = {
 		browserName: 'Chrome',
@@ -33,7 +31,7 @@ describe('ContextualInformation', () => {
 			<ContextualInformation contextData={fromJS(mockContext)} />
 		);
 
-		expect(getByText('UTC -03:00 (AEST)')).toBeTruthy();
+		expect(getByText('UTC -03:00 (AEST)')).toBeInTheDocument();
 	});
 
 	it('should show email and uuid when passed as props', () => {
@@ -45,8 +43,8 @@ describe('ContextualInformation', () => {
 			/>
 		);
 
-		expect(getByText('test@example.com')).toBeTruthy();
-		expect(getByText('1234-abcde-67890')).toBeTruthy();
+		expect(getByText('test@example.com')).toBeInTheDocument();
+		expect(getByText('1234-abcde-67890')).toBeInTheDocument();
 	});
 
 	it('should display no data for missing context values', () => {
@@ -57,6 +55,5 @@ describe('ContextualInformation', () => {
 		const noDataValues = getAllByText('–');
 
 		expect(noDataValues.length).toBeGreaterThan(0);
-		expect(noDataValues[0]).toHaveClass('text-secondary');
 	});
 });

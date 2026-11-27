@@ -6,8 +6,6 @@ import {Segment} from 'shared/util/records';
 import {SegmentTypes} from 'shared/util/constants';
 import {withReferencedObjectsProvider} from 'segment/segment-editor/dynamic/context/referencedObjects';
 
-jest.unmock('react-dom');
-
 const FIELD_MAPPINGS = {
 	individual: {
 		demographics: {
@@ -124,16 +122,18 @@ describe('CriteriaView', () => {
 	});
 
 	it('should render w/ Non-Existent Property message', () => {
-		const {queryByText} = render(
+		const {getByText} = render(
 			<CriteriaView criteria={data.mockNewCriteria()} />
 		);
 
-		expect(queryByText('Attribute no longer exists.')).toBeTruthy();
+		expect(
+			getByText(/^attribute no longer exists\.$/i)
+		).toBeInTheDocument();
 	});
 
 	it('should render numbered steps and "then" conjunction when real time + sequential', () => {
 		const WrappedCriteriaView = withReferencedObjectsProvider(CriteriaView);
-		const {container, queryByText} = render(
+		const {container, getByText, queryByText} = render(
 			<WrappedCriteriaView
 				criteria={data.mockNewCriteria(2, {
 					propertyName: 'demographics/firstName/value'
@@ -149,8 +149,8 @@ describe('CriteriaView', () => {
 		expect(stepNumbers).toHaveLength(2);
 		expect(stepNumbers[0].textContent).toBe('1');
 		expect(stepNumbers[1].textContent).toBe('2');
-		expect(queryByText('Then')).toBeTruthy();
-		expect(queryByText('And')).toBeFalsy();
+		expect(getByText(/^then$/i)).toBeInTheDocument();
+		expect(queryByText(/^and$/i)).toBeFalsy();
 	});
 
 	it('should not wrap items in criteria-step when sequential is false', () => {
@@ -168,7 +168,7 @@ describe('CriteriaView', () => {
 
 		expect(container.querySelector('.criteria-step')).toBeNull();
 		expect(container.querySelector('.criteria-step-number')).toBeNull();
-		expect(queryByText('Then')).toBeFalsy();
+		expect(queryByText(/^then$/i)).toBeFalsy();
 	});
 
 	it('should not render numbered steps when segment type is batch even if sequential', () => {
@@ -186,7 +186,7 @@ describe('CriteriaView', () => {
 
 		expect(container.querySelector('.criteria-step')).toBeNull();
 		expect(container.querySelector('.criteria-step-number')).toBeNull();
-		expect(queryByText('Then')).toBeFalsy();
+		expect(queryByText(/^then$/i)).toBeFalsy();
 	});
 
 	it('should render numbered steps only at the top level when nested', () => {

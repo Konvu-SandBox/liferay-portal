@@ -5,8 +5,6 @@ import {cleanup, getByText, render} from '@testing-library/react';
 import {getISODate} from 'shared/util/date';
 import {mockGetDateNow} from 'test/mock-date';
 
-jest.unmock('react-dom');
-
 describe('TokenCell', () => {
 	beforeAll(() => {
 		mockGetDateNow(getISODate(data.getTimestamp(0)));
@@ -31,7 +29,7 @@ describe('TokenCell', () => {
 
 		expect(
 			getByText(container.querySelector('.label'), 'Expired')
-		).toBeTruthy();
+		).toBeInTheDocument();
 
 		jest.restoreAllMocks();
 	});

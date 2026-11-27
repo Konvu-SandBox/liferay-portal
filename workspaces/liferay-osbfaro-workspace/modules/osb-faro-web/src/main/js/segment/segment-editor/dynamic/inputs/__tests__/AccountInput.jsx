@@ -13,8 +13,6 @@ import {fromJS} from 'immutable';
 import {Property} from 'shared/util/records';
 import {PropertyTypes, RelationalOperators} from '../../utils/constants';
 
-jest.unmock('react-dom');
-
 const {EQ} = RelationalOperators;
 
 describe('AccountInput', () => {
@@ -31,11 +29,11 @@ describe('AccountInput', () => {
 		fireEvent.click(getByText('is'));
 
 		expect(getAllByText('is')[1]).toBeTruthy();
-		expect(getByText('is not')).toBeTruthy();
-		expect(getByText('contains')).toBeTruthy();
-		expect(getByText('does not contain')).toBeTruthy();
-		expect(getByText('is known')).toBeTruthy();
-		expect(getByText('is unknown')).toBeTruthy();
+		expect(getByText('is not')).toBeInTheDocument();
+		expect(getByText('contains')).toBeInTheDocument();
+		expect(getByText('does not contain')).toBeInTheDocument();
+		expect(getByText('is known')).toBeInTheDocument();
+		expect(getByText('is unknown')).toBeInTheDocument();
 		expect(container).toMatchSnapshot();
 	});
 

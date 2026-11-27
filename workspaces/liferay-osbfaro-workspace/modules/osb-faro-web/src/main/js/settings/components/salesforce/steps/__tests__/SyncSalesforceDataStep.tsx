@@ -4,8 +4,6 @@ import {fromJS} from 'immutable';
 import {SyncSalesforceDataStep} from '../SyncSalesforceDataStep';
 import {updateSalesforce} from 'shared/api/data-source';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useParams: () => ({groupId: '23'}),
@@ -39,13 +37,13 @@ describe('SyncSalesforceDataStep', () => {
 			<SyncSalesforceDataStep onNext={jest.fn()} onPrev={jest.fn()} />
 		);
 
-		expect(screen.getByText('Campaigns')).toBeTruthy();
+		expect(screen.getByText(/^campaigns$/i)).toBeInTheDocument();
 		expect(
 			screen.getByText(
-				'Represents fields from the Campaign and Campaign Members objects within Salesforce.'
+				/^represents fields from the campaign and campaign members objects within salesforce\.$/i
 			)
-		).toBeTruthy();
-		expect(screen.queryByText(/Items Synced/i)).toBeNull();
+		).toBeInTheDocument();
+		expect(screen.queryByText(/items synced/i)).toBeNull();
 
 		const checkboxes = getCheckboxes();
 
@@ -69,7 +67,7 @@ describe('SyncSalesforceDataStep', () => {
 		expect(checkboxes[0].checked).toBe(false);
 		expect(checkboxes[2].checked).toBe(true);
 
-		fireEvent.click(screen.getByText('Continue'));
+		fireEvent.click(screen.getByText(/^continue$/i));
 
 		await waitFor(() => expect(onNext).toHaveBeenCalled());
 

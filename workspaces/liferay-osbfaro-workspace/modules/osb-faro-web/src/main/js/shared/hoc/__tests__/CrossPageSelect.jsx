@@ -17,8 +17,6 @@ import {range} from 'lodash';
 import {Routes} from 'shared/util/router';
 import {SelectionProvider} from 'shared/context/selection';
 
-jest.unmock('react-dom');
-
 const mockItemArray = [
 	{id: '1', name: 'orange'},
 	{id: '2', name: 'apple'},
@@ -117,9 +115,9 @@ describe('CrossPageSelect', () => {
 
 		selectAllAndToggle(container);
 
-		expect(getByText('apple')).toBeTruthy();
-		expect(getByText('banana')).toBeTruthy();
-		expect(getByText('grapefruit')).toBeTruthy();
+		expect(getByText('apple')).toBeInTheDocument();
+		expect(getByText('banana')).toBeInTheDocument();
+		expect(getByText('grapefruit')).toBeInTheDocument();
 	});
 
 	it('it should search selected items when given a custom search function', () => {

@@ -10,8 +10,6 @@ import {Provider} from 'react-redux';
 import {useCurrentUser} from 'shared/hooks/useCurrentUser';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/hooks/useCurrentUser', () => ({
 	useCurrentUser: jest.fn()
 }));
@@ -63,8 +61,8 @@ describe('Data Privacy Overview', () => {
 
 		fireEvent.click(getByText('Select an option'));
 
-		expect(getByText('7 Months')).toBeTruthy();
-		expect(getByText('13 Months')).toBeTruthy();
+		expect(getByText('7 Months')).toBeInTheDocument();
+		expect(getByText('13 Months')).toBeInTheDocument();
 		expect(container).toMatchSnapshot();
 	});
 

@@ -3,8 +3,6 @@ import React from 'react';
 import {cleanup, fireEvent, render} from '@testing-library/react';
 import {Property} from 'shared/util/records';
 
-jest.unmock('react-dom');
-
 describe('BooleanInput', () => {
 	afterEach(cleanup);
 
@@ -17,8 +15,8 @@ describe('BooleanInput', () => {
 		);
 		fireEvent.click(getByText('Select an option'));
 
-		expect(getByText('True')).toBeTruthy();
-		expect(getByText('False')).toBeTruthy();
+		expect(getByText(/^true$/i)).toBeInTheDocument();
+		expect(getByText(/^false$/i)).toBeInTheDocument();
 		expect(container).toMatchSnapshot();
 	});
 
@@ -31,10 +29,10 @@ describe('BooleanInput', () => {
 				value='true'
 			/>
 		);
-		fireEvent.click(getByText('True'));
+		fireEvent.click(getByText(/^true$/i));
 
-		expect(getAllByText('True')[1]).toBeTruthy();
-		expect(getByText('False')).toBeTruthy();
+		expect(getAllByText(/^true$/i)[1]).toBeTruthy();
+		expect(getByText(/^false$/i)).toBeInTheDocument();
 		expect(container).toMatchSnapshot();
 	});
 });

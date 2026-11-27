@@ -12,8 +12,6 @@ import {Segment} from 'shared/util/records';
 import {SegmentCategories, SegmentStates} from 'shared/util/constants';
 import {MemoryRouter} from 'react-router';
 
-jest.unmock('react-dom');
-
 type FakeFilter = {
 	id: string;
 	preloadedData?: {
@@ -89,9 +87,13 @@ describe('AccountProfile', () => {
 	it('should render the segment name, its type and its external reference code', () => {
 		renderAccountProfile();
 
-		expect(screen.getByRole('heading', {name: 'Seattle0'})).toBeTruthy();
-		expect(screen.getByText('Account Batch Segment')).toBeTruthy();
-		expect(screen.getByText('ERC: my-erc')).toBeTruthy();
+		expect(
+			screen.getByRole('heading', {name: 'Seattle0'})
+		).toBeInTheDocument();
+		expect(
+			screen.getByText(/^account batch segment$/i)
+		).toBeInTheDocument();
+		expect(screen.getByText('ERC: my-erc')).toBeInTheDocument();
 	});
 
 	it('should warn that the membership is still being processed', () => {
@@ -99,9 +101,9 @@ describe('AccountProfile', () => {
 
 		expect(
 			screen.getByText(
-				'Segment data is processing, please check back later.'
+				/^segment data is processing, please check back later\.$/i
 			)
-		).toBeTruthy();
+		).toBeInTheDocument();
 	});
 
 	it('should warn that the segment is disabled', () => {
@@ -109,9 +111,9 @@ describe('AccountProfile', () => {
 
 		expect(
 			screen.getByText(
-				'This segment is disabled because some criteria has been affected by removal of a data source. To continue using this segment please update the criteria.'
+				/^this segment is disabled because some criteria has been affected by removal of a data source\. to continue using this segment please update the criteria\.$/i
 			)
-		).toBeTruthy();
+		).toBeInTheDocument();
 	});
 
 	it('should not show any alert when the segment is ready', () => {
@@ -123,11 +125,11 @@ describe('AccountProfile', () => {
 	it('should link to the segment editor', () => {
 		renderAccountProfile();
 
-		fireEvent.click(screen.getByRole('button', {name: 'Menu'}));
+		fireEvent.click(screen.getByRole('button', {name: /^menu$/i}));
 
 		expect(
 			screen
-				.getByRole('menuitem', {name: 'Edit Segment'})
+				.getByRole('menuitem', {name: /^edit segment$/i})
 				.getAttribute('href')
 		).toMatch(/\/segments\/0\/edit$/);
 	});
@@ -137,7 +139,7 @@ describe('AccountProfile', () => {
 
 		await screen.findByTestId('fds-component');
 
-		expect(screen.getByText('SEGMENT MEMBERSHIP')).toBeTruthy();
+		expect(screen.getByText('SEGMENT MEMBERSHIP')).toBeInTheDocument();
 		expect(lastApiURL).toBe(
 			'/o/faro/contacts/23/account/search?channelId=123&segmentId=0'
 		);
@@ -178,11 +180,11 @@ describe('AccountProfile', () => {
 	it('should offer the segment membership as a CSV download', () => {
 		renderAccountProfile();
 
-		fireEvent.click(screen.getByRole('button', {name: 'Menu'}));
+		fireEvent.click(screen.getByRole('button', {name: /^menu$/i}));
 
 		expect(
-			screen.getByRole('menuitem', {name: 'Download CSV'})
-		).toBeTruthy();
+			screen.getByRole('menuitem', {name: /^download csv$/i})
+		).toBeInTheDocument();
 	});
 
 	it('should display the segment criteria', () => {
@@ -191,22 +193,22 @@ describe('AccountProfile', () => {
 				"accounts.filter(filter='industry eq ''Technology''')",
 		});
 
-		expect(screen.getByText('Industry')).toBeTruthy();
-		expect(screen.getByText('Segment Criteria')).toBeTruthy();
-		expect(screen.getByText('"Technology"')).toBeTruthy();
+		expect(screen.getByText(/^industry$/i)).toBeInTheDocument();
+		expect(screen.getByText(/^segment criteria$/i)).toBeInTheDocument();
+		expect(screen.getByText('"Technology"')).toBeInTheDocument();
 	});
 
 	it('should open the manage notifications modal with the workspace and segment IDs', async () => {
 		renderAccountProfile({id: '456'});
 
-		fireEvent.click(screen.getByRole('button', {name: 'Menu'}));
+		fireEvent.click(screen.getByRole('button', {name: /^menu$/i}));
 
 		fireEvent.click(
-			screen.getByRole('menuitem', {name: 'Manage Notifications'})
+			screen.getByRole('menuitem', {name: /^manage notifications$/i})
 		);
 
 		expect(
-			await screen.findByText('Manage Segment Notifications')
+			await screen.findByText(/^manage segment notifications$/i)
 		).toBeInTheDocument();
 
 		expect(API.preferences.fetchSegmentNotifications).toHaveBeenCalledWith({

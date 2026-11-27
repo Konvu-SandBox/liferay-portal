@@ -2,8 +2,6 @@ import Radio from '../Radio';
 import React from 'react';
 import {cleanup, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('Radio', () => {
 	afterEach(cleanup);
 
@@ -13,7 +11,7 @@ describe('Radio', () => {
 	});
 
 	it('should render with a label', () => {
-		const {queryByText} = render(<Radio label='foo' />);
-		expect(queryByText('foo')).toBeTruthy();
+		const {getByText} = render(<Radio label='foo' />);
+		expect(getByText('foo')).toBeInTheDocument();
 	});
 });

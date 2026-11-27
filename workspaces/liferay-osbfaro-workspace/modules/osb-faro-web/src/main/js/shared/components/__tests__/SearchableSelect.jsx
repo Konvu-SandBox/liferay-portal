@@ -3,8 +3,6 @@ import SearchableSelect from '../SearchableSelect';
 import {cleanup, fireEvent, render} from '@testing-library/react';
 import {times} from 'lodash';
 
-jest.unmock('react-dom');
-
 describe('SearchableSelect', () => {
 	afterEach(cleanup);
 
@@ -35,6 +33,6 @@ describe('SearchableSelect', () => {
 
 		fireEvent.click(getByText(/Bar/));
 
-		expect(getByText('foo bar')).toBeTruthy();
+		expect(getByText('foo bar')).toBeInTheDocument();
 	});
 });

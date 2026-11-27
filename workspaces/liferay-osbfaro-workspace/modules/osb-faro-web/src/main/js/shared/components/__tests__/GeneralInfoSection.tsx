@@ -2,8 +2,6 @@ import React from 'react';
 import {GeneralInfoSection} from '../GeneralInfoSection';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('GeneralInfoSection', () => {
 	const mockConfig = [
 		{
@@ -47,8 +45,8 @@ describe('GeneralInfoSection', () => {
 			/>
 		);
 
-		expect(getByText('John Doe')).toBeTruthy();
-		expect(getByText('john@example.com')).toBeTruthy();
+		expect(getByText('John Doe')).toBeInTheDocument();
+		expect(getByText('john@example.com')).toBeInTheDocument();
 
 		expect(mockGetValue).toHaveBeenCalledWith('userName');
 		expect(mockGetValue).toHaveBeenCalledWith('userEmail');
@@ -70,8 +68,8 @@ describe('GeneralInfoSection', () => {
 				/>
 			);
 
-			expect(getByText('John Doe')).toBeTruthy();
-			expect(getByText('–')).toHaveClass('text-secondary');
+			expect(getByText('John Doe')).toBeInTheDocument();
+			expect(getByText('–')).toBeInTheDocument();
 		}
 	);
 
@@ -91,7 +89,7 @@ describe('GeneralInfoSection', () => {
 				/>
 			);
 
-			expect(getByText('0')).toBeTruthy();
+			expect(getByText('0')).toBeInTheDocument();
 			expect(queryByText('–')).toBeNull();
 		}
 	);
@@ -118,7 +116,7 @@ describe('GeneralInfoSection', () => {
 			/>
 		);
 
-		expect(getByText('User Profile')).toBeTruthy();
+		expect(getByText(/^user profile$/i)).toBeInTheDocument();
 	});
 
 	it('should render multiple sections with their respective items', () => {

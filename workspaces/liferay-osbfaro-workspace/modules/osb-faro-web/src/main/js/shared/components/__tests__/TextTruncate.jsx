@@ -3,8 +3,6 @@ import TextTruncate from '../TextTruncate';
 import {cleanup, render} from '@testing-library/react';
 import {range} from 'lodash';
 
-jest.unmock('react-dom');
-
 describe('TextTruncate', () => {
 	afterEach(cleanup);
 
@@ -30,6 +28,6 @@ describe('TextTruncate', () => {
 					.map(() => 'a')
 					.join('')}...`
 			)
-		).toBeTruthy();
+		).toBeInTheDocument();
 	});
 });

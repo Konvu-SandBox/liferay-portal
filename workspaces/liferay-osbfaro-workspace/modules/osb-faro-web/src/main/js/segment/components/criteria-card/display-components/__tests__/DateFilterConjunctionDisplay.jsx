@@ -7,8 +7,6 @@ import {
 	TimeSpans
 } from 'segment/segment-editor/dynamic/utils/constants';
 
-jest.unmock('react-dom');
-
 describe('DateFilterConjunctionDisplay', () => {
 	afterEach(cleanup);
 
@@ -41,7 +39,7 @@ describe('DateFilterConjunctionDisplay', () => {
 			/>
 		);
 
-		expect(getByText('between')).toBeTruthy();
+		expect(getByText('between')).toBeInTheDocument();
 	});
 
 	it('should render w/ ever', () => {
@@ -53,7 +51,7 @@ describe('DateFilterConjunctionDisplay', () => {
 			/>
 		);
 
-		expect(getByText('ever')).toBeTruthy();
+		expect(getByText('ever')).toBeInTheDocument();
 	});
 
 	it('should render w/ since', () => {
@@ -69,6 +67,6 @@ describe('DateFilterConjunctionDisplay', () => {
 			/>
 		);
 
-		expect(getByText('since')).toBeTruthy();
+		expect(getByText('since')).toBeInTheDocument();
 	});
 });

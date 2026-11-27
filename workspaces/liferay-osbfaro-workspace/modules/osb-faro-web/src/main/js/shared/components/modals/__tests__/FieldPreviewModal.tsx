@@ -4,8 +4,6 @@ import {render} from '@testing-library/react';
 import {useModal} from '@clayui/modal';
 import {waitForModal} from 'test/render-modal';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = (
 	props: Partial<React.ComponentProps<typeof FieldPreviewModal>> = {}
 ) => {
@@ -37,6 +35,6 @@ describe('FieldPreviewModal', () => {
 
 		await waitForModal();
 
-		expect(getByText(fieldName)).toBeTruthy();
+		expect(getByText(fieldName)).toBeInTheDocument();
 	});
 });

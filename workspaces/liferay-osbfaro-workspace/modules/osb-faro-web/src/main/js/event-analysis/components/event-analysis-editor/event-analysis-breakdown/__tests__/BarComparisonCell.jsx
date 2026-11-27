@@ -5,8 +5,6 @@ import {getMaxEventValue, parseBreakdownData} from 'event-analysis/utils/utils';
 import {mockBreakdownData} from 'test/data';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('BarComparisonCell', () => {
 	const orderedBreakdowns = [
 		{dataType: DataTypes.String},
@@ -44,7 +42,7 @@ describe('BarComparisonCell', () => {
 		const topValue = getMaxEventValue(items, true);
 		const {events} = items[0];
 
-		const {container, queryByText} = render(
+		const {container, getByText} = render(
 			<BarComparisonCell
 				compareToPrevious
 				event={event}
@@ -55,7 +53,7 @@ describe('BarComparisonCell', () => {
 
 		expect(container.querySelectorAll('tbody > tr').length).toBe(2);
 		expect(container.querySelector('.metric-bar-root .lines')).toBeTruthy();
-		expect(queryByText('Previous Value')).toBeTruthy();
+		expect(getByText(/^previous value$/i)).toBeInTheDocument();
 	});
 
 	it('render comparing previous and segment', () => {
@@ -66,7 +64,7 @@ describe('BarComparisonCell', () => {
 		const topValue = getMaxEventValue(items, true);
 		const {events} = items[0];
 
-		const {container, queryByText} = render(
+		const {container, getByText} = render(
 			<BarComparisonCell
 				compareToPrevious
 				event={event}
@@ -76,7 +74,7 @@ describe('BarComparisonCell', () => {
 		);
 
 		expect(container.querySelectorAll('tbody > tr').length).toBe(4);
-		expect(queryByText('Segmented')).toBeTruthy();
+		expect(getByText(/^segmented$/i)).toBeInTheDocument();
 	});
 
 	it('render comparing previous and event', () => {
@@ -87,7 +85,7 @@ describe('BarComparisonCell', () => {
 		const topValue = getMaxEventValue(items, true);
 		const {events} = items[0];
 
-		const {container, queryByText} = render(
+		const {container, getByText} = render(
 			<BarComparisonCell
 				compareToPrevious
 				event={event}
@@ -97,7 +95,7 @@ describe('BarComparisonCell', () => {
 		);
 
 		expect(container.querySelectorAll('tbody > tr').length).toBe(4);
-		expect(queryByText('Read Article')).toBeTruthy();
+		expect(getByText('Read Article')).toBeInTheDocument();
 	});
 
 	it('render two tables when comparing segment and event', () => {

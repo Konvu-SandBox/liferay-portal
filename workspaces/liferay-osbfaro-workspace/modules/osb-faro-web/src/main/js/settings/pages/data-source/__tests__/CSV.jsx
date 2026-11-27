@@ -8,8 +8,6 @@ import {render} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 import {UserRoleNames} from 'shared/util/constants';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useParams: () => ({
@@ -33,9 +31,9 @@ const DefaultComponent = props => (
 
 describe('CSV', () => {
 	it('should render', () => {
-		const {container, queryByText} = render(<DefaultComponent />);
+		const {container, getByText} = render(<DefaultComponent />);
 
-		expect(queryByText(/Edit CSV/)).toBeTruthy();
+		expect(getByText(/Edit CSV/)).toBeInTheDocument();
 		expect(container).toMatchSnapshot();
 	});
 

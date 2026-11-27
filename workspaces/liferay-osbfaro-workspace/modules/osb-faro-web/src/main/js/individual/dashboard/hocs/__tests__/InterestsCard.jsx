@@ -8,9 +8,6 @@ import {
 } from 'test/graphql-data';
 import {MockedProvider} from '@apollo/client/testing';
 import {omit} from 'lodash';
-import {waitFor} from '@testing-library/react';
-
-jest.unmock('react-dom');
 
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
@@ -24,7 +21,7 @@ describe('InterestsCard', () => {
 	afterEach(cleanup);
 
 	it('renders', async () => {
-		const {getByText} = render(
+		const {findByText, getByText} = render(
 			<MockedProvider
 				mocks={[
 					mockIndividualInterestsReq(variables =>
@@ -42,15 +39,13 @@ describe('InterestsCard', () => {
 			await jest.advanceTimersByTimeAsync(0);
 		});
 
-		await waitFor(() =>
-			expect(
-				getByText('Top Interests as of Yesterday')
-			).toBeInTheDocument()
-		);
+		expect(
+			await findByText(/^top interests as of yesterday$/i)
+		).toBeInTheDocument();
 	});
 
 	it('renders with empty data', async () => {
-		const {getByText} = render(
+		const {findByText, getByText} = render(
 			<MockedProvider
 				mocks={[
 					mockIndividualInterestsReq(
@@ -74,10 +69,8 @@ describe('InterestsCard', () => {
 			await jest.advanceTimersByTimeAsync(0);
 		});
 
-		await waitFor(() =>
-			expect(
-				getByText('No interests were found.')
-			).toBeInTheDocument()
-		);
+		expect(
+			await findByText(/^no interests were found\.$/i)
+		).toBeInTheDocument();
 	});
 });

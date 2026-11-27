@@ -3,8 +3,6 @@ import React from 'react';
 import {FunctionalOperators} from '../../../utils/constants';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('NumberInput', () => {
 	it('should render', () => {
 		const {container} = render(
@@ -28,7 +26,7 @@ describe('NumberInput', () => {
 	});
 
 	it('should render with BetweenNumberInput', () => {
-		const {queryByTestId} = render(
+		const {getByTestId} = render(
 			<NumberInput
 				onChange={jest.fn()}
 				operatorName={FunctionalOperators.Between}
@@ -38,7 +36,7 @@ describe('NumberInput', () => {
 			/>
 		);
 
-		expect(queryByTestId('between-number-start-input')).toBeTruthy();
-		expect(queryByTestId('between-number-end-input')).toBeTruthy();
+		expect(getByTestId('between-number-start-input')).toBeInTheDocument();
+		expect(getByTestId('between-number-end-input')).toBeInTheDocument();
 	});
 });

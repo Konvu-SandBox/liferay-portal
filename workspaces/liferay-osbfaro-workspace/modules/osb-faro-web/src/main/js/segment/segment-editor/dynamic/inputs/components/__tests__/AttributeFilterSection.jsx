@@ -7,8 +7,6 @@ import {mockEventPropertiesReq} from 'test/graphql-data';
 import {RelationalOperators} from '../../../utils/constants';
 import {render, screen, waitFor} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 let mockInputProps;
 
 jest.mock('../attribute-conjunction-input', () => (props) => {
@@ -74,9 +72,9 @@ describe('AttributeFilterSection', () => {
 
 		renderWithMocks(mocks);
 
-		await waitFor(() =>
-			expect(screen.getByText('where event attribute')).toBeTruthy()
-		);
+		expect(
+			await screen.findByText('where event attribute')
+		).toBeInTheDocument();
 
 		expect(
 			screen.getByTestId('attribute-conjunction-input')

@@ -14,7 +14,21 @@ import {Property, Segment} from 'shared/util/records';
 import {SegmentCategories, SegmentTypes} from 'shared/util/constants';
 import {withReferencedObjectsProvider} from 'segment/segment-editor/dynamic/context/referencedObjects';
 
-jest.unmock('react-dom');
+jest.mock('react-router-dom', () => ({
+	...jest.requireActual('react-router-dom'),
+	useParams: () => ({channelId: '123', groupId: '456'})
+}));
+
+jest.mock('shared/api', () => ({
+	assets: {
+		searchTypes: jest.fn(() =>
+			Promise.resolve({
+				items: [{id: 'C_ProductSheet', name: 'Product Sheet'}],
+				totalCount: 1
+			})
+		)
+	}
+}));
 
 describe('BehaviorDisplay', () => {
 	const WrappedBehaviorDisplay =
@@ -92,9 +106,11 @@ describe('BehaviorDisplay', () => {
 			/>
 		);
 
-		expect(getByText('Account')).toBeTruthy();
-		expect(getByText('at least one individual who triggered')).toBeTruthy();
-		expect(queryByText('Individual')).toBeNull();
+		expect(getByText(/^account$/i)).toBeInTheDocument();
+		expect(
+			getByText(/^at least one individual who triggered$/i)
+		).toBeInTheDocument();
+		expect(queryByText(/^individual$/i)).toBeNull();
 	});
 
 	it('renders the attribute filter when an attribute/<id> criterion is present', () => {
@@ -152,7 +168,7 @@ describe('BehaviorDisplay', () => {
 			})
 		};
 
-		const {queryByText} = render(
+		const {getByText} = render(
 			<WrappedBehaviorDisplay
 				criterion={mockCriterionWithAttribute}
 				property={mockProperty}
@@ -161,6 +177,61 @@ describe('BehaviorDisplay', () => {
 			/>
 		);
 
-		expect(queryByText('Foo Attribute String')).toBeTruthy();
+		expect(getByText('Foo Attribute String')).toBeInTheDocument();
+	});
+
+	const getObjectEntryCriterion = objectDefinitionName => ({
+		operatorName: CustomFunctionOperators.ActivitiesFilterByCount,
+		propertyName: 'activityKey',
+		value: Map({
+			criterionGroup: Map({
+				items: List([
+					Map({
+						operatorName: RelationalOperators.EQ,
+						propertyName: 'applicationId',
+						value: 'ObjectEntry'
+					}),
+					Map({
+						operatorName: RelationalOperators.EQ,
+						propertyName: 'objectDefinitionName',
+						value: objectDefinitionName
+					}),
+					Map({
+						operatorName: RelationalOperators.GT,
+						propertyName: 'day',
+						value: TimeSpans.Last24Hours
+					})
+				])
+			}),
+			operator: RelationalOperators.GE,
+			value: 2
+		})
+	});
+
+	it('renders the label of the object definition of any asset of that type', async () => {
+		const {findByText, queryByText} = render(
+			<WrappedBehaviorDisplay
+				criterion={getObjectEntryCriterion('C_ProductSheet')}
+				property={mockProperty}
+				segment={mockSegment}
+				segmentType={SegmentTypes.Batch}
+			/>
+		);
+
+		expect(await findByText('Product Sheet')).toBeInTheDocument();
+		expect(queryByText('ObjectEntry')).toBeNull();
+	});
+
+	it('renders the name of the object definition when its label is unknown', async () => {
+		const {findByText} = render(
+			<WrappedBehaviorDisplay
+				criterion={getObjectEntryCriterion('C_UnknownStructure')}
+				property={mockProperty}
+				segment={mockSegment}
+				segmentType={SegmentTypes.Batch}
+			/>
+		);
+
+		expect(await findByText('C_UnknownStructure')).toBeInTheDocument();
 	});
 });

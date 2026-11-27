@@ -3,8 +3,6 @@ import {cleanup, render} from '@testing-library/react';
 import {SafeResults, withEmpty, withError, withLoading} from '../util';
 import {MemoryRouter} from 'react-router';
 
-jest.unmock('react-dom');
-
 describe('HOC Util', () => {
 	afterEach(cleanup);
 
@@ -16,7 +14,7 @@ describe('HOC Util', () => {
 				</SafeResults>
 			);
 
-			expect(getByText('foo')).toBeTruthy();
+			expect(getByText('foo')).toBeInTheDocument();
 		});
 
 		it('should return a loading screen when loading is true', () => {
@@ -106,7 +104,7 @@ describe('HOC Util', () => {
 				</MemoryRouter>
 			);
 
-			expect(getByText(customMessage)).toBeTruthy();
+			expect(getByText(customMessage)).toBeInTheDocument();
 		});
 	});
 

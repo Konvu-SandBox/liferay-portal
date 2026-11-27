@@ -9,8 +9,6 @@ import {MemoryRouter, Route, Routes as RouterRoutes} from 'react-router-dom';
 import {mockChannelContext} from 'test/mock-channel-context';
 import {Routes} from 'shared/util/router';
 
-jest.unmock('react-dom');
-
 const MOCK_CONTEXT = {
 	rangeKey: {defaultValue: '30'},
 	router: {
@@ -113,14 +111,14 @@ describe('Sites Dashboard Overview', () => {
 				</MemoryRouter>
 			</ApolloProvider>
 		);
-		fireEvent.click(getByText('All Visitors'));
+		fireEvent.click(getByText(/^all visitors$/i));
 
-		expect(getAllByText('All Visitors')[1]).toBeTruthy();
-		expect(getByText('Anonymous Visitors')).toBeTruthy();
-		expect(getByText('Known Visitors')).toBeTruthy();
-		expect(getByLabelText('View All Pages')).toBeInTheDocument();
-		expect(getByLabelText('View All Search Terms')).toBeInTheDocument();
-		expect(getByLabelText('View All Interests')).toBeInTheDocument();
+		expect(getAllByText(/^all visitors$/i)[1]).toBeTruthy();
+		expect(getByText(/^anonymous visitors$/i)).toBeInTheDocument();
+		expect(getByText(/^known visitors$/i)).toBeInTheDocument();
+		expect(getByLabelText(/^view all pages$/i)).toBeInTheDocument();
+		expect(getByLabelText(/^view all search terms$/i)).toBeInTheDocument();
+		expect(getByLabelText(/^view all interests$/i)).toBeInTheDocument();
 
 		expect(container).toMatchSnapshot();
 	});

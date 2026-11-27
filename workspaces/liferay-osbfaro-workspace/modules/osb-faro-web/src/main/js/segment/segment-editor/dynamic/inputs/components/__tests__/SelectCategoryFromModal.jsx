@@ -11,8 +11,6 @@ import {act, cleanup, fireEvent, render, waitFor} from '@testing-library/react';
 import {OrderedMap} from 'immutable';
 import {Provider} from 'react-redux';
 
-jest.unmock('react-dom');
-
 const defaultProps = {
 	channelId: 'ch-1',
 	groupId: 'gp-1',
@@ -42,7 +40,7 @@ describe('SelectCategoryFromModal', () => {
 				<DefaultComponent selectedCategories={[]} />
 			);
 
-			expect(getByText(/add category/i)).toBeTruthy();
+			expect(getByText(/add category/i)).toBeInTheDocument();
 		});
 
 		it('should not render labels or clear button when there are no categories', () => {
@@ -66,8 +64,8 @@ describe('SelectCategoryFromModal', () => {
 				<DefaultComponent selectedCategories={selectedCategories} />
 			);
 
-			expect(getByText('Category One')).toBeTruthy();
-			expect(getByText('Category Two')).toBeTruthy();
+			expect(getByText('Category One')).toBeInTheDocument();
+			expect(getByText('Category Two')).toBeInTheDocument();
 		});
 
 		it('should render an add category button and a clear button', () => {
@@ -75,8 +73,8 @@ describe('SelectCategoryFromModal', () => {
 				<DefaultComponent selectedCategories={selectedCategories} />
 			);
 
-			expect(getByText(/add category/i)).toBeTruthy();
-			expect(getByLabelText(/clear/i)).toBeTruthy();
+			expect(getByText(/add category/i)).toBeInTheDocument();
+			expect(getByLabelText(/clear/i)).toBeInTheDocument();
 		});
 	});
 

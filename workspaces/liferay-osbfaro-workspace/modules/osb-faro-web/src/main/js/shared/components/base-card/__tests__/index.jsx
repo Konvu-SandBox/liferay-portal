@@ -6,8 +6,6 @@ import {MockedProvider} from '@apollo/client/testing';
 import {Provider} from 'react-redux';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const Wrapper = ({children}) => (
 	<Provider store={mockStore()}>
 		<MemoryRouter>
@@ -42,7 +40,7 @@ describe('BaseCard', () => {
 			</Wrapper>
 		);
 
-		expect(getByText('My body component')).toBeTruthy();
+		expect(getByText('My body component')).toBeInTheDocument();
 	});
 
 	it('should return the props in Body component', () => {
@@ -82,8 +80,8 @@ describe('BaseCard', () => {
 		);
 
 		expect(container.querySelector('.interval-selector-root')).toBeTruthy();
-		expect(getByText('D')).toBeTruthy();
-		expect(getByText('W')).toBeTruthy();
-		expect(getByText('M')).toBeTruthy();
+		expect(getByText('D')).toBeInTheDocument();
+		expect(getByText(/^w$/i)).toBeInTheDocument();
+		expect(getByText(/^m$/i)).toBeInTheDocument();
 	});
 });

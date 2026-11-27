@@ -2,10 +2,14 @@ import ChannelsMenu, {isValidChannel} from '../index';
 import mockStore from 'test/mock-store';
 import React from 'react';
 import {BrowserRouter} from 'react-router-dom';
-import {cleanup, fireEvent, render, screen} from '@testing-library/react';
+import {
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	within
+} from '@testing-library/react';
 import {Provider} from 'react-redux';
-
-jest.unmock('react-dom');
 
 const mockMenuItems = () => [
 	{
@@ -45,7 +49,7 @@ describe('ChannelsMenu', () => {
 			</Provider>
 		);
 
-		expect(container).toHaveTextContent('No Properties');
+		expect(container).toHaveTextContent(/no properties/i);
 	});
 
 	it('should render dropdown menu when clicked', () => {
@@ -61,11 +65,11 @@ describe('ChannelsMenu', () => {
 			</Provider>
 		);
 
-		const toggleButton = screen.getByRole('combobox', {name: 'Property'});
+		const toggleButton = screen.getByRole('combobox', {name: /^property$/i});
 
 		fireEvent.click(toggleButton);
 
-		expect(screen.getByRole('listbox')).toBeTruthy();
+		expect(screen.getByRole('listbox')).toBeInTheDocument();
 	});
 
 	it('should mark the selected channel and let the other one be picked', () => {
@@ -81,12 +85,12 @@ describe('ChannelsMenu', () => {
 			</Provider>
 		);
 
-		fireEvent.click(screen.getByRole('combobox', {name: 'Property'}));
+		fireEvent.click(screen.getByRole('combobox', {name: /^property$/i}));
 
-		expect(screen.getByText('Link 2')).toBeTruthy();
+		expect(screen.getByText('Link 2')).toBeInTheDocument();
 	});
 
-	it('should find a channel with a truncated label by its full name', () => {
+	it('should show the full name of a long channel in the options', () => {
 		const channelName = 'A property name longer than the label length';
 
 		render(
@@ -101,13 +105,38 @@ describe('ChannelsMenu', () => {
 			</Provider>
 		);
 
-		fireEvent.click(screen.getByRole('combobox', {name: 'Property'}));
+		fireEvent.click(screen.getByRole('combobox', {name: /^property$/i}));
 
-		fireEvent.change(screen.getByPlaceholderText('Search'), {
+		fireEvent.change(screen.getByPlaceholderText(/^search$/i), {
 			target: {value: channelName}
 		});
 
 		expect(screen.getAllByRole('option')).toHaveLength(1);
+
+		expect(screen.getByRole('option')).toHaveTextContent(channelName);
+	});
+
+	it('should truncate a selected property name longer than the picker', () => {
+		const channelName =
+			'A property name much longer than the product menu picker width';
+
+		render(
+			<Provider store={mockStore()}>
+				<BrowserRouter>
+					<ChannelsMenu
+						channels={[{id: '1', name: channelName}]}
+						defaultChannelId='1'
+						groupId='123456'
+					/>
+				</BrowserRouter>
+			</Provider>
+		);
+
+		expect(
+			within(
+				screen.getByRole('combobox', {name: /^property$/i})
+			).getByText(channelName)
+		).toHaveClass('text-truncate');
 	});
 });
 

@@ -10,8 +10,6 @@ import {Provider} from 'react-redux';
 import {useModal} from '@clayui/modal';
 import {waitForModal} from 'test/render-modal';
 
-jest.unmock('react-dom');
-
 const mockGroupId = '23';
 
 const TestModal = props => {
@@ -64,7 +62,7 @@ describe('CSVPreviewModal', () => {
 	});
 
 	it('should render with a title on the heading', async () => {
-		const {getByText} = render(
+		const {findByText, getByText} = render(
 			<Wrapper>
 				<MockedProvider
 					cache={
@@ -84,10 +82,8 @@ describe('CSVPreviewModal', () => {
 			</Wrapper>
 		);
 
-		await waitFor(() =>
-			expect(
-				getByText(/Data Preview "CSV Test Title"/i)
-			).toBeInTheDocument()
-		);
+		expect(
+			await findByText(/Data Preview "CSV Test Title"/i)
+		).toBeInTheDocument();
 	});
 });

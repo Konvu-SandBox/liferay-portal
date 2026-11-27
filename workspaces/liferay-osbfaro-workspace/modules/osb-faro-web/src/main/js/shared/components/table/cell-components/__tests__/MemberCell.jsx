@@ -2,8 +2,6 @@ import MemberCell from '../MemberCell';
 import React from 'react';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const LONG_EMAIL = 'abderrahmane.boutitaou@tamarisoft.com';
 
 const FilledComponent = props => (
@@ -27,8 +25,8 @@ describe('MemberCell', () => {
 	it('should render the name and the email', () => {
 		const {getByText} = render(<FilledComponent />);
 
-		expect(getByText('foo')).toBeTruthy();
-		expect(getByText(LONG_EMAIL)).toBeTruthy();
+		expect(getByText('foo')).toBeInTheDocument();
+		expect(getByText(LONG_EMAIL)).toBeInTheDocument();
 	});
 
 	it('should truncate the name and the email so they do not overlap the next column', () => {
@@ -68,6 +66,6 @@ describe('MemberCell', () => {
 			/>
 		);
 
-		expect(getByText(LONG_EMAIL)).toBeTruthy();
+		expect(getByText(LONG_EMAIL)).toBeInTheDocument();
 	});
 });

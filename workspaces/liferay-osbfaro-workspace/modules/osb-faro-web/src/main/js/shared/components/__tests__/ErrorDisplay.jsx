@@ -3,8 +3,6 @@ import React from 'react';
 import {cleanup, render} from '@testing-library/react';
 import {noop} from 'lodash';
 
-jest.unmock('react-dom');
-
 describe('ErrorDisplay', () => {
 	afterEach(cleanup);
 
@@ -14,7 +12,7 @@ describe('ErrorDisplay', () => {
 	});
 
 	it('should render with button', () => {
-		const {queryByText} = render(<ErrorDisplay onReload={noop} />);
-		expect(queryByText('Reload')).toBeTruthy();
+		const {getByText} = render(<ErrorDisplay onReload={noop} />);
+		expect(getByText(/^reload$/i)).toBeInTheDocument();
 	});
 });

@@ -9,8 +9,6 @@ import {
 } from 'segment/segment-editor/dynamic/utils/constants';
 import {ReferencedObjectsProvider} from 'segment/segment-editor/dynamic/context/referencedObjects';
 
-jest.unmock('react-dom');
-
 describe('IndividualDisplay', () => {
 	const propertyName = 'demographics/givenName/value';
 
@@ -50,7 +48,7 @@ describe('IndividualDisplay', () => {
 			<IndividualDisplay criterion={criterion} property={mockProperty} />
 		);
 
-		expect(getByText('is unknown')).toBeTruthy();
+		expect(getByText('is unknown')).toBeInTheDocument();
 	});
 
 	it('renders w/ a duration type', () => {
@@ -80,7 +78,7 @@ describe('IndividualDisplay', () => {
 			/>
 		);
 
-		expect(getByText('01:01:01')).toBeTruthy();
+		expect(getByText('01:01:01')).toBeInTheDocument();
 	});
 
 	it('renders w/ a SelectInput type', () => {
@@ -124,6 +122,6 @@ describe('IndividualDisplay', () => {
 			</ReferencedObjectsProvider>
 		);
 
-		expect(getByText("'Admin'")).toBeTruthy();
+		expect(getByText("'Admin'")).toBeInTheDocument();
 	});
 });

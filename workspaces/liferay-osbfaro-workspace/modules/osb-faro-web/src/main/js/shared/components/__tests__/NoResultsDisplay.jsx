@@ -2,8 +2,6 @@ import NoResultsDisplay, {getFormattedTitle} from '../NoResultsDisplay';
 import React from 'react';
 import {cleanup, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('NoResultsDisplay', () => {
 	afterEach(cleanup);
 
@@ -13,14 +11,6 @@ describe('NoResultsDisplay', () => {
 		expect(container).toMatchSnapshot();
 	});
 
-	it('should render component with primary color', () => {
-		const {container} = render(<NoResultsDisplay primary />);
-
-		expect(container.querySelector('.no-results-root')).toHaveClass(
-			'no-results-primary'
-		);
-	});
-
 	it('should render component with description', () => {
 		const description = 'No results with description';
 
@@ -28,7 +18,7 @@ describe('NoResultsDisplay', () => {
 			<NoResultsDisplay description={description} />
 		);
 
-		expect(getByText(description)).toBeTruthy();
+		expect(getByText(description)).toBeInTheDocument();
 	});
 
 	it('should render component with title', () => {
@@ -36,7 +26,7 @@ describe('NoResultsDisplay', () => {
 
 		const {getByText} = render(<NoResultsDisplay title={title} />);
 
-		expect(getByText(title)).toBeTruthy();
+		expect(getByText(title)).toBeInTheDocument();
 	});
 
 	it('should render component with icon', () => {

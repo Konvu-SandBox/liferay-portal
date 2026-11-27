@@ -17,8 +17,6 @@ import {useModal} from '@clayui/modal';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 import {waitForModal} from 'test/render-modal';
 
-jest.unmock('react-dom');
-
 const COLUMNS = [
 	{
 		accessor: 'name',
@@ -110,7 +108,7 @@ describe('SearchableTableModalGraphql', () => {
 		await waitForLoadingToBeRemoved(document.body);
 
 		expect(document.querySelector('.modal-title')).toHaveTextContent(
-			'Custom Title'
+			/custom title/i
 		);
 	});
 
@@ -121,11 +119,9 @@ describe('SearchableTableModalGraphql', () => {
 
 		await waitForLoadingToBeRemoved();
 
-		await waitFor(() => {
-			expect(
-				screen.getByText('Custom Submit Message')
-			).toBeInTheDocument();
-		});
+		expect(
+			await screen.findByText('Custom Submit Message')
+		).toBeInTheDocument();
 	});
 
 	it('should render with preselected items', async () => {

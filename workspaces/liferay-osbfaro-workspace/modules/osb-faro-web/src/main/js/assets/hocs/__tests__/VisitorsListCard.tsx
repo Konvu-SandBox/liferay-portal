@@ -7,8 +7,6 @@ import {getVisitorsListCard} from '../VisitorsListCard';
 import {MemoryRouter} from 'react-router-dom';
 import {Provider} from 'react-redux';
 
-jest.unmock('react-dom');
-
 const MOCK_ROUTER = {
 	params: {
 		channelId: '456',
@@ -46,15 +44,15 @@ describe('getVisitorsListCard', () => {
 				</Provider>
 			);
 
-			expect(getByText('Accounts')).toBeTruthy();
-			expect(getByText('Known Individuals')).toBeTruthy();
+			expect(getByText(/^accounts$/i)).toBeInTheDocument();
+			expect(getByText(/^known individuals$/i)).toBeInTheDocument();
 
 			expect(getByTestId('accounts').className).toContain('active');
 			expect(getByTestId('individuals').className).not.toContain(
 				'active'
 			);
 
-			fireEvent.click(getByText('Known Individuals'));
+			fireEvent.click(getByText(/^known individuals$/i));
 
 			expect(getByTestId('individuals').className).toContain('active');
 			expect(getByTestId('accounts').className).not.toContain('active');

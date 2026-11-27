@@ -3,8 +3,6 @@ import CreatedByCell from '../CreatedBy';
 import React from 'react';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const tableRow = document.createElement('tr');
 
 describe('CreatedByCell', () => {
@@ -34,6 +32,6 @@ describe('CreatedByCell', () => {
 			{container: document.body.appendChild(tableRow)}
 		);
 
-		expect(getByText('Last Edited: 6/9/26')).toBeTruthy();
+		expect(getByText('Last Edited: 6/9/26')).toBeInTheDocument();
 	});
 });

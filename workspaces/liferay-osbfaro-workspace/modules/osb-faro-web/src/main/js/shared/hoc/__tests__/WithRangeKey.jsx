@@ -3,8 +3,6 @@ import withRangeKey from '../WithRangeKey';
 import {RangeKeyTimeRanges} from 'shared/util/constants';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const WrappedComponent = withRangeKey(({rangeSelectors}) => {
 	const {rangeEnd, rangeKey, rangeStart} = rangeSelectors;
 
@@ -21,11 +19,11 @@ describe('WithRangeKey', () => {
 	it('should render', () => {
 		const {getByText} = render(<WrappedComponent />);
 
-		expect(getByText('rangeEnd: null')).toBeTruthy();
+		expect(getByText('rangeEnd: null')).toBeInTheDocument();
 		expect(
 			getByText(`rangeKey: ${RangeKeyTimeRanges.Last30Days}`)
-		).toBeTruthy();
-		expect(getByText('rangeStart: null')).toBeTruthy();
+		).toBeInTheDocument();
+		expect(getByText('rangeStart: null')).toBeInTheDocument();
 	});
 
 	it('should pass rangeSelectors as a prop to the wrapped component', () => {
@@ -37,11 +35,11 @@ describe('WithRangeKey', () => {
 			/>
 		);
 
-		expect(getByText('rangeEnd: null')).toBeTruthy();
+		expect(getByText('rangeEnd: null')).toBeInTheDocument();
 		expect(
 			getByText(`rangeKey: ${RangeKeyTimeRanges.Last180Days}`)
-		).toBeTruthy();
-		expect(getByText('rangeStart: null')).toBeTruthy();
+		).toBeInTheDocument();
+		expect(getByText('rangeStart: null')).toBeInTheDocument();
 	});
 
 	it('should pass custom rangeSelectors as a prop to the wrapped component', () => {
@@ -55,10 +53,10 @@ describe('WithRangeKey', () => {
 			/>
 		);
 
-		expect(getByText('rangeEnd: 2022-15-01')).toBeTruthy();
+		expect(getByText('rangeEnd: 2022-15-01')).toBeInTheDocument();
 		expect(
 			getByText(`rangeKey: ${RangeKeyTimeRanges.CustomRange}`)
-		).toBeTruthy();
-		expect(getByText('rangeStart: 2022-10-01')).toBeTruthy();
+		).toBeInTheDocument();
+		expect(getByText('rangeStart: 2022-10-01')).toBeInTheDocument();
 	});
 });

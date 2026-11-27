@@ -2,8 +2,6 @@ import MetricBar from '../MetricBar';
 import React from 'react';
 import {cleanup, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('MetricBar', () => {
 	afterEach(cleanup);
 
@@ -23,11 +21,11 @@ describe('MetricBar', () => {
 	});
 
 	it('should render w/ children', () => {
-		const {queryByText} = render(
+		const {getByText} = render(
 			<MetricBar>
 				<div data-testid='child'>{'Test Test'}</div>
 			</MetricBar>
 		);
-		expect(queryByText('Test Test')).toBeTruthy();
+		expect(getByText('Test Test')).toBeInTheDocument();
 	});
 });

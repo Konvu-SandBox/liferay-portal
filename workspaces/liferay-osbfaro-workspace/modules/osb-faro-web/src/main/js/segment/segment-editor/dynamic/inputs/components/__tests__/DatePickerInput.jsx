@@ -8,8 +8,6 @@ import {MockedProvider} from '@apollo/client/testing';
 import {mockPreferenceReq} from 'test/graphql-data';
 import {Provider} from 'react-redux';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useParams: () => ({
@@ -61,6 +59,6 @@ describe('DatePickerInput', () => {
 			</WrapperComponent>
 		);
 
-		expect(getByTestId('date-range-input')).toBeTruthy();
+		expect(getByTestId('date-range-input')).toBeInTheDocument();
 	});
 });

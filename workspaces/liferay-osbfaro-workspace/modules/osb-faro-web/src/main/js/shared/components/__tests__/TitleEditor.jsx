@@ -3,8 +3,6 @@ import {cleanup, fireEvent, render} from '@testing-library/react';
 import {noop} from 'lodash';
 import {TitleEditor} from '../TitleEditor';
 
-jest.unmock('react-dom');
-
 describe('TitleEditor', () => {
 	afterEach(cleanup);
 
@@ -16,7 +14,7 @@ describe('TitleEditor', () => {
 	it('should render with placeholder', () => {
 		const placeholder = 'test placeholder';
 
-		const {queryByPlaceholderText} = render(
+		const {getByPlaceholderText} = render(
 			<TitleEditor
 				name='test'
 				onChange={noop}
@@ -24,17 +22,17 @@ describe('TitleEditor', () => {
 			/>
 		);
 
-		expect(queryByPlaceholderText(placeholder)).toBeTruthy();
+		expect(getByPlaceholderText(placeholder)).toBeInTheDocument();
 	});
 
 	it('should render with value', () => {
 		const value = 'foo';
 
-		const {queryByText} = render(
+		const {getByText} = render(
 			<TitleEditor name='test' onChange={noop} value={value} />
 		);
 
-		expect(queryByText(value)).toBeTruthy();
+		expect(getByText(value)).toBeInTheDocument();
 	});
 
 	it('should render as editing', () => {
@@ -50,11 +48,11 @@ describe('TitleEditor', () => {
 
 		const input = getByPlaceholderText(placeholder);
 
-		expect(input).toHaveClass('hide');
+		expect(input).not.toBeVisible();
 
 		fireEvent.click(container.querySelector('.btn'));
 
-		expect(input).not.toHaveClass('hide');
+		expect(input).toBeVisible();
 	});
 
 	it('should not be editable if editable prop is false', () => {

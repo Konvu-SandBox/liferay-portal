@@ -7,8 +7,6 @@ import {ProjectStates} from 'shared/util/constants';
 import {MemoryRouter} from 'react-router-dom';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 describe('WorkspaceListItem', () => {
 	afterEach(cleanup);
 
@@ -36,7 +34,7 @@ describe('WorkspaceListItem', () => {
 			</MemoryRouter>
 		);
 
-		const button = queryByText('Workspace unavailable; click to reload.');
+		const button = queryByText(/^workspace unavailable; click to reload\.$/i);
 
 		expect(button).toBeTruthy();
 
@@ -47,12 +45,12 @@ describe('WorkspaceListItem', () => {
 		await waitForLoadingToBeRemoved(container);
 
 		expect(
-			queryByText('Workspace unavailable; click to reload.')
+			queryByText(/^workspace unavailable; click to reload\.$/i)
 		).toBeNull();
 	});
 
 	it('should render a workspace with projects you can join', () => {
-		const {queryByText} = render(
+		const {getByText} = render(
 			<MemoryRouter>
 				<WorkspaceListItem
 					isJoinableProjects
@@ -61,16 +59,16 @@ describe('WorkspaceListItem', () => {
 			</MemoryRouter>
 		);
 
-		expect(queryByText('Request Access')).toBeTruthy();
+		expect(getByText(/^request access$/i)).toBeInTheDocument();
 	});
 
 	it('should render a workspace with a deactivated project', () => {
-		const {queryByText} = render(
+		const {getByText} = render(
 			<MemoryRouter>
 				<WorkspaceListItem projectState={ProjectStates.Deactivated} />
 			</MemoryRouter>
 		);
-		expect(queryByText('Activate')).toBeTruthy();
+		expect(getByText(/^activate$/i)).toBeInTheDocument();
 	});
 
 	it('should render contact sales and the Analytics Cloud limit message when hasLimitReached and ldpEnabled is false', () => {
@@ -85,11 +83,11 @@ describe('WorkspaceListItem', () => {
 
 		expect(
 			getByText(
-				'Access to Analytics Cloud has been restricted because your workspace has reached the known individuals or page view limit. Please contact sales to proceed.'
+				/^access to analytics cloud has been restricted because your workspace has reached the known individuals or page view limit\. please contact sales to proceed\.$/i
 			)
-		).toBeTruthy();
+		).toBeInTheDocument();
 
-		expect(getByText('Contact Sales')).toBeTruthy();
+		expect(getByText(/^contact sales$/i)).toBeInTheDocument();
 	});
 
 	it('should render the Liferay Data Platform limit message when hasLimitReached and ldpEnabled is true', () => {
@@ -105,8 +103,8 @@ describe('WorkspaceListItem', () => {
 
 		expect(
 			getByText(
-				'Access to Liferay Data Platform has been restricted because your workspace has reached the known individuals or page view limit. Please contact sales to proceed.'
+				/^access to liferay data platform has been restricted because your workspace has reached the known individuals or page view limit\. please contact sales to proceed\.$/i
 			)
-		).toBeTruthy();
+		).toBeInTheDocument();
 	});
 });

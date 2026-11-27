@@ -2,8 +2,6 @@ import CriteriaSidebarSearchBar from '../CriteriaSidebarSearchBar';
 import React from 'react';
 import {cleanup, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('CriteriaSidebarSearchBar', () => {
 	afterEach(cleanup);
 
@@ -25,6 +23,6 @@ describe('CriteriaSidebarSearchBar', () => {
 			/>
 		);
 
-		expect(getByDisplayValue(searchValue)).toBeTruthy();
+		expect(getByDisplayValue(searchValue)).toBeInTheDocument();
 	});
 });

@@ -9,8 +9,6 @@ import {useModal} from '@clayui/modal';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 import {waitForModal} from 'test/render-modal';
 
-jest.unmock('react-dom');
-
 const ITEMS = [
 	{emailAddress: 'foo@liferay.com', name: 'Foo'},
 	{emailAddress: 'bar@liferay.com', name: 'Bar'}
@@ -57,7 +55,7 @@ describe('SearchableEntitiesTableModal', () => {
 
 		await waitForModal();
 
-		expect(getByText('entities')).toBeTruthy();
+		expect(getByText('entities')).toBeInTheDocument();
 		expect(document.querySelector('.loading-root')).toBeTruthy();
 		expect(document.querySelector('table')).toBeFalsy();
 	});

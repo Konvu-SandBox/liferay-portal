@@ -7,8 +7,6 @@ import {RelationalOperators} from 'segment/segment-editor/dynamic/utils/constant
 import {render} from '@testing-library/react';
 import {SegmentTypes} from 'shared/util/constants';
 
-jest.unmock('react-dom');
-
 describe('DisplayComponent', () => {
 	it.each`
 		propertyKey     | entityName
@@ -61,7 +59,7 @@ describe('DisplayComponent', () => {
 			/>
 		);
 
-		expect(getByText(entityName)).toBeTruthy();
+		expect(getByText(entityName)).toBeInTheDocument();
 		expect(container).toMatchSnapshot();
 	});
 });

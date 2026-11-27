@@ -6,8 +6,6 @@ import {Provider} from 'react-redux';
 import {render, screen} from '@testing-library/react';
 import {useLDPEnabled} from 'shared/hooks/useLDPEnabled';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/components/download-report/DownloadCSVReport', () => ({
 	__esModule: true,
 	default: () => null,
@@ -108,7 +106,7 @@ describe('Dashboard', () => {
 			</Provider>
 		);
 
-		expect(screen.queryByTestId('filter-by-account')).toBeTruthy();
+		expect(screen.getByTestId('filter-by-account')).toBeInTheDocument();
 	});
 
 	it('hides the account filter for non-LDP workspaces', () => {
@@ -159,7 +157,7 @@ describe('Dashboard', () => {
 			</Provider>
 		);
 
-		expect(screen.queryByTestId('filter-by-segment')).toBeTruthy();
+		expect(screen.getByTestId('filter-by-segment')).toBeInTheDocument();
 	});
 
 	it('hides the segment filter for non-LDP workspaces', () => {

@@ -1,5 +1,3 @@
-jest.unmock('react-dom');
-
 import ConnectorEntities from '../ConnectorEntities';
 import React from 'react';
 import {ConnectorStatus, Entity} from '../types';
@@ -14,8 +12,8 @@ describe('ConnectorEntities', () => {
 			/>
 		);
 
-		expect(getByText('Accounts')).toBeTruthy();
-		expect(getByText('Events')).toBeTruthy();
+		expect(getByText(/^accounts$/i)).toBeInTheDocument();
+		expect(getByText(/^events$/i)).toBeInTheDocument();
 	});
 
 	it('renders the synced count when it is a non-negative number', () => {
@@ -26,7 +24,7 @@ describe('ConnectorEntities', () => {
 			/>
 		);
 
-		expect(getByText(/42/)).toBeTruthy();
+		expect(getByText(/42/)).toBeInTheDocument();
 	});
 
 	it('renders the synced count with comma separators when it is large', () => {
@@ -37,7 +35,7 @@ describe('ConnectorEntities', () => {
 			/>
 		);
 
-		expect(getByText('279,089 Items Synced')).toBeTruthy();
+		expect(getByText('279,089 Items Synced')).toBeInTheDocument();
 	});
 
 	it('renders the synced count when it is zero', () => {
@@ -48,7 +46,7 @@ describe('ConnectorEntities', () => {
 			/>
 		);
 
-		expect(getByText(/0/)).toBeTruthy();
+		expect(getByText(/0/)).toBeInTheDocument();
 	});
 
 	it('hides the synced count when no value is provided', () => {
@@ -59,7 +57,7 @@ describe('ConnectorEntities', () => {
 			/>
 		);
 
-		expect(queryByText(/Items Synced/i)).toBeNull();
+		expect(queryByText(/items synced/i)).toBeNull();
 	});
 
 	it('renders the Configured label with success display when count is greater than zero', () => {
@@ -70,7 +68,7 @@ describe('ConnectorEntities', () => {
 			/>
 		);
 
-		expect(getByText('Configured')).toBeTruthy();
+		expect(getByText(/^configured$/i)).toBeInTheDocument();
 	});
 
 	it('renders the Unconfigured label when count is zero', () => {
@@ -81,7 +79,7 @@ describe('ConnectorEntities', () => {
 			/>
 		);
 
-		expect(getByText('Unconfigured')).toBeTruthy();
+		expect(getByText(/^unconfigured$/i)).toBeInTheDocument();
 	});
 
 	it('renders the Unconfigured label when no count is provided', () => {
@@ -92,7 +90,7 @@ describe('ConnectorEntities', () => {
 			/>
 		);
 
-		expect(getByText('Unconfigured')).toBeTruthy();
+		expect(getByText(/^unconfigured$/i)).toBeInTheDocument();
 	});
 
 	it('renders the Unconfigured label when connector status is Disconnected even with count greater than zero', () => {
@@ -104,7 +102,7 @@ describe('ConnectorEntities', () => {
 			/>
 		);
 
-		expect(getByText('Unconfigured')).toBeTruthy();
+		expect(getByText(/^unconfigured$/i)).toBeInTheDocument();
 	});
 
 	it('renders the Configured label when connector status is Active and count is greater than zero', () => {
@@ -116,7 +114,7 @@ describe('ConnectorEntities', () => {
 			/>
 		);
 
-		expect(getByText('Configured')).toBeTruthy();
+		expect(getByText(/^configured$/i)).toBeInTheDocument();
 	});
 
 	it('renders the Configured label when connector status is Inactive and count is greater than zero', () => {
@@ -128,7 +126,7 @@ describe('ConnectorEntities', () => {
 			/>
 		);
 
-		expect(getByText('Configured')).toBeTruthy();
+		expect(getByText(/^configured$/i)).toBeInTheDocument();
 	});
 
 	it('renders nothing inside the list when no entities are provided', () => {

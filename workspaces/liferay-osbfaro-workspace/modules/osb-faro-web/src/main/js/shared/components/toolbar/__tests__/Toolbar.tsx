@@ -7,8 +7,6 @@ import {MemoryRouter} from 'react-router-dom';
 import {Provider} from 'react-redux';
 import {Routes, toRoute} from 'shared/util/router';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/api', () => ({
 	user: {
 		updateLanguage: jest.fn(() => Promise.resolve()),
@@ -32,7 +30,21 @@ describe('Toolbar', () => {
 	it('renders the product name', () => {
 		renderToolbar();
 
-		expect(screen.getByText(/liferay data platform/i)).toBeTruthy();
+		expect(screen.getByText(/liferay data platform/i)).toBeInTheDocument();
+	});
+
+	it('renders the product name as a link to Sites', () => {
+		renderToolbar();
+
+		const link = screen.getByRole('link', {
+			name: 'Liferay Data Platform, Go to Sites',
+		});
+
+		expect(link).toHaveAttribute(
+			'href',
+			toRoute(Routes.SITES, {groupId: '23'})
+		);
+		expect(link).toHaveTextContent(/liferay data platform/i);
 	});
 
 	it('collapses the sidebar from the toggle', () => {
@@ -163,6 +175,6 @@ describe('Toolbar', () => {
 		fireEvent.click(screen.getByLabelText('Test Test'));
 
 		expect(await screen.findByText('test@liferay.com')).toBeTruthy();
-		expect(screen.getByText(/sign.out/i)).toBeTruthy();
+		expect(screen.getByText(/sign.out/i)).toBeInTheDocument();
 	});
 });

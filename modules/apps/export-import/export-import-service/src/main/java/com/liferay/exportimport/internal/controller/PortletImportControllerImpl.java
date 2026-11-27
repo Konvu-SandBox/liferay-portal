@@ -105,7 +105,6 @@ import com.liferay.portal.kernel.xml.DocumentException;
 import com.liferay.portal.kernel.xml.Element;
 import com.liferay.portal.kernel.xml.SAXReaderUtil;
 import com.liferay.portal.kernel.zip.ZipReader;
-import com.liferay.portal.kernel.zip.ZipReaderFactory;
 import com.liferay.portlet.PortletPreferencesImpl;
 
 import java.io.File;
@@ -243,7 +242,7 @@ public class PortletImportControllerImpl implements PortletImportController {
 
 			Layout layout = _layoutLocalService.getLayout(targetPlid);
 
-			try (ZipReader zipReader = _zipReaderFactory.getZipReader(file)) {
+			try (ZipReader zipReader = new ZipReader(file)) {
 				validateFile(
 					layout.getCompanyId(), targetGroupId, portletId, zipReader);
 
@@ -288,7 +287,7 @@ public class PortletImportControllerImpl implements PortletImportController {
 
 		PortletDataContext portletDataContext = null;
 
-		try (ZipReader zipReader = _zipReaderFactory.getZipReader(file)) {
+		try (ZipReader zipReader = new ZipReader(file)) {
 			portletDataContext = getPortletDataContext(
 				exportImportConfiguration, zipReader);
 
@@ -682,22 +681,17 @@ public class PortletImportControllerImpl implements PortletImportController {
 			PortletDataContext portletDataContext, Element serviceElement)
 		throws PortalException {
 
-		long ownerId = GetterUtil.getLong(
-			serviceElement.attributeValue("owner-id"));
 		int ownerType = GetterUtil.getInteger(
 			serviceElement.attributeValue("owner-type"));
-		String serviceName = serviceElement.attributeValue("service-name");
 
-		if (ownerType == PortletKeys.PREFS_OWNER_TYPE_GROUP) {
-			ownerId = portletDataContext.getGroupId();
-		}
-		else if (ownerType == PortletKeys.PREFS_OWNER_TYPE_COMPANY) {
-			ownerId = portletDataContext.getCompanyId();
+		if (ownerType != PortletKeys.PREFS_OWNER_TYPE_GROUP) {
+			return;
 		}
 
 		PortletPreferences portletPreferences = getPortletPreferences(
-			portletDataContext.getCompanyId(), ownerId, ownerType,
-			LayoutConstants.DEFAULT_PLID, serviceName);
+			portletDataContext.getCompanyId(), portletDataContext.getGroupId(),
+			ownerType, LayoutConstants.DEFAULT_PLID,
+			serviceElement.attributeValue("service-name"));
 
 		for (Attribute attribute : serviceElement.attributes()) {
 			serviceElement.remove(attribute);
@@ -854,7 +848,7 @@ public class PortletImportControllerImpl implements PortletImportController {
 
 			MissingReferences missingReferences = null;
 
-			try (ZipReader zipReader = _zipReaderFactory.getZipReader(file)) {
+			try (ZipReader zipReader = new ZipReader(file)) {
 				validateFile(
 					layout.getCompanyId(), targetGroupId, portletId, zipReader);
 
@@ -1616,8 +1610,5 @@ public class PortletImportControllerImpl implements PortletImportController {
 
 	@Reference
 	private UserLocalService _userLocalService;
-
-	@Reference
-	private ZipReaderFactory _zipReaderFactory;
 
 }

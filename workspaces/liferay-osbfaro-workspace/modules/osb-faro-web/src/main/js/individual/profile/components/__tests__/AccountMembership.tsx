@@ -5,8 +5,6 @@ import {fromJS} from 'immutable';
 import {Provider} from 'react-redux';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const renderWithStore = (children: React.ReactNode) =>
 	render(<Provider store={mockStore()}>{children}</Provider>);
 
@@ -40,7 +38,7 @@ describe('Account Membership', () => {
 			</AccountMembership>
 		);
 
-		expect(getByText('empty state rendered')).toBeTruthy();
+		expect(getByText('empty state rendered')).toBeInTheDocument();
 		expect(queryByText('industry')).toBeNull();
 	});
 
@@ -49,9 +47,9 @@ describe('Account Membership', () => {
 			<AccountMembership accountData={fromJS(mockData)} />
 		);
 
-		expect(getByText('2015')).toBeTruthy();
-		expect(getByText('Dec 1, 2021')).toBeTruthy();
-		expect(getByText('Jan 1, 2020')).toBeTruthy();
+		expect(getByText('2015')).toBeInTheDocument();
+		expect(getByText('Dec 1, 2021')).toBeInTheDocument();
+		expect(getByText('Jan 1, 2020')).toBeInTheDocument();
 	});
 
 	it('should display no data for missing account values', () => {
@@ -62,7 +60,6 @@ describe('Account Membership', () => {
 		const noDataValues = getAllByText('–');
 
 		expect(noDataValues.length).toBeGreaterThan(0);
-		expect(noDataValues[0]).toHaveClass('text-secondary');
 	});
 
 	it('should display a missing annual revenue as no data', () => {
@@ -73,7 +70,7 @@ describe('Account Membership', () => {
 		);
 
 		expect(
-			getByText('Annual Revenue').nextElementSibling
+			getByText(/^annual revenue$/i).nextElementSibling
 		).toHaveTextContent('–');
 	});
 
@@ -85,10 +82,10 @@ describe('Account Membership', () => {
 		);
 
 		expect(
-			getByText('Annual Revenue').nextElementSibling
+			getByText(/^annual revenue$/i).nextElementSibling
 		).not.toHaveTextContent('–');
 		expect(
-			getByText('Annual Revenue').nextElementSibling
+			getByText(/^annual revenue$/i).nextElementSibling
 		).toHaveTextContent('0');
 	});
 

@@ -13,8 +13,6 @@ import {Routes} from 'shared/util/router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 import SegmentProfileRoutes from '../ProfileRoutes';
 
-jest.unmock('react-dom');
-
 jest.mock('../Overview', () => () => <div>{'SegmentOverview'}</div>);
 jest.mock('../OverviewRealTime', () => () => (
 	<div>{'SegmentOverviewRealTime'}</div>
@@ -83,8 +81,10 @@ describe('SegmentProfileRoutes', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(screen.getByText('Account Batch Segment')).toBeTruthy();
-		expect(screen.getByText('SEGMENT MEMBERSHIP')).toBeTruthy();
+		expect(
+			screen.getByText(/^account batch segment$/i)
+		).toBeInTheDocument();
+		expect(screen.getByText('SEGMENT MEMBERSHIP')).toBeInTheDocument();
 	});
 
 	it('should offer the edit action and no report actions for a real time segment', async () => {
@@ -100,9 +100,9 @@ describe('SegmentProfileRoutes', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(screen.getByText('Edit Segment')).toBeTruthy();
-		expect(screen.queryByText('Download Reports')).toBeNull();
-		expect(screen.queryByText('Refresh Data')).toBeNull();
+		expect(screen.getByText(/^edit segment$/i)).toBeInTheDocument();
+		expect(screen.queryByText(/^download reports$/i)).toBeNull();
+		expect(screen.queryByText(/^refresh data$/i)).toBeNull();
 	});
 
 	it('should render the external reference code with its label', async () => {
@@ -114,7 +114,7 @@ describe('SegmentProfileRoutes', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(screen.getByText('ERC: my-erc')).toBeTruthy();
+		expect(screen.getByText('ERC: my-erc')).toBeInTheDocument();
 	});
 
 	it('opens the manage notifications modal from the actions menu', async () => {
@@ -122,14 +122,14 @@ describe('SegmentProfileRoutes', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		fireEvent.click(screen.getByRole('button', {name: 'Menu'}));
+		fireEvent.click(screen.getByRole('button', {name: /^menu$/i}));
 
 		fireEvent.click(
-			screen.getByRole('menuitem', {name: 'Manage Notifications'})
+			screen.getByRole('menuitem', {name: /^manage notifications$/i})
 		);
 
 		expect(
-			await screen.findByText('Manage Segment Notifications')
+			await screen.findByText(/^manage segment notifications$/i)
 		).toBeInTheDocument();
 	});
 });

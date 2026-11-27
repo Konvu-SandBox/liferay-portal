@@ -1,5 +1,3 @@
-jest.unmock('react-dom');
-
 import MarketoCampaignEntities from '../MarketoCampaignEntities';
 import React from 'react';
 import {render} from '@testing-library/react';
@@ -14,7 +12,7 @@ describe('MarketoCampaignEntities', () => {
 			/>
 		);
 
-		expect(getByText('Configured')).toBeTruthy();
+		expect(getByText(/^configured$/i)).toBeInTheDocument();
 	});
 
 	it('renders the Unconfigured label when the synced count is zero', () => {
@@ -26,7 +24,7 @@ describe('MarketoCampaignEntities', () => {
 			/>
 		);
 
-		expect(getByText('Unconfigured')).toBeTruthy();
+		expect(getByText(/^unconfigured$/i)).toBeInTheDocument();
 	});
 
 	it('renders the Unconfigured label when no synced count is provided', () => {
@@ -37,6 +35,6 @@ describe('MarketoCampaignEntities', () => {
 			/>
 		);
 
-		expect(getByText('Unconfigured')).toBeTruthy();
+		expect(getByText(/^unconfigured$/i)).toBeInTheDocument();
 	});
 });

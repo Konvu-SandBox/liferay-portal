@@ -11,8 +11,6 @@ import {Provider} from 'react-redux';
 import {useRequest} from 'shared/hooks/useRequest';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/api/connector', () => ({
 	fetchConnectorEntityCount: entity => entity
 }));
@@ -87,8 +85,8 @@ describe('SalesforceOverview', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(getByText('Campaigns')).toBeTruthy();
-		expect(getByText('1,204 Items Synced')).toBeTruthy();
+		expect(getByText(/^campaigns$/i)).toBeInTheDocument();
+		expect(getByText('1,204 Items Synced')).toBeInTheDocument();
 	});
 
 	it('should render the error display when the campaigns count fails', async () => {
@@ -100,7 +98,9 @@ describe('SalesforceOverview', () => {
 
 		const {getByText, queryByText} = render(<WrappedComponent />);
 
-		expect(getByText('An unexpected error occurred.')).toBeTruthy();
-		expect(queryByText(/Items Synced/i)).toBeNull();
+		expect(
+			getByText(/^an unexpected error occurred\.$/i)
+		).toBeInTheDocument();
+		expect(queryByText(/items synced/i)).toBeNull();
 	});
 });

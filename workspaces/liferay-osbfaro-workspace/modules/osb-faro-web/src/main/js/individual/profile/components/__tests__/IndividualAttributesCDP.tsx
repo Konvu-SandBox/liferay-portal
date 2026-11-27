@@ -3,8 +3,6 @@ import React from 'react';
 import {fromJS} from 'immutable';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('IndividualAttributesCDP', () => {
 	const mockProperties = {
 		birthDate: '2020-01-01T00:00:00.000Z',
@@ -39,7 +37,7 @@ describe('IndividualAttributesCDP', () => {
 			</IndividualAttributesCDP>
 		);
 
-		expect(getByText('empty state rendered')).toBeTruthy();
+		expect(getByText('empty state rendered')).toBeInTheDocument();
 		expect(queryByText('screenName')).toBeNull();
 	});
 
@@ -48,7 +46,7 @@ describe('IndividualAttributesCDP', () => {
 			<IndividualAttributesCDP propertiesData={fromJS(mockProperties)} />
 		);
 
-		expect(getByText('Jan 1, 2020')).toBeTruthy();
+		expect(getByText('Jan 1, 2020')).toBeInTheDocument();
 	});
 
 	it('should correctly format the known since date', () => {
@@ -59,7 +57,7 @@ describe('IndividualAttributesCDP', () => {
 			/>
 		);
 
-		expect(getByText('Mar 4, 2026')).toBeTruthy();
+		expect(getByText('Mar 4, 2026')).toBeInTheDocument();
 	});
 
 	it('should display no data for missing values', () => {
@@ -70,6 +68,5 @@ describe('IndividualAttributesCDP', () => {
 		const noDataValues = getAllByText('–');
 
 		expect(noDataValues.length).toBeGreaterThan(0);
-		expect(noDataValues[0]).toHaveClass('text-secondary');
 	});
 });

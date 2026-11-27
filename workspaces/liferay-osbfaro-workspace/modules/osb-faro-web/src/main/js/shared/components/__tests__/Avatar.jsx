@@ -3,8 +3,6 @@ import React from 'react';
 import {cleanup, render} from '@testing-library/react';
 import {mockIndividual, mockSegment} from 'test/data';
 
-jest.unmock('react-dom');
-
 describe('Avatar', () => {
 	afterEach(cleanup);
 
@@ -23,7 +21,7 @@ describe('Avatar', () => {
 			/>
 		);
 
-		expect(getByText('F')).toBeTruthy();
+		expect(getByText(/^f$/i)).toBeInTheDocument();
 	});
 
 	it('should render with a first and last name', () => {
@@ -36,7 +34,7 @@ describe('Avatar', () => {
 			/>
 		);
 
-		expect(getByText('FB')).toBeTruthy();
+		expect(getByText('FB')).toBeInTheDocument();
 	});
 
 	it('should render if null is used as the first name', () => {

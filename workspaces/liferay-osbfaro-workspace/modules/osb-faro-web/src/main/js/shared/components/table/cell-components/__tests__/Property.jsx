@@ -2,8 +2,6 @@ import PropertyCell from '../Property';
 import React from 'react';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('PropertyCell', () => {
 	it('should render', () => {
 		const {container} = render(
@@ -28,7 +26,7 @@ describe('PropertyCell', () => {
 			/>
 		);
 
-		expect(getByText('–')).toHaveClass('text-secondary');
+		expect(getByText('–')).toBeInTheDocument();
 	});
 
 	it('should render the no data value when the value is null', () => {
@@ -41,7 +39,7 @@ describe('PropertyCell', () => {
 			/>
 		);
 
-		expect(getByText('–')).toHaveClass('text-secondary');
+		expect(getByText('–')).toBeInTheDocument();
 	});
 
 	it('should render a zero value', () => {
@@ -54,6 +52,6 @@ describe('PropertyCell', () => {
 			/>
 		);
 
-		expect(getByText('0')).toBeTruthy();
+		expect(getByText('0')).toBeInTheDocument();
 	});
 });

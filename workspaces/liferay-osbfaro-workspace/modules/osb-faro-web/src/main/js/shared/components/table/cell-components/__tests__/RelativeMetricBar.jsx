@@ -2,8 +2,6 @@ import React from 'react';
 import RelativeMetricBar from '../RelativeMetricBar';
 import {cleanup, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('RelativeMetricBar', () => {
 	afterEach(cleanup);
 
@@ -36,7 +34,7 @@ describe('RelativeMetricBar', () => {
 			/>
 		);
 
-		expect(getByText('Test Test')).toBeTruthy();
+		expect(getByText('Test Test')).toBeInTheDocument();
 	});
 
 	it('should render w/ data-tooltip attr', () => {

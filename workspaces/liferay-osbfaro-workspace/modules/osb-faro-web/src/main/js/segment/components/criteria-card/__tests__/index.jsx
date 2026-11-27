@@ -5,8 +5,6 @@ import {cleanup, render} from '@testing-library/react';
 import {ReferencedObjectsProvider} from 'segment/segment-editor/dynamic/context/referencedObjects';
 import {Segment} from 'shared/util/records';
 
-jest.unmock('react-dom');
-
 describe('CriteriaCard', () => {
 	const innerHeight = window.innerHeight;
 
@@ -50,7 +48,7 @@ describe('CriteriaCard', () => {
 	});
 
 	it('should render w/ anonymous label', () => {
-		const {queryByText} = render(
+		const {getByText} = render(
 			<ReferencedObjectsProvider segment={mockSegment}>
 				<CriteriaCard
 					criteriaString="demographics/name/value eq 'Test'"
@@ -60,6 +58,8 @@ describe('CriteriaCard', () => {
 			</ReferencedObjectsProvider>
 		);
 
-		expect(queryByText('Includes Anonymous Individuals')).toBeTruthy();
+		expect(
+			getByText(/^includes anonymous individuals$/i)
+		).toBeInTheDocument();
 	});
 });

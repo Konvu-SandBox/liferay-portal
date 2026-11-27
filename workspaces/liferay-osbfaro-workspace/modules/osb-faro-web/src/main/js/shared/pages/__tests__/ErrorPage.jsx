@@ -3,8 +3,6 @@ import React from 'react';
 import {render} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = props => (
 	<MemoryRouter>
 		<ErrorPage {...props} />
@@ -21,6 +19,6 @@ describe('ErrorPage', () => {
 	it('should render a custom message', () => {
 		const {getByText} = render(<DefaultComponent message='foo bar' />);
 
-		expect(getByText('foo bar')).toBeTruthy();
+		expect(getByText('foo bar')).toBeInTheDocument();
 	});
 });

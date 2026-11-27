@@ -4,8 +4,6 @@ import {cleanup, fireEvent, render} from '@testing-library/react';
 import {fromJS} from 'immutable';
 import {Property} from 'shared/util/records';
 
-jest.unmock('react-dom');
-
 describe('CustomBooleanInput', () => {
 	afterEach(cleanup);
 
@@ -30,10 +28,10 @@ describe('CustomBooleanInput', () => {
 				})}
 			/>
 		);
-		fireEvent.click(getByText('True'));
+		fireEvent.click(getByText(/^true$/i));
 
-		expect(getAllByText('True')[1]).toBeTruthy();
-		expect(getByText('False')).toBeTruthy();
+		expect(getAllByText(/^true$/i)[1]).toBeTruthy();
+		expect(getByText(/^false$/i)).toBeInTheDocument();
 		expect(container).toMatchSnapshot();
 	});
 });

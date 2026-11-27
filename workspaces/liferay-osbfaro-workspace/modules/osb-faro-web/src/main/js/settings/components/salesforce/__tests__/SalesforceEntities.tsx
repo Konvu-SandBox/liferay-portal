@@ -1,5 +1,3 @@
-jest.unmock('react-dom');
-
 import React from 'react';
 import SalesforceEntities from '../SalesforceEntities';
 import {render} from '@testing-library/react';
@@ -15,12 +13,12 @@ describe('SalesforceEntities', () => {
 			/>
 		);
 
-		expect(getByText('Campaigns')).toBeTruthy();
+		expect(getByText(/^campaigns$/i)).toBeInTheDocument();
 		expect(
 			getByText(
-				'Represents fields from the Campaign and Campaign Members objects within Salesforce.'
+				/^represents fields from the campaign and campaign members objects within salesforce\.$/i
 			)
-		).toBeTruthy();
+		).toBeInTheDocument();
 
 		const checkboxes = document.querySelectorAll<HTMLInputElement>(
 			'input[type="checkbox"]'
@@ -48,9 +46,9 @@ describe('SalesforceEntities', () => {
 			/>
 		);
 
-		expect(getByText('73,085 Items Synced')).toBeTruthy();
-		expect(getByText('279,089 Items Synced')).toBeTruthy();
-		expect(getByText('1,204 Items Synced')).toBeTruthy();
+		expect(getByText('73,085 Items Synced')).toBeInTheDocument();
+		expect(getByText('279,089 Items Synced')).toBeInTheDocument();
+		expect(getByText('1,204 Items Synced')).toBeInTheDocument();
 	});
 
 	it('renders the synced counts when they are zero', () => {
@@ -79,7 +77,7 @@ describe('SalesforceEntities', () => {
 			/>
 		);
 
-		expect(getByText('Campaigns')).toBeTruthy();
-		expect(queryByText(/Items Synced/i)).toBeNull();
+		expect(getByText(/^campaigns$/i)).toBeInTheDocument();
+		expect(queryByText(/items synced/i)).toBeNull();
 	});
 });

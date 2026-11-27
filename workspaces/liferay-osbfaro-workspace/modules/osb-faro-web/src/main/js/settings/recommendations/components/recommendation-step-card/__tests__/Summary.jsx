@@ -15,8 +15,6 @@ import {
 import {render} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 
-jest.unmock('react-dom');
-
 describe('Summary', () => {
 	it('should render', () => {
 		const {container} = render(
@@ -62,7 +60,7 @@ describe('Summary', () => {
 	});
 
 	it('should render with "Including Previous Period" if includePreviousPeriod is true', () => {
-		const {queryByText} = render(
+		const {getByText} = render(
 			<MockedProvider
 				mocks={[
 					mockRecommendationPageAssetsReq([], {size: 0}),
@@ -102,6 +100,6 @@ describe('Summary', () => {
 			</MockedProvider>
 		);
 
-		expect(queryByText(/Including Previous Period/)).toBeTruthy();
+		expect(getByText(/Including Previous Period/)).toBeInTheDocument();
 	});
 });

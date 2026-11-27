@@ -2,8 +2,6 @@ import DefinitionItem from '../DefinitionItem';
 import React from 'react';
 import {cleanup, fireEvent, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('DefinitionItem', () => {
 	afterEach(cleanup);
 
@@ -14,18 +12,18 @@ describe('DefinitionItem', () => {
 	});
 
 	it('should render with a label and value', () => {
-		const {queryByText} = render(
+		const {getByText} = render(
 			<DefinitionItem label='foo' value='bar' />
 		);
 
-		expect(queryByText('foo')).toBeTruthy();
-		expect(queryByText('bar')).toBeTruthy();
+		expect(getByText('foo')).toBeInTheDocument();
+		expect(getByText('bar')).toBeInTheDocument();
 	});
 
 	it('should render with an edit button', () => {
-		const {queryByLabelText} = render(<DefinitionItem editable />);
+		const {getByLabelText} = render(<DefinitionItem editable />);
 
-		expect(queryByLabelText('Edit')).toBeTruthy();
+		expect(getByLabelText(/^edit$/i)).toBeInTheDocument();
 	});
 
 	it('should render as an input field with a cancel and submit button', () => {
@@ -33,12 +31,12 @@ describe('DefinitionItem', () => {
 			<DefinitionItem editable />
 		);
 
-		fireEvent.click(getByLabelText('Edit'));
+		fireEvent.click(getByLabelText(/^edit$/i));
 
 		jest.runAllTimers();
 
-		expect(queryByLabelText('Cancel')).toBeTruthy();
-		expect(queryByLabelText('Submit')).toBeTruthy();
-		expect(queryByLabelText('Edit')).toBeNull();
+		expect(getByLabelText(/^cancel$/i)).toBeInTheDocument();
+		expect(getByLabelText(/^submit$/i)).toBeInTheDocument();
+		expect(queryByLabelText(/^edit$/i)).toBeNull();
 	});
 });

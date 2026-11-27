@@ -5,8 +5,6 @@ import {createCustomValueMap} from '../../utils/custom-inputs';
 import {Property} from 'shared/util/records';
 import {RelationalOperators} from '../../utils/constants';
 
-jest.unmock('react-dom');
-
 describe('SearchTermBooleanInput', () => {
 	afterEach(cleanup);
 
@@ -36,7 +34,7 @@ describe('SearchTermBooleanInput', () => {
 		fireEvent.click(getByText('is'));
 
 		expect(getAllByText('is')[1]).toBeTruthy();
-		expect(getByText('is not')).toBeTruthy();
+		expect(getByText('is not')).toBeInTheDocument();
 		expect(container).toMatchSnapshot();
 	});
 });

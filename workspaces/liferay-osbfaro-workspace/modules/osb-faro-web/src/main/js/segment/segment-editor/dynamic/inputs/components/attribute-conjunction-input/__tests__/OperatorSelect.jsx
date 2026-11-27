@@ -5,8 +5,6 @@ import {DataTypes} from 'shared/types/DataTypes';
 import {Operators} from 'event-analysis/utils/types';
 import {fireEvent, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('OperatorSelect', () => {
 	it('should render', () => {
 		const {container, getByText} = render(
@@ -20,10 +18,10 @@ describe('OperatorSelect', () => {
 		);
 		fireEvent.click(getByText('Select an option'));
 
-		expect(getByText('greater than')).toBeTruthy();
-		expect(getByText('less than')).toBeTruthy();
-		expect(getByText('is equal to')).toBeTruthy();
-		expect(getByText('is not equal to')).toBeTruthy();
+		expect(getByText('greater than')).toBeInTheDocument();
+		expect(getByText('less than')).toBeInTheDocument();
+		expect(getByText('is equal to')).toBeInTheDocument();
+		expect(getByText('is not equal to')).toBeInTheDocument();
 
 		expect(container).toMatchSnapshot();
 	});

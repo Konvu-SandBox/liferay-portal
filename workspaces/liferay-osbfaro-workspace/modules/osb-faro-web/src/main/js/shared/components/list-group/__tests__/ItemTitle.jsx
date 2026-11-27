@@ -2,8 +2,6 @@ import ItemTitle from '../ItemTitle';
 import React from 'react';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('ItemTitle', () => {
 	it('should render', () => {
 		const {container} = render(<ItemTitle />);
@@ -14,12 +12,12 @@ describe('ItemTitle', () => {
 	it('should render with children', () => {
 		const stringToMatch = 'Item title text';
 
-		const {queryByText} = render(
+		const {getByText} = render(
 			<ItemTitle>
 				<span>{stringToMatch}</span>
 			</ItemTitle>
 		);
 
-		expect(queryByText(stringToMatch)).toBeTruthy();
+		expect(getByText(stringToMatch)).toBeInTheDocument();
 	});
 });

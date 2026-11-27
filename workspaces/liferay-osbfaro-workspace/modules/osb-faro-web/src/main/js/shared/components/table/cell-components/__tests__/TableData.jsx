@@ -3,8 +3,6 @@ import TableData from '../TableData';
 import {render} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 
-jest.unmock('react-dom');
-
 describe('TableData', () => {
 	it('should render', () => {
 		const {container} = render(<TableData />);
@@ -32,7 +30,7 @@ describe('TableData', () => {
 		);
 
 		expect(container.querySelector('.text-secondary')).toBeTruthy();
-		expect(getByText('Empty Message')).toBeTruthy();
+		expect(getByText('Empty Message')).toBeInTheDocument();
 	});
 
 	it('should render when the body lacks the dxp class', () => {

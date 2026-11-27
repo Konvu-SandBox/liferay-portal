@@ -4,13 +4,11 @@ import DataSourceQuery from 'shared/queries/DataSourceQuery';
 import mockStore from 'test/mock-store';
 import React from 'react';
 import {ChannelContext} from 'shared/context/channel';
-import {cleanup, render, screen, waitFor} from '@testing-library/react';
+import {cleanup, render, screen} from '@testing-library/react';
 import {DataSourceTypes, OrderByDirections} from 'shared/util/constants';
 import {MemoryRouter} from 'react-router-dom';
 import {MockedProvider} from '@apollo/client/testing';
 import {Provider} from 'react-redux';
-
-jest.unmock('react-dom');
 
 const mockGroupId = '23';
 
@@ -77,9 +75,9 @@ describe('ConnectDXP', () => {
 			</Wrapper>
 		);
 
-		await waitFor(() =>
-			expect(screen.getByDisplayValue('test-token')).toBeInTheDocument()
-		);
+		expect(
+			await screen.findByDisplayValue('test-token')
+		).toBeInTheDocument();
 
 		expect(container).toMatchSnapshot();
 	});

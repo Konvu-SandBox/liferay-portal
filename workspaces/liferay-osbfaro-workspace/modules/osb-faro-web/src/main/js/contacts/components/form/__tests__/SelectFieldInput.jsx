@@ -4,8 +4,6 @@ import {Formik} from 'formik';
 import {FormSelectFieldInput} from '../SelectFieldInput';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const Wrapper = ({children}) => (
 	<Formik initialValues={{foo: ''}} onSubmit={() => {}}>
 		{children}
@@ -45,6 +43,6 @@ describe('SelectFieldInput', () => {
 			</Wrapper>
 		);
 
-		expect(getByText(label)).toBeTruthy();
+		expect(getByText(label)).toBeInTheDocument();
 	});
 });

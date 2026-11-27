@@ -16,8 +16,6 @@ import {Provider} from 'react-redux';
 import {MemoryRouter} from 'react-router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useParams: () => ({
@@ -55,11 +53,11 @@ describe('AccessTokenList', () => {
 	it('should display the card with the options to create a new token if there is no token', async () => {
 		API.apiTokens.search.mockReturnValueOnce(Promise.resolve([]));
 
-		const {container, queryByTestId} = render(<DefaultComponent />);
+		const {container, getByTestId} = render(<DefaultComponent />);
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(queryByTestId('generate-token-button')).toBeTruthy();
+		expect(getByTestId('generate-token-button')).toBeInTheDocument();
 		expect(container.querySelector('.table-root')).toBeNull();
 	});
 
@@ -73,7 +71,7 @@ describe('AccessTokenList', () => {
 		await waitForLoadingToBeRemoved(container);
 
 		expect(container.querySelector('.table-root')).toBeNull();
-		expect(queryByTestId('generate-token-button')).toBeTruthy();
+		expect(getByTestId('generate-token-button')).toBeInTheDocument();
 
 		fireEvent.click(getByTestId('generate-token-button'));
 
@@ -88,11 +86,11 @@ describe('AccessTokenList', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		fireEvent.click(getByText('Revoke'));
+		fireEvent.click(getByText(/^revoke$/i));
 
 		expect(await screen.findByRole('dialog')).toBeInTheDocument();
 
-		expect(await screen.findByText('Revoke Token')).toBeInTheDocument();
+		expect(await screen.findByText(/^revoke token$/i)).toBeInTheDocument();
 	});
 
 	it('should display the "Generate Token" card  above the table if the token is expired', async () => {
@@ -110,7 +108,7 @@ describe('AccessTokenList', () => {
 
 		expect(
 			getByText(container.querySelector('.card-body'), 'Generate Token')
-		).toBeTruthy();
+		).toBeInTheDocument();
 		expect(container.querySelector('.table-root')).toMatchSnapshot();
 	});
 

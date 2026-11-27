@@ -1,5 +1,3 @@
-jest.unmock('react-dom');
-
 import ClayModal from '@clayui/modal';
 import mockStore from 'test/mock-store';
 import React from 'react';
@@ -16,7 +14,7 @@ describe('ReportIssue', () => {
 	afterEach(cleanup);
 
 	it('should render', async () => {
-		const {queryByText} = await renderModal(observer => (
+		const {getByText} = await renderModal(observer => (
 			<Provider store={mockStore()}>
 				<MemoryRouter initialEntries={['/workspace/23']}>
 					<Routes>
@@ -47,8 +45,8 @@ describe('ReportIssue', () => {
 
 		await waitForLoadingToBeRemoved(document.body);
 
-		expect(queryByText('Issue Title')).toBeTruthy();
-		expect(queryByText('Description')).toBeTruthy();
+		expect(getByText(/^issue title$/i)).toBeInTheDocument();
+		expect(getByText(/^description$/i)).toBeInTheDocument();
 		expect(document.body).toMatchSnapshot();
 	});
 });

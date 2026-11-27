@@ -1,5 +1,3 @@
-jest.unmock('react-dom');
-
 import Input from '../Input';
 import mockStore from 'test/mock-store';
 import React from 'react';
@@ -62,7 +60,7 @@ describe('Input', () => {
 	});
 
 	it('should render a labelled input', async () => {
-		const {container, queryByText} = render(
+		const {container, getByText} = render(
 			<Provider store={mockStore()}>
 				<MemoryRouter>
 					
@@ -82,11 +80,11 @@ describe('Input', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(queryByText('Input label')).toBeTruthy();
+		expect(getByText('Input label')).toBeInTheDocument();
 	});
 
 	it('should render a required input', async () => {
-		const {container, queryByText} = render(
+		const {container, getByLabelText} = render(
 			<Provider store={mockStore()}>
 				<MemoryRouter>
 					
@@ -106,8 +104,6 @@ describe('Input', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(queryByText('Input label').closest('label')).toHaveClass(
-			'required'
-		);
+		expect(getByLabelText('Input label', {exact: false})).toBeRequired();
 	});
 });

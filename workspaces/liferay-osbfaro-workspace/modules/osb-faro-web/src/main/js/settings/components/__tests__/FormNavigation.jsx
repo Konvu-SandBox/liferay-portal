@@ -2,8 +2,6 @@ import FormNavigation from '../FormNavigation';
 import React from 'react';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('FormNavigation', () => {
 	it('should render', () => {
 		const {container} = render(<FormNavigation cancelHref='' />);
@@ -18,7 +16,7 @@ describe('FormNavigation', () => {
 			<FormNavigation submitMessage={submitMessage} />
 		);
 
-		expect(getByText(submitMessage)).toBeTruthy();
+		expect(getByText(submitMessage)).toBeInTheDocument();
 	});
 
 	it('should render with a previous button', () => {
@@ -26,6 +24,6 @@ describe('FormNavigation', () => {
 			<FormNavigation onPreviousStep={() => jest.fn()} />
 		);
 
-		expect(getByText('Previous')).toBeTruthy();
+		expect(getByText(/^previous$/i)).toBeInTheDocument();
 	});
 });

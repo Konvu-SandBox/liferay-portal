@@ -28,7 +28,6 @@ import com.liferay.object.constants.ObjectFieldConstants;
 import com.liferay.object.constants.ObjectFieldSettingConstants;
 import com.liferay.object.constants.ObjectRelationshipConstants;
 import com.liferay.object.constants.ObjectValidationRuleSettingConstants;
-import com.liferay.object.definition.security.permission.resource.util.ObjectDefinitionResourcePermissionUtil;
 import com.liferay.object.definition.setting.util.ObjectDefinitionSettingUtil;
 import com.liferay.object.definition.tree.util.ObjectDefinitionTreeUtil;
 import com.liferay.object.definition.util.ObjectDefinitionThreadLocal;
@@ -79,6 +78,7 @@ import com.liferay.object.field.business.type.ObjectFieldBusinessTypeRegistry;
 import com.liferay.object.field.setting.builder.ObjectFieldSettingBuilder;
 import com.liferay.object.field.util.ObjectFieldUtil;
 import com.liferay.object.internal.dao.db.ObjectDBManagerUtil;
+import com.liferay.object.internal.definition.security.permission.resource.util.ObjectDefinitionResourcePermissionUtil;
 import com.liferay.object.internal.deployer.InactiveObjectDefinitionDeployerUtil;
 import com.liferay.object.internal.deployer.ObjectDefinitionDeployerImpl;
 import com.liferay.object.model.ObjectAction;
@@ -145,6 +145,7 @@ import com.liferay.portal.kernel.dao.orm.RestrictionsFactoryUtil;
 import com.liferay.portal.kernel.dao.orm.Session;
 import com.liferay.portal.kernel.dependency.manager.DependencyManagerSyncUtil;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.lazy.referencing.LazyReferencingThreadLocal;
 import com.liferay.portal.kernel.log.Log;
@@ -1108,14 +1109,14 @@ public class ObjectDefinitionLocalServiceImpl
 			_dlFileEntryLocalService, _dlFileEntryTextProvider,
 			_groupLocalService, _kaleoDefinitionLocalService,
 			_listTypeLocalService, _objectActionLocalService,
-			objectDefinitionLocalService, _objectDefinitionSettingLocalService,
-			_objectEntryFolderLocalService, _objectEntryLocalService,
-			_objectEntryService, _objectFieldBusinessTypeRegistry,
-			_objectFieldLocalService, _objectFolderLocalService,
-			_objectLayoutLocalService, _objectLayoutTabLocalService,
-			_objectRelationshipLocalService, _objectScopeProviderRegistry,
-			_objectViewLocalService, _organizationLocalService, _portal,
-			_portletLocalService, _resourceActions, _userLocalService,
+			objectDefinitionLocalService, _objectEntryFolderLocalService,
+			_objectEntryLocalService, _objectEntryService,
+			_objectFieldBusinessTypeRegistry, _objectFieldLocalService,
+			_objectFolderLocalService, _objectLayoutLocalService,
+			_objectLayoutTabLocalService, _objectRelationshipLocalService,
+			_objectScopeProviderRegistry, _objectViewLocalService,
+			_organizationLocalService, _portal, _portletLocalService,
+			_resourceActions, _userLocalService,
 			_resourcePermissionLocalService, _searchLocalizationHelper,
 			_sharingModelResourcePermissionConfigurator,
 			_systemEventLocalService, _textEmbeddingDocumentContributor,
@@ -1700,6 +1701,29 @@ public class ObjectDefinitionLocalServiceImpl
 			StringUtil.equals(className, objectDefinition.getClassName())) {
 
 			return;
+		}
+
+		if (objectDefinition.isSystem()) {
+			ObjectDefinition existingObjectDefinition =
+				objectDefinitionPersistence.fetchByC_C(
+					objectDefinition.getCompanyId(), className);
+
+			if (existingObjectDefinition != null) {
+				if (_log.isInfoEnabled()) {
+					_log.info(
+						StringBundler.concat(
+							"Object definition ",
+							objectDefinition.getExternalReferenceCode(),
+							" uses class name ",
+							objectDefinition.getClassName(),
+							" because object definition ",
+							existingObjectDefinition.getExternalReferenceCode(),
+							" uses class name ", className, " in company ",
+							objectDefinition.getCompanyId()));
+				}
+
+				return;
+			}
 		}
 
 		ObjectDefinitionSetting objectDefinitionSetting =
@@ -2794,8 +2818,6 @@ public class ObjectDefinitionLocalServiceImpl
 		String oldClassName = objectDefinition.getClassName();
 		boolean oldEnableObjectEntrySubscription =
 			objectDefinition.isEnableObjectEntrySubscription();
-		String oldFriendlyURLSeparator =
-			objectDefinition.getFriendlyURLSeparator();
 
 		boolean addSystemObjectFields = false;
 
@@ -2960,13 +2982,8 @@ public class ObjectDefinitionLocalServiceImpl
 				objectDefinitionLocalService.deployObjectDefinition(
 					objectDefinition);
 
-				if (!StringUtil.equals(
-						oldFriendlyURLSeparator,
-						objectDefinition.getFriendlyURLSeparator())) {
-
-					_registerTransactionCallbackForCluster(
-						_deployObjectDefinitionMethodKey, objectDefinition);
-				}
+				_registerTransactionCallbackForCluster(
+					_deployObjectDefinitionMethodKey, objectDefinition);
 			}
 
 			if (active != oldActive) {
@@ -3222,6 +3239,27 @@ public class ObjectDefinitionLocalServiceImpl
 				accountEntryRestrictedObjectFieldId);
 		}
 
+		if (FeatureFlagManagerUtil.isEnabled(
+				objectDefinition.getCompanyId(), "LPD-108620") &&
+			accountEntryRestricted &&
+			(accountEntryRestrictedObjectFieldId > 0)) {
+
+			ObjectField objectField = _objectFieldPersistence.fetchByPrimaryKey(
+				accountEntryRestrictedObjectFieldId);
+
+			if ((objectField != null) &&
+				Validator.isNotNull(objectField.getRelationshipType()) &&
+				!Objects.equals(
+					objectField.getRelationshipType(),
+					ObjectRelationshipConstants.TYPE_ONE_TO_MANY)) {
+
+				_handleException(
+					new ObjectDefinitionAccountEntryRestrictedObjectFieldIdException(),
+					"accountEntryRestrictedObjectFieldId",
+					accountEntryRestrictedObjectFieldId);
+			}
+		}
+
 		if (objectDefinition.isApproved() &&
 			objectDefinition.isAccountEntryRestricted() &&
 			!accountEntryRestricted) {
@@ -3281,17 +3319,19 @@ public class ObjectDefinitionLocalServiceImpl
 			return;
 		}
 
-		ObjectDefinition existingObjectDefinition =
-			objectDefinitionPersistence.fetchByC_C(companyId, className);
+		if (!system) {
+			ObjectDefinition existingObjectDefinition =
+				objectDefinitionPersistence.fetchByC_C(companyId, className);
 
-		if ((existingObjectDefinition != null) &&
-			(existingObjectDefinition.getObjectDefinitionId() !=
-				objectDefinitionId)) {
+			if ((existingObjectDefinition != null) &&
+				(existingObjectDefinition.getObjectDefinitionId() !=
+					objectDefinitionId)) {
 
-			_handleException(
-				new ObjectDefinitionClassNameException.MustNotBeDuplicate(
-					className),
-				"className", className);
+				_handleException(
+					new ObjectDefinitionClassNameException.MustNotBeDuplicate(
+						className),
+					"className", className);
+			}
 		}
 
 		if (!StringUtil.startsWith(
@@ -4060,7 +4100,7 @@ public class ObjectDefinitionLocalServiceImpl
 						ObjectDefinitionSettingConstants.NAME_ACCEPT_ALL_GROUPS,
 						objectDefinitionSettings))) {
 
-				return;
+				continue;
 			}
 
 			String acceptedGroupIds = ObjectDefinitionSettingUtil.getValue(

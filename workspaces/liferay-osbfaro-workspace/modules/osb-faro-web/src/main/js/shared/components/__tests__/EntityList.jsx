@@ -4,8 +4,6 @@ import {cleanup, render} from '@testing-library/react';
 import {mockIndividual, mockSegment} from 'test/data';
 import {withStaticRouter} from 'test/mock-router';
 
-jest.unmock('react-dom');
-
 const items = [
 	mockIndividual(0, {total: 123}),
 	mockIndividual(1, {total: 123}),
@@ -29,7 +27,7 @@ describe('EntityList', () => {
 
 	it('should render noItemsContent', () => {
 		const noItemsContent = <h1>{'No Items!'}</h1>;
-		const {queryByText} = render(
+		const {getByText} = render(
 			<WrappedComponent
 				groupId='23'
 				noItemsContent={noItemsContent}
@@ -37,7 +35,7 @@ describe('EntityList', () => {
 			/>
 		);
 
-		expect(queryByText('No Items!')).toBeTruthy();
+		expect(getByText('No Items!')).toBeInTheDocument();
 	});
 
 	it('should render a list of segments with segment icons', () => {

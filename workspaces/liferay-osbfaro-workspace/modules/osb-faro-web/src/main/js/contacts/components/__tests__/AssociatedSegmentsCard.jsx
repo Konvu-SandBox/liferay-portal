@@ -6,8 +6,6 @@ import {render} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = props => (
 	<MemoryRouter>
 		<AssociatedSegmentsCard
@@ -41,7 +39,9 @@ describe('AssociatedSegmentsCard', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(getByText('An unexpected error occurred.')).toBeTruthy();
+		expect(
+			getByText(/^an unexpected error occurred\.$/i)
+		).toBeInTheDocument();
 	});
 
 	it('should render with an no results display', async () => {

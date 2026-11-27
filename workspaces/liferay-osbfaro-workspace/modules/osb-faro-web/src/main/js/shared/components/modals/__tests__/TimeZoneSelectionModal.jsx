@@ -2,15 +2,13 @@ import * as pedantic from 'test/pedantic';
 import mockStore from 'test/mock-store';
 import React from 'react';
 import TimeZoneSelectionModal from '../TimeZoneSelectionModal';
-import {cleanup, fireEvent, screen, waitFor} from '@testing-library/react';
+import {cleanup, fireEvent, screen} from '@testing-library/react';
 import {fromJS} from 'immutable';
 import {InMemoryCache} from '@apollo/client';
 import {MemoryRouter} from 'react-router-dom';
 import {MockedProvider} from '@apollo/client/testing';
 import {Provider} from 'react-redux';
 import {renderModal} from 'test/render-modal';
-
-jest.unmock('react-dom');
 
 jest.mock('shared/util/date', () => ({
 	...jest.requireActual('shared/util/date'),
@@ -78,16 +76,16 @@ describe('TimeZoneSelectionModal', () => {
 
 		const {getByText} = screen;
 
-		expect(getByText('Workspace Timezone')).toBeInTheDocument();
+		expect(getByText(/^workspace timezone$/i)).toBeInTheDocument();
 		expect(
 			getByText(/Your workspace now supports custom timezones/)
 		).toBeInTheDocument();
 
-		expect(getByText('Current Time:')).toBeInTheDocument();
+		expect(getByText(/^current time:$/i)).toBeInTheDocument();
 		expect(getByText('12:10 PM')).toBeInTheDocument();
 
-		expect(getByText('Do This Later')).toBeInTheDocument();
-		expect(getByText('Set Timezone')).toBeInTheDocument();
+		expect(getByText(/^do this later$/i)).toBeInTheDocument();
+		expect(getByText(/^set timezone$/i)).toBeInTheDocument();
 	});
 
 	it('renders the current time in the workspace time zone', async () => {
@@ -103,18 +101,14 @@ describe('TimeZoneSelectionModal', () => {
 			timeZone: {country: 'Brazil', timeZoneId: 'America/Recife'}
 		});
 
-		const {getByText} = screen;
+		const {findByText, getByText} = screen;
 
-		await waitFor(() =>
-			expect(getByText('Chile')).toBeInTheDocument()
-		);
+		expect(await findByText(/^chile$/i)).toBeInTheDocument();
 
 		fireEvent.change(document.querySelector('select'), {
 			target: {value: 'Chile'}
 		});
 
-		await waitFor(() =>
-			expect(getByText('12:10 PM')).toBeInTheDocument()
-		);
+		expect(await findByText('12:10 PM')).toBeInTheDocument();
 	});
 });

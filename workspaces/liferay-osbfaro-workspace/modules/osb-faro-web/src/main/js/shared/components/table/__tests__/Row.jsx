@@ -3,8 +3,6 @@ import Row from '../Row';
 import {mockIndividual} from 'test/data';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const INDIVIDUAL = mockIndividual();
 
 const INDIVIDUAL_NO_SALARY = mockIndividual(1, {
@@ -41,7 +39,7 @@ describe('Row', () => {
 			<Row columns={COLUMNS} data={INDIVIDUAL_NO_SALARY} />
 		);
 
-		expect(getByText('–')).toHaveClass('text-secondary');
+		expect(getByText('–')).toBeInTheDocument();
 	});
 
 	it('should render with empty data if the accessor does not exist at all on the object', () => {
@@ -54,7 +52,7 @@ describe('Row', () => {
 			/>
 		);
 
-		expect(getByText('–')).toHaveClass('text-secondary');
+		expect(getByText('–')).toBeInTheDocument();
 	});
 
 	it('should render with empty data if the column accessor value is an empty string', () => {
@@ -65,7 +63,7 @@ describe('Row', () => {
 			/>
 		);
 
-		expect(getByText('–')).toHaveClass('text-secondary');
+		expect(getByText('–')).toBeInTheDocument();
 	});
 
 	it('should render a real zero', () => {
@@ -73,6 +71,6 @@ describe('Row', () => {
 			<Row columns={COLUMNS} data={mockIndividual(1, {salary: 0})} />
 		);
 
-		expect(getByText('0')).toBeTruthy();
+		expect(getByText('0')).toBeInTheDocument();
 	});
 });

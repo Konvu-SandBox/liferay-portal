@@ -2,8 +2,6 @@ import React from 'react';
 import withSelectedPoint from '../WithSelectedPoint';
 import {fireEvent, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('withSelectedPoint', () => {
 	it('should render the wrapped component', () => {
 		const WrappedComponent = withSelectedPoint(() => <div>{'foo'}</div>);
@@ -34,7 +32,7 @@ describe('withSelectedPoint', () => {
 
 		fireEvent.click(getByText('bar'));
 
-		expect(getByText('bar1')).toBeTruthy();
+		expect(getByText('bar1')).toBeInTheDocument();
 		expect(getByText('There is a selected point'));
 	});
 });

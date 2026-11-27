@@ -3,8 +3,6 @@ import React from 'react';
 import {fireEvent, render} from '@testing-library/react';
 import {RelationalOperators} from '../../../utils/constants';
 
-jest.unmock('react-dom');
-
 describe('OccurenceConjunctionInput', () => {
 	it('should render', () => {
 		const {container, getByRole, getByText} = render(
@@ -18,8 +16,8 @@ describe('OccurenceConjunctionInput', () => {
 		);
 		fireEvent.click(getByRole('combobox'));
 
-		expect(getByText('at least')).toBeTruthy();
-		expect(getByText('at most')).toBeTruthy();
+		expect(getByText('at least')).toBeInTheDocument();
+		expect(getByText('at most')).toBeInTheDocument();
 
 		expect(container).toMatchSnapshot();
 	});

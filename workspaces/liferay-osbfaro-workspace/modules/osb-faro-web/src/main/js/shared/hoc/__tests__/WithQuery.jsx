@@ -1,8 +1,6 @@
 import React from 'react';
 import withQuery from '../WithQuery';
-import {cleanup, render, waitFor} from '@testing-library/react';
-
-jest.unmock('react-dom');
+import {cleanup, render} from '@testing-library/react';
 
 const mockData = {test: 'pass'};
 const mockFailData = {test: 'fail'};
@@ -19,9 +17,9 @@ describe('WithQuery', () => {
 			val => val
 		)(({data}) => <div>{data && data.test}</div>);
 
-		const {queryByText} = render(<WrappedComponent />);
+		const {findByText} = render(<WrappedComponent />);
 
-		await waitFor(() => expect(queryByText('pass')).toBeTruthy());
+		expect(await findByText('pass')).toBeInTheDocument();
 	});
 
 	it('should return an error', async () => {
@@ -30,9 +28,9 @@ describe('WithQuery', () => {
 			val => val
 		)(({error}) => <div>{error && 'error'}</div>);
 
-		const {queryByText} = render(<WrappedComponent />);
+		const {findByText} = render(<WrappedComponent />);
 
-		await waitFor(() => expect(queryByText('error')).toBeTruthy());
+		expect(await findByText('error')).toBeInTheDocument();
 	});
 
 	it('should return the result mapped to props', async () => {
@@ -42,8 +40,8 @@ describe('WithQuery', () => {
 			({data}) => ({fooProp: data})
 		)(({fooProp}) => <div>{fooProp && fooProp.test}</div>);
 
-		const {queryByText} = render(<WrappedComponent />);
+		const {findByText} = render(<WrappedComponent />);
 
-		await waitFor(() => expect(queryByText('pass')).toBeTruthy());
+		expect(await findByText('pass')).toBeInTheDocument();
 	});
 });

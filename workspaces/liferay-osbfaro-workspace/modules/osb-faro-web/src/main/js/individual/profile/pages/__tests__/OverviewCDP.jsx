@@ -7,8 +7,6 @@ import {Individual} from 'shared/util/records';
 import {Provider} from 'react-redux';
 import {MemoryRouter} from 'react-router';
 
-jest.unmock('react-dom');
-
 jest.mock('../../components/ContextualInformation', () => ({
 	__esModule: true,
 	default: () => <div>{'ContextualInformation'}</div>
@@ -38,14 +36,14 @@ describe('IndividualOverview', () => {
 	it('should render the contextual information and profile card sections', () => {
 		const {getByText} = renderComponent();
 
-		expect(getByText('ContextualInformation')).toBeTruthy();
-		expect(getByText('ProfileCardCDP')).toBeTruthy();
+		expect(getByText('ContextualInformation')).toBeInTheDocument();
+		expect(getByText('ProfileCardCDP')).toBeInTheDocument();
 	});
 
 	it('should not render the no site data synced empty state', () => {
 		const {queryByText} = renderComponent();
 
 		expect(queryByText('No Site Data Synced')).not.toBeInTheDocument();
-		expect(queryByText('Connect Data Source')).not.toBeInTheDocument();
+		expect(queryByText(/^connect data source$/i)).not.toBeInTheDocument();
 	});
 });

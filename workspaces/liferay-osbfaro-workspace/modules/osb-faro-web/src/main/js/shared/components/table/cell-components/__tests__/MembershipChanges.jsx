@@ -2,8 +2,6 @@ import MembershipChanges from '../MembershipChanges';
 import React from 'react';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const tableRow = document.createElement('tr');
 
 describe('MembershipChanges', () => {
@@ -18,7 +16,7 @@ describe('MembershipChanges', () => {
 			{container: document.body.appendChild(tableRow)}
 		);
 
-		expect(getByText('June 10, 2026')).toBeTruthy();
-		expect(getByText('Added')).toBeTruthy();
+		expect(getByText('June 10, 2026')).toBeInTheDocument();
+		expect(getByText(/^added$/i)).toBeInTheDocument();
 	});
 });

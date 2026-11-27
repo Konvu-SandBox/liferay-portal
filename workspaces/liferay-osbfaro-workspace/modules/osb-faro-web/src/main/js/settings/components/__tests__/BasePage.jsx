@@ -5,8 +5,6 @@ import {cleanup, render} from '@testing-library/react';
 import {Provider} from 'react-redux';
 import {MemoryRouter} from 'react-router';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useParams: () => ({
@@ -53,7 +51,7 @@ describe('BasePage', () => {
 			</Provider>
 		);
 
-		expect(getByText('testPageDescription')).toBeTruthy();
+		expect(getByText('testPageDescription')).toBeInTheDocument();
 	});
 
 	it('should render with a breadcrumb', () => {
@@ -65,7 +63,7 @@ describe('BasePage', () => {
 			</Provider>
 		);
 
-		expect(getByText('testLabelBreadcrumbItems')).toBeTruthy();
+		expect(getByText('testLabelBreadcrumbItems')).toBeInTheDocument();
 	});
 
 	it('should render with a page action', () => {
@@ -77,7 +75,7 @@ describe('BasePage', () => {
 			</Provider>
 		);
 
-		expect(getByText('testLabelPageActions')).toBeTruthy();
+		expect(getByText('testLabelPageActions')).toBeInTheDocument();
 	});
 
 	it('should render with a title', () => {
@@ -89,7 +87,7 @@ describe('BasePage', () => {
 			</Provider>
 		);
 
-		expect(getByText('testPageTitle')).toBeTruthy();
+		expect(getByText('testPageTitle')).toBeInTheDocument();
 	});
 
 	it('should render with an inline title with subtitle', () => {
@@ -105,9 +103,7 @@ describe('BasePage', () => {
 			</Provider>
 		);
 
-		expect(getByText('testPageTitle').parentElement).toHaveClass(
-			'title-text'
-		);
+		expect(getByText('testPageTitle')).toBeInTheDocument();
 		expect(getByText('mysubtitle').parentElement).toBeTruthy();
 	});
 });

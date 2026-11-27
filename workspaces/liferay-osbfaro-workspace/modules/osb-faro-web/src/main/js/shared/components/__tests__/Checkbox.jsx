@@ -2,8 +2,6 @@ import Checkbox from '../Checkbox';
 import React from 'react';
 import {cleanup, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('Checkbox', () => {
 	afterEach(cleanup);
 
@@ -13,7 +11,7 @@ describe('Checkbox', () => {
 	});
 
 	it('should render with a label', () => {
-		const {queryByText} = render(<Checkbox label='foo' />);
-		expect(queryByText('foo')).toBeTruthy();
+		const {getByText} = render(<Checkbox label='foo' />);
+		expect(getByText('foo')).toBeInTheDocument();
 	});
 });

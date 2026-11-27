@@ -16,8 +16,6 @@ import {Routes} from 'shared/util/router';
 import {useCurrentUser} from 'shared/hooks/useCurrentUser';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/hooks/useCurrentUser', () => ({
 	useCurrentUser: jest.fn()
 }));
@@ -69,7 +67,7 @@ describe('CustomEventList', () => {
 	it('should render', async () => {
 		useCurrentUser.mockImplementation(() => ({isAdmin: () => true}));
 
-		const {container, queryByTestId} = render(
+		const {container, getByTestId} = render(
 			<WrappedComponent>
 				<CustomEventList groupId='23' />
 			</WrappedComponent>
@@ -77,7 +75,7 @@ describe('CustomEventList', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(queryByTestId('select-all-checkbox')).toBeTruthy();
+		expect(getByTestId('select-all-checkbox')).toBeInTheDocument();
 		expect(container).toMatchSnapshot();
 	});
 
