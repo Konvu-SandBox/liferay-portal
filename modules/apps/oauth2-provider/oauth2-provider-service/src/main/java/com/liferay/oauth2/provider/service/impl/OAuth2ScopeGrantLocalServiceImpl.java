@@ -41,15 +41,6 @@ public class OAuth2ScopeGrantLocalServiceImpl
 	@Override
 	public OAuth2ScopeGrant createOAuth2ScopeGrant(
 			long companyId, long oAuth2ApplicationScopeAliasesId,
-			String applicationName, String bundleSymbolicName, String scope)
-		throws DuplicateOAuth2ScopeGrantException {
-
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public OAuth2ScopeGrant createOAuth2ScopeGrant(
-			long companyId, long oAuth2ApplicationScopeAliasesId,
 			String applicationName, String bundleSymbolicName, String scope,
 			List<String> scopeAliases)
 		throws DuplicateOAuth2ScopeGrantException {
@@ -82,31 +73,6 @@ public class OAuth2ScopeGrantLocalServiceImpl
 	}
 
 	@Override
-	public Collection<LiferayOAuth2Scope> getFilteredLiferayOAuth2Scopes(
-		long oAuth2ApplicationScopeAliasesId,
-		Collection<LiferayOAuth2Scope> liferayOAuth2Scopes) {
-
-		Collection<LiferayOAuth2Scope> filteredLiferayOAuth2Scopes =
-			new ArrayList<>(liferayOAuth2Scopes.size());
-
-		List<OAuth2ScopeGrant> oAuth2ScopeGrants =
-			oAuth2ScopeGrantPersistence.findByOAuth2ApplicationScopeAliasesId(
-				oAuth2ApplicationScopeAliasesId);
-
-		for (LiferayOAuth2Scope liferayOAuth2Scope : liferayOAuth2Scopes) {
-			for (OAuth2ScopeGrant oAuth2ScopeGrant : oAuth2ScopeGrants) {
-				if (_isMatch(oAuth2ScopeGrant, liferayOAuth2Scope)) {
-					filteredLiferayOAuth2Scopes.add(liferayOAuth2Scope);
-
-					break;
-				}
-			}
-		}
-
-		return filteredLiferayOAuth2Scopes;
-	}
-
-	@Override
 	public Collection<OAuth2ScopeGrant> getOAuth2ScopeGrants(
 		long oAuth2ApplicationScopeAliasesId, int start, int end,
 		OrderByComparator<OAuth2ScopeGrant> orderByComparator) {
@@ -121,10 +87,10 @@ public class OAuth2ScopeGrantLocalServiceImpl
 		long companyId, String applicationName, String bundleSymbolicName,
 		String accessTokenContent) {
 
+		List<OAuth2ScopeGrant> oAuth2ScopeGrants = new ArrayList<>();
+
 		accessTokenContent = OAuth2TokenContentUtil.getTokenContent(
 			accessTokenContent);
-
-		List<OAuth2ScopeGrant> oAuth2ScopeGrants = new ArrayList<>();
 
 		for (OAuth2Authorization oAuth2Authorization :
 				oAuth2AuthorizationPersistence.findByC_ATCH(

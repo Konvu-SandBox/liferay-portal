@@ -35,6 +35,7 @@ import com.liferay.object.constants.ObjectFolderConstants;
 import com.liferay.object.constants.ObjectRelationshipConstants;
 import com.liferay.object.constants.ObjectValidationRuleConstants;
 import com.liferay.object.constants.ObjectValidationRuleSettingConstants;
+import com.liferay.object.definition.processor.ObjectDefinitionClassNameProcessor;
 import com.liferay.object.definition.setting.builder.ObjectDefinitionSettingBuilder;
 import com.liferay.object.definition.util.ObjectDefinitionValidationThreadLocal;
 import com.liferay.object.exception.DuplicateObjectDefinitionExternalReferenceCodeException;
@@ -110,6 +111,7 @@ import com.liferay.object.service.test.system.TestSystemObjectDefinitionManager;
 import com.liferay.object.system.BaseSystemObjectDefinitionManager;
 import com.liferay.object.system.JaxRsApplicationDescriptor;
 import com.liferay.object.system.SystemObjectDefinitionManager;
+import com.liferay.object.test.util.ObjectDefinitionSettingTestUtil;
 import com.liferay.object.test.util.ObjectDefinitionTestUtil;
 import com.liferay.object.test.util.ObjectRelationshipTestUtil;
 import com.liferay.object.test.util.TreeTestUtil;
@@ -1046,7 +1048,7 @@ public class ObjectDefinitionLocalServiceTest {
 				workflowDefinitionLinks);
 
 		workflowDefinitionLink =
-			_workflowDefinitionLinkLocalService.getWorkflowDefinitionLink(
+			_workflowDefinitionLinkLocalService.fetchWorkflowDefinitionLink(
 				TestPropsValues.getCompanyId(), 0,
 				objectDefinition.getClassName(), 0, 0, true);
 
@@ -1070,7 +1072,7 @@ public class ObjectDefinitionLocalServiceTest {
 				kaleoDefinition.getTitle(), TestPropsValues.getUserId());
 
 		workflowDefinitionLink =
-			_workflowDefinitionLinkLocalService.getWorkflowDefinitionLink(
+			_workflowDefinitionLinkLocalService.fetchWorkflowDefinitionLink(
 				TestPropsValues.getCompanyId(), 0,
 				objectDefinition.getClassName(), 0, 0, true);
 
@@ -1546,6 +1548,29 @@ public class ObjectDefinitionLocalServiceTest {
 
 		// Depot scope
 
+		AssertUtils.assertFailure(
+			ObjectDefinitionScopeException.class,
+			"An object definition can only be linked to a workflow " +
+				"definition within the same scope",
+			() -> _objectDefinitionLocalService.addCustomObjectDefinition(
+				null, TestPropsValues.getUserId(), 0, null, null, true, false,
+				true, true, true, false, false, false, false, null,
+				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
+				ObjectDefinitionTestUtil.getRandomName(), null, null,
+				LocalizedMapUtil.getLocalizedMap(RandomTestUtil.randomString()),
+				true, ObjectDefinitionConstants.SCOPE_DEPOT,
+				ObjectDefinitionConstants.STORAGE_TYPE_DEFAULT,
+				Collections.singletonList(
+					new ObjectDefinitionSettingBuilder(
+					).name(
+						ObjectDefinitionSettingConstants.NAME_ACCEPT_ALL_GROUPS
+					).value(
+						StringPool.TRUE
+					).build()),
+				Collections.emptyList(),
+				_createWorkflowDefinitionLinks(
+					depotEntry1.getGroupId(), group.getGroupId()),
+				new ServiceContext()));
 		AssertUtils.assertFailure(
 			ObjectDefinitionScopeException.class,
 			"An object definition can only be linked to a workflow " +
@@ -2673,6 +2698,65 @@ public class ObjectDefinitionLocalServiceTest {
 	}
 
 	@Test
+	public void testAddSystemObjectDefinitionWithClassNameHeldByCustomObjectDefinition()
+		throws Exception {
+
+		String className = ObjectDefinitionTestUtil.getUniqueRandomClassName();
+
+		ObjectDefinition objectDefinition1 = _addCustomObjectDefinition(
+			className, ObjectDefinitionTestUtil.getRandomName());
+
+		ObjectDefinition objectDefinition2 = null;
+
+		try {
+			objectDefinition2 =
+				_objectDefinitionLocalService.addSystemObjectDefinition(
+					null, TestPropsValues.getUserId(), 0, className, null, null,
+					true, false, true, false, true, false, false, false, false,
+					false, null, RandomTestUtil.randomLocaleStringMap(), true,
+					"Test" + RandomTestUtil.randomString(), null, null, null,
+					null, RandomTestUtil.randomLocaleStringMap(), false,
+					ObjectDefinitionConstants.SCOPE_COMPANY, null, 1,
+					WorkflowConstants.STATUS_APPROVED, Collections.emptyList(),
+					Collections.emptyList(), Collections.emptyList());
+
+			_assertUniqueClassName(className, objectDefinition2);
+
+			_objectDefinitionLocalService.deleteObjectDefinition(
+				objectDefinition2);
+
+			try (SafeCloseable safeCloseable =
+					LazyReferencingThreadLocal.setEnabledWithSafeCloseable(
+						true)) {
+
+				objectDefinition2 =
+					_objectDefinitionLocalService.getOrAddEmptyObjectDefinition(
+						"Test" + RandomTestUtil.randomString(),
+						TestPropsValues.getCompanyId(),
+						TestPropsValues.getUserId(), 0, true,
+						ObjectDefinitionConstants.SCOPE_COMPANY, true);
+
+				Assert.assertTrue(
+					Validator.isNull(objectDefinition2.getClassName()));
+
+				objectDefinition2 = _updateCustomObjectDefinition(
+					className, objectDefinition2);
+
+				_assertUniqueClassName(className, objectDefinition2);
+			}
+		}
+		finally {
+			if (objectDefinition2 != null) {
+				_objectDefinitionLocalService.deleteObjectDefinition(
+					objectDefinition2.getObjectDefinitionId());
+			}
+
+			_objectDefinitionLocalService.deleteObjectDefinition(
+				objectDefinition1);
+		}
+	}
+
+	@Test
 	public void testAuditRouter() throws Exception {
 		Queue<AuditMessage> auditMessages = new LinkedList<>();
 
@@ -2908,7 +2992,7 @@ public class ObjectDefinitionLocalServiceTest {
 			StringPool.TRUE);
 
 		Assert.assertNotNull(
-			_objectDefinitionSettingLocalService.getObjectDefinitionSetting(
+			ObjectDefinitionSettingTestUtil.getObjectDefinitionSetting(
 				objectDefinition.getObjectDefinitionId(),
 				ObjectDefinitionSettingConstants.NAME_ACCEPT_ALL_GROUPS));
 
@@ -4050,6 +4134,7 @@ public class ObjectDefinitionLocalServiceTest {
 		_objectDefinitionLocalService.deleteObjectDefinition(objectDefinition);
 	}
 
+	@FeatureFlag("LPD-108620")
 	@Test
 	public void testUpdateCustomObjectDefinition() throws Exception {
 		_assertObjectDefinitionValidationExceptionValidationErrors(
@@ -4095,6 +4180,54 @@ public class ObjectDefinitionLocalServiceTest {
 							"Test"
 						).build()),
 					Collections.emptyList(), new ServiceContext());
+			});
+
+		_assertObjectDefinitionValidationExceptionValidationErrors(
+			List.of(
+				ObjectDefinitionAccountEntryRestrictedObjectFieldIdException.
+					class.getName()),
+			() -> {
+				ObjectDefinition childObjectDefinition =
+					ObjectDefinitionTestUtil.addCustomObjectDefinition();
+
+				ObjectRelationship objectRelationship =
+					ObjectRelationshipTestUtil.addObjectRelationship(
+						_objectRelationshipLocalService,
+						ObjectDefinitionTestUtil.addCustomObjectDefinition(),
+						childObjectDefinition,
+						ObjectRelationshipConstants.DELETION_TYPE_PREVENT,
+						StringUtil.randomId(),
+						ObjectRelationshipConstants.TYPE_ONE_TO_ONE);
+
+				_objectDefinitionLocalService.updateCustomObjectDefinition(
+					childObjectDefinition.getExternalReferenceCode(),
+					childObjectDefinition.getObjectDefinitionId(),
+					objectRelationship.getObjectFieldId2(),
+					childObjectDefinition.getDescriptionObjectFieldId(),
+					childObjectDefinition.getObjectFolderId(),
+					childObjectDefinition.getTitleObjectFieldId(), true,
+					childObjectDefinition.isActive(), null, null,
+					childObjectDefinition.isEnableCategorization(),
+					childObjectDefinition.isEnableComments(),
+					childObjectDefinition.isEnableFormContainer(),
+					childObjectDefinition.isEnableFriendlyURLCustomization(),
+					childObjectDefinition.isEnableIndexSearch(),
+					childObjectDefinition.isEnableObjectEntryDraft(),
+					childObjectDefinition.isEnableObjectEntryHistory(),
+					childObjectDefinition.isEnableObjectEntrySchedule(),
+					childObjectDefinition.isEnableObjectEntrySubscription(),
+					childObjectDefinition.isEnableObjectEntryVersioning(),
+					childObjectDefinition.getFriendlyURLSeparator(),
+					childObjectDefinition.getLabelMap(),
+					childObjectDefinition.getShortName(),
+					childObjectDefinition.getPanelAppOrder(),
+					childObjectDefinition.getPanelCategoryKey(),
+					childObjectDefinition.isPortlet(),
+					childObjectDefinition.getPluralLabelMap(),
+					childObjectDefinition.getScope(),
+					childObjectDefinition.getStatus(), Collections.emptyList(),
+					Collections.emptyList(), Collections.emptyList(),
+					new ServiceContext());
 			});
 
 		ObjectDefinition objectDefinition =
@@ -4379,6 +4512,41 @@ public class ObjectDefinitionLocalServiceTest {
 	}
 
 	@Test
+	public void testUpdateCustomObjectDefinitionWithClassNameHeldByCustomObjectDefinition()
+		throws Exception {
+
+		ObjectDefinition objectDefinition1 =
+			ObjectDefinitionTestUtil.publishObjectDefinition();
+		ObjectDefinition objectDefinition2 =
+			ObjectDefinitionTestUtil.publishObjectDefinition();
+
+		try {
+			objectDefinition2 = _updateCustomObjectDefinition(
+				objectDefinition1.getClassName(), objectDefinition2);
+
+			Assert.assertNotEquals(
+				objectDefinition1.getClassName(),
+				objectDefinition2.getClassName());
+
+			ObjectDefinitionSetting objectDefinitionSetting =
+				_objectDefinitionSettingLocalService.
+					fetchObjectDefinitionSetting(
+						objectDefinition2.getObjectDefinitionId(),
+						ObjectDefinitionSettingConstants.NAME_OLD_CLASS_NAME);
+
+			Assert.assertEquals(
+				objectDefinition1.getClassName(),
+				objectDefinitionSetting.getValue());
+		}
+		finally {
+			_objectDefinitionLocalService.deleteObjectDefinition(
+				objectDefinition1.getObjectDefinitionId());
+			_objectDefinitionLocalService.deleteObjectDefinition(
+				objectDefinition2.getObjectDefinitionId());
+		}
+	}
+
+	@Test
 	public void testUpdateCustomObjectDefinitionWithClusterExecutor()
 		throws Exception {
 
@@ -4397,7 +4565,20 @@ public class ObjectDefinitionLocalServiceTest {
 						String methodName = method.getName();
 
 						if (methodName.equals("execute")) {
-							clusterRequests.add((ClusterRequest)arguments[0]);
+							ClusterRequest clusterRequest =
+								(ClusterRequest)arguments[0];
+
+							MethodHandler methodHandler =
+								(MethodHandler)clusterRequest.getPayload();
+
+							MethodKey methodKey = methodHandler.getMethodKey();
+
+							if (Objects.equals(
+									methodKey.getMethodName(),
+									"deployObjectDefinition")) {
+
+								clusterRequests.add(clusterRequest);
+							}
 						}
 						else if (methodName.equals(
 									"getClusterEventListeners") ||
@@ -4457,14 +4638,34 @@ public class ObjectDefinitionLocalServiceTest {
 
 		clusterRequests.clear();
 
+		objectDefinition.setPanelCategoryKey("site_administration.content");
+
 		_updateCustomObjectDefinition(
 			objectDefinition.getClassName(),
 			objectDefinition.getDescriptionMap(),
 			objectDefinition.getFriendlyURLSeparator(), objectDefinition,
 			Collections.emptyList());
 
-		Assert.assertTrue(
-			clusterRequests.toString(), clusterRequests.isEmpty());
+		Assert.assertEquals(
+			clusterRequests.toString(), 1, clusterRequests.size());
+
+		clusterRequest = clusterRequests.get(0);
+
+		Assert.assertTrue(clusterRequest.isMulticast());
+		Assert.assertTrue(clusterRequest.isSkipLocal());
+
+		methodHandler = (MethodHandler)clusterRequest.getPayload();
+
+		arguments = methodHandler.getArguments();
+
+		deployedObjectDefinition = (ObjectDefinition)arguments[0];
+
+		Assert.assertEquals(
+			objectDefinition.getObjectDefinitionId(),
+			deployedObjectDefinition.getObjectDefinitionId());
+		Assert.assertEquals(
+			"site_administration.content",
+			deployedObjectDefinition.getPanelCategoryKey());
 
 		ReflectionTestUtil.setFieldValue(
 			clusterExecutorSnapshot, "_serviceSupplier", serviceSupplier);
@@ -5008,7 +5209,6 @@ public class ObjectDefinitionLocalServiceTest {
 		_objectFolderLocalService.deleteObjectFolder(objectFolder);
 	}
 
-	@FeatureFlag("LPD-11388")
 	@Test
 	public void testUpdateTitleObjectFieldId() throws Exception {
 		ObjectDefinition objectDefinition =
@@ -5372,6 +5572,21 @@ public class ObjectDefinitionLocalServiceTest {
 			expectedObjectField.isState(), objectField.isState());
 	}
 
+	private void _assertUniqueClassName(
+		String className, ObjectDefinition objectDefinition) {
+
+		Assert.assertEquals(
+			className,
+			_objectDefinitionClassNameProcessor.
+				updateObjectDefinitionReferences(className));
+		Assert.assertNotEquals(className, objectDefinition.getClassName());
+		Assert.assertTrue(
+			StringUtil.startsWith(
+				objectDefinition.getClassName(),
+				ObjectDefinitionConstants.
+					CLASS_NAME_PREFIX_CUSTOM_OBJECT_DEFINITION));
+	}
+
 	private void _assertWorkflowDefinitionLink(
 		WorkflowDefinitionLink expectedWorkflowDefinitionLink, long groupId,
 		ObjectDefinition objectDefinition) {
@@ -5424,18 +5639,23 @@ public class ObjectDefinitionLocalServiceTest {
 	}
 
 	private List<WorkflowDefinitionLink> _createWorkflowDefinitionLinks(
-			long groupId)
+			long... groupIds)
 		throws Exception {
 
-		WorkflowDefinitionLink workflowDefinitionLink =
-			_workflowDefinitionLinkLocalService.createWorkflowDefinitionLink(
-				0L);
+		return TransformUtil.transformToList(
+			groupIds,
+			groupId -> {
+				WorkflowDefinitionLink workflowDefinitionLink =
+					_workflowDefinitionLinkLocalService.
+						createWorkflowDefinitionLink(0L);
 
-		workflowDefinitionLink.setGroupId(groupId);
-		workflowDefinitionLink.setUserId(TestPropsValues.getUserId());
-		workflowDefinitionLink.setWorkflowDefinitionName("Single Approver");
+				workflowDefinitionLink.setGroupId(groupId);
+				workflowDefinitionLink.setUserId(TestPropsValues.getUserId());
+				workflowDefinitionLink.setWorkflowDefinitionName(
+					"Single Approver");
 
-		return Collections.singletonList(workflowDefinitionLink);
+				return workflowDefinitionLink;
+			});
 	}
 
 	private long _getClassNameId(String className) throws Exception {
@@ -5842,7 +6062,7 @@ public class ObjectDefinitionLocalServiceTest {
 
 		AssetListEntrySegmentsEntryRel assetListEntrySegmentsEntryRel =
 			_assetListEntrySegmentsEntryRelLocalService.
-				getAssetListEntrySegmentsEntryRel(
+				fetchAssetListEntrySegmentsEntryRel(
 					assetListEntry.getAssetListEntryId(),
 					SegmentsEntryConstants.ID_DEFAULT);
 
@@ -6508,6 +6728,10 @@ public class ObjectDefinitionLocalServiceTest {
 
 	@Inject
 	private ObjectActionLocalService _objectActionLocalService;
+
+	@Inject
+	private ObjectDefinitionClassNameProcessor
+		_objectDefinitionClassNameProcessor;
 
 	@Inject
 	private ObjectDefinitionLocalService _objectDefinitionLocalService;

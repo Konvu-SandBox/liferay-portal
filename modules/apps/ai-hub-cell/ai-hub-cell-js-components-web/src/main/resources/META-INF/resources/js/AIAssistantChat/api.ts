@@ -24,33 +24,32 @@ export interface ChatContext {
 	[key: string]: unknown;
 }
 
-export async function createEventSource() {
-	const editMode = document.body.classList.contains('has-edit-mode-menu');
-
-	if (editMode) {
-		return null;
-	}
-
+export async function createEventSource(chatbotExternalReferenceCode?: string) {
 	const authorizationToken = await postAuthorizationToken();
 
 	if (!authorizationToken) {
 		return null;
 	}
 
-	return new EventSource(
-		`${authorizationToken.serviceURL}${AI_HUB_ENDPOINT}/chats/subscribe`,
-		{
-			fetch: (input, init) =>
-				fetch(input as RequestInfo, {
-					...init,
-					headers: new Headers({
-						Accept: 'text/event-stream',
-						Authorization: `Bearer ${authorizationToken.accessToken}`,
-					}),
+	let url = `${authorizationToken.serviceURL}${AI_HUB_ENDPOINT}/chats/subscribe`;
+
+	if (chatbotExternalReferenceCode) {
+		url += `?chatbotExternalReferenceCode=${encodeURIComponent(
+			chatbotExternalReferenceCode
+		)}`;
+	}
+
+	return new EventSource(url, {
+		fetch: (input, init) =>
+			fetch(input as RequestInfo, {
+				...init,
+				headers: new Headers({
+					Accept: 'text/event-stream',
+					Authorization: `Bearer ${authorizationToken.accessToken}`,
 				}),
-			withCredentials: true,
-		}
-	);
+			}),
+		withCredentials: true,
+	});
 }
 
 async function executeHttpRequestAction({
