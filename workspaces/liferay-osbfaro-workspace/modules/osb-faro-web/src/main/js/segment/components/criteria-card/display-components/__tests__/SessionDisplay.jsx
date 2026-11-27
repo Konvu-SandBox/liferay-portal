@@ -15,8 +15,6 @@ import {
 import {List, Map} from 'immutable';
 import {Property} from 'shared/util/records';
 
-jest.unmock('react-dom');
-
 describe('SessionDisplay', () => {
 	const mockCriterion = {
 		operatorName: CustomFunctionOperators.SessionsFilter,
@@ -129,7 +127,7 @@ describe('SessionDisplay', () => {
 			<SessionDisplay criterion={criterion} property={property} />
 		);
 
-		expect(getByText('UTM Campaign')).toBeTruthy();
+		expect(getByText(/^utm campaign$/i)).toBeTruthy();
 		expect(getByText('is')).toBeTruthy();
 		expect(getByText('"summer-sale"')).toBeTruthy();
 		expect(container).not.toHaveTextContent('ever');

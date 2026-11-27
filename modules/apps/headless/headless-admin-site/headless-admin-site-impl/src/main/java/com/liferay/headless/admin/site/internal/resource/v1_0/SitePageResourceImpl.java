@@ -262,7 +262,7 @@ public class SitePageResourceImpl
 			sitePageExternalReferenceCode);
 
 		if (layout.isPrivateLayout()) {
-			EnabledUtil.checkPrivateLayoutEnabled(contextCompany);
+			EnabledUtil.checkPrivateLayoutEnabled(layout.getGroupId());
 		}
 
 		List<Layout> layouts = null;
@@ -378,12 +378,12 @@ public class SitePageResourceImpl
 			Filter filter, Pagination pagination, Sort[] sorts)
 		throws Exception {
 
-		if (privateLayout) {
-			EnabledUtil.checkPrivateLayoutEnabled(contextCompany);
-		}
-
 		long groupId = GroupUtil.getGroupId(
 			true, contextCompany.getCompanyId(), siteExternalReferenceCode);
+
+		if (privateLayout) {
+			EnabledUtil.checkPrivateLayoutEnabled(groupId);
+		}
 
 		return SearchUtil.search(
 			null,
@@ -433,8 +433,11 @@ public class SitePageResourceImpl
 			SitePage sitePage)
 		throws Exception {
 
+		long groupId = GroupUtil.getGroupId(
+			false, contextCompany.getCompanyId(), siteExternalReferenceCode);
+
 		if (privateLayout) {
-			EnabledUtil.checkPrivateLayoutEnabled(contextCompany);
+			EnabledUtil.checkPrivateLayoutEnabled(groupId);
 		}
 
 		if (Objects.equals(sitePage.getType(), SitePage.Type.WIDGET_PAGE)) {
@@ -443,11 +446,8 @@ public class SitePageResourceImpl
 
 		return _toSitePage(
 			_addLayout(
-				sitePage.getExternalReferenceCode(),
-				GroupUtil.getGroupId(
-					false, contextCompany.getCompanyId(),
-					siteExternalReferenceCode),
-				privateLayout, sitePage));
+				sitePage.getExternalReferenceCode(), groupId, privateLayout,
+				sitePage));
 	}
 
 	@Override
@@ -457,15 +457,15 @@ public class SitePageResourceImpl
 			SitePage sitePage)
 		throws Exception {
 
-		if (privateLayout) {
-			EnabledUtil.checkPrivateLayoutEnabled(contextCompany);
-		}
-
 		long groupId = GroupUtil.getStagingAwareGroupId(
 			contextCompany.getCompanyId(), siteExternalReferenceCode);
 
-		Layout layout = _layoutService.fetchLayoutByExternalReferenceCode(
-			sitePageExternalReferenceCode, groupId);
+		if (privateLayout) {
+			EnabledUtil.checkPrivateLayoutEnabled(groupId);
+		}
+
+		Layout layout = _fetchOrUpdateLayout(
+			groupId, privateLayout, sitePage, sitePageExternalReferenceCode);
 
 		if (layout == null) {
 			if (Objects.equals(sitePage.getType(), SitePage.Type.WIDGET_PAGE)) {
@@ -678,6 +678,32 @@ public class SitePageResourceImpl
 		}
 
 		return layout;
+	}
+
+	private Layout _fetchOrUpdateLayout(
+			long groupId, boolean privateLayout, SitePage sitePage,
+			String sitePageExternalReferenceCode)
+		throws Exception {
+
+		Layout layout = _layoutService.fetchLayoutByExternalReferenceCode(
+			sitePageExternalReferenceCode, groupId);
+
+		if ((layout != null) || !ExportImportThreadLocal.isImportInProcess() ||
+			(sitePage.getUuid() == null)) {
+
+			return layout;
+		}
+
+		layout = _layoutLocalService.fetchLayoutByUuidAndGroupId(
+			sitePage.getUuid(), groupId, privateLayout);
+
+		if (layout == null) {
+			return null;
+		}
+
+		layout.setExternalReferenceCode(sitePageExternalReferenceCode);
+
+		return _layoutLocalService.updateLayout(layout);
 	}
 
 	private CustomMetaTag[] _getCustomMetaTags(PageSettings pageSettings) {

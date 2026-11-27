@@ -9,6 +9,7 @@ import ClayLayout from '@clayui/layout';
 import {sub} from 'frontend-js-web';
 import React, {useMemo, useState} from 'react';
 
+import {ExportImportProcess} from '../../types/exportImportProcess';
 import FieldSelectWithOption from '../forms/FieldSelectWithOption';
 import DateRangeFields from './DateRangeFields';
 import LastRangeFields from './LastRangeFields';
@@ -32,14 +33,14 @@ const INITIAL_EDITING: EditingState = {
 export default function DateFilter({
 	appliedValue = {range: Range.All} as DateFilterValues,
 	itemsCount = 0,
-	lastPublishDate,
 	onApplyFilter,
+	process,
 	timeZoneId,
 }: {
 	appliedValue?: DateFilterValues;
 	itemsCount?: number;
-	lastPublishDate?: string;
 	onApplyFilter?: (dateFilterValues: DateFilterValues) => void;
+	process?: ExportImportProcess;
 	timeZoneId: string;
 }) {
 	const [editing, setEditing] = useState<EditingState>(() =>
@@ -66,7 +67,7 @@ export default function DateFilter({
 
 	const rangeOptions = useMemo(
 		() =>
-			lastPublishDate || appliedValue.range === Range.FromLastPublishDate
+			process === 'publish'
 				? [
 						...RANGE_OPTIONS,
 						{
@@ -77,7 +78,7 @@ export default function DateFilter({
 						},
 					]
 				: RANGE_OPTIONS,
-		[appliedValue, lastPublishDate]
+		[process]
 	);
 
 	const handleShowResults = () => {
@@ -94,7 +95,7 @@ export default function DateFilter({
 	return (
 		<>
 			<ClayLayout.Row>
-				<ClayLayout.Col md={4}>
+				<ClayLayout.Col md="auto">
 					<FieldSelectWithOption
 						formGroupProps={{className: 'mb-0'}}
 						id="range"
@@ -126,21 +127,23 @@ export default function DateFilter({
 					/>
 				)}
 
-				<ClayLayout.Col className="align-items-end d-flex" md="auto">
-					{!(
-						editing.range === Range.All &&
-						appliedValue.range === Range.All
-					) && (
+				{!(
+					editing.range === Range.All &&
+					appliedValue.range === Range.All
+				) && (
+					<ClayLayout.Col
+						className="form-group-item-label-spacer pt-3 pt-sm-0"
+						md="auto"
+					>
 						<ClayButton
 							disabled={isDirty ? !validation.isValid : true}
 							displayType="secondary"
 							onClick={handleShowResults}
-							size="sm"
 						>
 							{Liferay.Language.get('show-results')}
 						</ClayButton>
-					)}
-				</ClayLayout.Col>
+					</ClayLayout.Col>
+				)}
 			</ClayLayout.Row>
 
 			{appliedValue.range !== Range.All && (

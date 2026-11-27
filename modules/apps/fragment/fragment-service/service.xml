@@ -331,10 +331,12 @@
 		<exception>FragmentCompositionDescription</exception>
 		<exception>FragmentCompositionGroupId</exception>
 		<exception>FragmentCompositionName</exception>
+		<exception>FragmentCompositionPreviewFileEntryId</exception>
 		<exception>FragmentEntryConfiguration</exception>
 		<exception>FragmentEntryContent</exception>
 		<exception>FragmentEntryFieldTypes</exception>
 		<exception>FragmentEntryName</exception>
+		<exception>FragmentEntryPreviewFileEntryId</exception>
 		<exception>FragmentEntryTypeOptions</exception>
 		<exception>InvalidFile</exception>
 		<exception>InvalidFragmentCompositionKey</exception>
