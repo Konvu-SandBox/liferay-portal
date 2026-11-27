@@ -21,7 +21,12 @@ import focusInvalidElement from '../../common/utils/focusInvalidElement';
 import ObjectEntryService from '../../main_view/info_panel/services/ObjectEntryService';
 import {Comment} from '../services/CommentService';
 import {EVENT_VALIDATE_FORM} from './ContentEditorToolbar';
-import {dateConfig, toMomentDate, toServerISOFormat} from './ScheduleField';
+import {
+	dateConfig,
+	isPastDate,
+	toMomentDate,
+	toServerISOFormat,
+} from './ScheduleField';
 import CategorizationPanel from './panels/CategorizationPanel';
 import CommentsPanel from './panels/CommentsPanel';
 import GeneralPanel from './panels/GeneralPanel';
@@ -48,6 +53,7 @@ type Props = {
 	entryGroupExternalReferenceCode?: string;
 	expirationDate: string;
 	getCommentsURL: string;
+	getMentionUsersURL?: string;
 	hasUpdatePermission: boolean;
 	id: string;
 	isSubscribed: boolean;
@@ -61,6 +67,7 @@ type SidePanelProps = Props & {
 	categorizationFields: CategorizationFields | null;
 	dateConfig: datetimeUtils.DateConfig;
 	onUpdateCategorization: (props: UpdateCategorizationProps) => void;
+	onUpdateComments: React.Dispatch<React.SetStateAction<Comment[]>>;
 	onUpdateSchedule: (props: UpdateScheduleProps) => void;
 	requiredVocabularyIds: number[] | null;
 	scheduleFields: ScheduleFields;
@@ -147,7 +154,9 @@ export default function ContentEditorSidePanel(props: Props) {
 	const [formId, setFormId] = useState<string | undefined>();
 	const [scheduleFields, setScheduleFields] = useState<ScheduleFields>({
 		expirationDate: {
-			error: '',
+			error: isPastDate(toMomentDate(props.expirationDate))
+				? Liferay.Language.get('the-date-entered-is-in-the-past')
+				: '',
 			neverCheckbox: {
 				label: Liferay.Language.get('never-expire'),
 				value: !props.expirationDate,
@@ -167,6 +176,7 @@ export default function ContentEditorSidePanel(props: Props) {
 	});
 	const [categorizationFields, setCategorizationFields] =
 		useState<CategorizationFields | null>(null);
+	const [comments, setComments] = useState<Comment[]>(props.comments);
 	const [requiredVocabularyIds, setRequiredVocabularyIds] = useState<
 		number[] | null
 	>(null);
@@ -294,8 +304,10 @@ export default function ContentEditorSidePanel(props: Props) {
 			<SidePanel
 				{...props}
 				categorizationFields={categorizationFields}
+				comments={comments}
 				dateConfig={dateConfig}
 				onUpdateCategorization={onUpdateCategorization}
+				onUpdateComments={setComments}
 				onUpdateSchedule={onUpdateSchedule}
 				requiredVocabularyIds={requiredVocabularyIds}
 				scheduleFields={scheduleFields}

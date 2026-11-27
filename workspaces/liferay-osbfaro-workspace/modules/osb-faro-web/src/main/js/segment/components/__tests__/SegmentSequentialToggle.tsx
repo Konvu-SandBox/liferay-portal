@@ -3,8 +3,6 @@ import SegmentSequentialToggle from '../SegmentSequentialToggle';
 import {cleanup, fireEvent, render, waitFor} from '@testing-library/react';
 import {Form, Formik, FormikProps} from 'formik';
 
-jest.unmock('react-dom');
-
 type Values = {sequential: boolean};
 
 const renderToggle = () => {
@@ -37,7 +35,7 @@ describe('SegmentSequentialToggle', () => {
 		const {getByRole, getFormik} = renderToggle();
 
 		fireEvent.click(
-			getByRole('switch', {name: 'Enable Sequential Criteria'})
+			getByRole('switch', {name: /^enable sequential criteria$/i})
 		);
 
 		await waitFor(() => expect(getFormik().values.sequential).toBe(true));
@@ -47,7 +45,7 @@ describe('SegmentSequentialToggle', () => {
 		const {getByRole, getFormik} = renderToggle();
 
 		fireEvent.blur(
-			getByRole('switch', {name: 'Enable Sequential Criteria'})
+			getByRole('switch', {name: /^enable sequential criteria$/i})
 		);
 
 		await waitFor(() => expect(getFormik().touched.sequential).toBe(true));
@@ -57,7 +55,7 @@ describe('SegmentSequentialToggle', () => {
 		const {getByRole} = renderToggle();
 
 		expect(
-			getByRole('switch', {name: 'Enable Sequential Criteria'})
+			getByRole('switch', {name: /^enable sequential criteria$/i})
 		).not.toHaveAttribute('id', 'sequential');
 	});
 });

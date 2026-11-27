@@ -2,8 +2,6 @@ import Canvas from '../Canvas';
 import React from 'react';
 import {act, cleanup, render, waitFor} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const EMPTY_STATE = {
 	description: 'Drop something here.',
 	title: 'Nothing Here',
@@ -26,8 +24,8 @@ describe('Canvas', () => {
 		expect(
 			getByRole('heading', {level: 2, name: 'Canvas Title'})
 		).toBeInTheDocument();
-		expect(getByText('Action').closest('.canvas-actions')).toBeTruthy();
-		expect(getByText('Action').closest('.canvas-header')).toBeTruthy();
+		expect(getByText(/^action$/i).closest('.canvas-actions')).toBeTruthy();
+		expect(getByText(/^action$/i).closest('.canvas-header')).toBeTruthy();
 	});
 
 	it('keeps the gap before the body unless the header has no body', () => {
@@ -57,7 +55,7 @@ describe('Canvas', () => {
 			</Canvas>
 		);
 
-		expect(getByText('Content').closest('.canvas-body')).toBeTruthy();
+		expect(getByText(/^content$/i).closest('.canvas-body')).toBeTruthy();
 	});
 
 	it('renders the empty state as a body child', () => {

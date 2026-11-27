@@ -158,6 +158,7 @@ public class CPDefinitionServiceImpl extends CPDefinitionServiceBaseImpl {
 		throws PortalException {
 
 		_checkCommerceCatalog(groupId, ActionKeys.UPDATE);
+		_checkCommerceCatalogByCPDefinitionId(cpDefinitionId, ActionKeys.VIEW);
 
 		return cpDefinitionLocalService.cloneCPDefinition(
 			getUserId(), cpDefinitionId, groupId, serviceContext);
@@ -168,7 +169,8 @@ public class CPDefinitionServiceImpl extends CPDefinitionServiceBaseImpl {
 			long sourceCPDefinitionId, long groupId, int status)
 		throws PortalException {
 
-		_checkCommerceCatalog(groupId, ActionKeys.UPDATE);
+		_checkCommerceCatalogByCPDefinitionId(
+			sourceCPDefinitionId, ActionKeys.UPDATE);
 
 		return cpDefinitionLocalService.copyCPDefinition(
 			sourceCPDefinitionId, groupId, status);

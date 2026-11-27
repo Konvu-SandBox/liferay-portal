@@ -1,6 +1,7 @@
 import dateFns from 'date-fns';
 import {
 	ACCOUNT_PROPERTIES,
+	CAMPAIGN_PROPERTY,
 	INDIVIDUAL_PROPERTIES,
 	ORGANIZATION_PROPERTIES,
 	SESSION_PROPERTIES,
@@ -92,6 +93,26 @@ export const createSearchTermProperty = (name: string): Property =>
 		name,
 		propertyKey: 'search-term',
 		type: PropertyTypes.SearchTerm,
+	});
+
+/**
+ * A campaign listed in the sidebar's Campaigns section. It keeps the campaign
+ * ID so that dragging it in creates a criterion already set to that campaign.
+ */
+export const createCampaignProperty = ({
+	id,
+	name,
+}: {
+	id: string;
+	name: string;
+}): Property =>
+	new Property({
+		entityName: CAMPAIGN_PROPERTY.entityName,
+		id,
+		label: name,
+		name: CAMPAIGN_PROPERTY.name,
+		propertyKey: CAMPAIGN_PROPERTY.propertyKey,
+		type: PropertyTypes.Campaign,
 	});
 
 export const createVocabularyProperty = ({
@@ -438,6 +459,16 @@ export const findPropertyByCriterion = (
 			],
 			''
 		);
+	}
+	else if (
+		[
+			CustomFunctionOperators.CampaignsFilter,
+			NotOperators.NotCampaignsFilter,
+		].includes(
+			operatorName as unknown as CustomFunctionOperators | NotOperators
+		)
+	) {
+		return CAMPAIGN_PROPERTY;
 	}
 	else if (
 		[
