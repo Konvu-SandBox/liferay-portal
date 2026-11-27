@@ -9,6 +9,7 @@ import com.liferay.asset.kernel.service.AssetEntryLocalService;
 import com.liferay.document.library.kernel.model.DLFileEntry;
 import com.liferay.document.library.kernel.model.DLFolderConstants;
 import com.liferay.document.library.kernel.service.DLAppLocalService;
+import com.liferay.document.library.kernel.service.DLFileEntryLocalService;
 import com.liferay.document.library.kernel.util.DLUtil;
 import com.liferay.document.library.util.DLURLHelperUtil;
 import com.liferay.dynamic.data.mapping.constants.DDMFormConstants;
@@ -30,12 +31,12 @@ import com.liferay.dynamic.data.mapping.model.DDMFormInstanceRecord;
 import com.liferay.dynamic.data.mapping.model.DDMFormInstanceRecordVersion;
 import com.liferay.dynamic.data.mapping.model.DDMFormInstanceReport;
 import com.liferay.dynamic.data.mapping.model.DDMFormInstanceSettings;
+import com.liferay.dynamic.data.mapping.model.DDMFormInstanceVersion;
 import com.liferay.dynamic.data.mapping.model.DDMStorageLink;
-import com.liferay.dynamic.data.mapping.model.DDMStructure;
-import com.liferay.dynamic.data.mapping.model.DDMStructureVersion;
 import com.liferay.dynamic.data.mapping.model.Value;
 import com.liferay.dynamic.data.mapping.service.DDMFormInstanceRecordVersionLocalService;
 import com.liferay.dynamic.data.mapping.service.DDMFormInstanceReportLocalService;
+import com.liferay.dynamic.data.mapping.service.DDMFormInstanceVersionLocalService;
 import com.liferay.dynamic.data.mapping.service.DDMStorageLinkLocalService;
 import com.liferay.dynamic.data.mapping.service.base.DDMFormInstanceRecordLocalServiceBaseImpl;
 import com.liferay.dynamic.data.mapping.service.persistence.DDMFormInstancePersistence;
@@ -54,6 +55,7 @@ import com.liferay.dynamic.data.mapping.util.DDMFormUtil;
 import com.liferay.dynamic.data.mapping.validator.DDMFormValuesValidator;
 import com.liferay.expando.kernel.model.ExpandoBridge;
 import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
+import com.liferay.mail.kernel.service.MailService;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
@@ -85,6 +87,7 @@ import com.liferay.portal.kernel.search.IndexerRegistryUtil;
 import com.liferay.portal.kernel.search.SearchContext;
 import com.liferay.portal.kernel.search.Sort;
 import com.liferay.portal.kernel.service.ClassNameLocalService;
+import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.ResourcePermissionLocalService;
 import com.liferay.portal.kernel.service.RoleLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
@@ -95,8 +98,10 @@ import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
+import com.liferay.portal.kernel.util.HtmlParser;
 import com.liferay.portal.kernel.util.OrderByComparator;
 import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.PrefsProps;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.TempFileEntryUtil;
 import com.liferay.portal.kernel.util.Time;
@@ -120,6 +125,7 @@ import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.TimeZone;
 
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -426,10 +432,11 @@ public class DDMFormInstanceRecordLocalServiceImpl
 			ddmFormInstanceRecordPersistence.findByPrimaryKey(
 				ddmFormInstanceRecordId);
 
+		List<FileEntry> fileEntries = new ArrayList<>();
 		List<FileEntry> tempFileEntries = new ArrayList<>();
 
 		_addFileEntries(
-			user.getCompanyId(), ddmFormInstanceRecordId, ddmFormValues,
+			user.getCompanyId(), ddmFormValues, fileEntries,
 			ddmFormInstanceRecord.getGroupId(), tempFileEntries);
 
 		ddmFormInstanceRecord.setModifiedDate(
@@ -438,8 +445,13 @@ public class DDMFormInstanceRecordLocalServiceImpl
 		DDMFormInstance ddmFormInstance =
 			ddmFormInstanceRecord.getFormInstance();
 
+		DDMFormInstanceVersion latestDDMFormInstanceVersion =
+			_ddmFormInstanceVersionLocalService.getLatestFormInstanceVersion(
+				ddmFormInstance.getFormInstanceId(),
+				WorkflowConstants.STATUS_APPROVED);
+
 		ddmFormInstanceRecord.setFormInstanceVersion(
-			ddmFormInstance.getVersion());
+			latestDDMFormInstanceVersion.getVersion());
 
 		ddmFormInstanceRecord = ddmFormInstanceRecordPersistence.update(
 			ddmFormInstanceRecord);
@@ -449,9 +461,9 @@ public class DDMFormInstanceRecordLocalServiceImpl
 
 		if (ddmFormInstanceRecordVersion.isApproved()) {
 			long ddmStorageId = _createDDMContent(
-				ddmFormInstanceRecord.getGroupId(),
 				ddmFormInstance.getFormInstanceId(), ddmFormValues,
-				serviceContext);
+				latestDDMFormInstanceVersion.getStructureVersionId(),
+				ddmFormInstanceRecord.getGroupId(), serviceContext);
 
 			String version = _getNextVersion(
 				ddmFormInstanceRecordVersion.getVersion(), majorVersion,
@@ -470,7 +482,7 @@ public class DDMFormInstanceRecordLocalServiceImpl
 
 			_updateFormInstanceRecordVersion(
 				user, ddmFormInstanceRecordVersion,
-				ddmFormInstance.getVersion(),
+				latestDDMFormInstanceVersion.getVersion(),
 				ddmFormInstanceRecordVersion.getStatus(), version,
 				serviceContext);
 
@@ -492,6 +504,9 @@ public class DDMFormInstanceRecordLocalServiceImpl
 				deleteDDMFormInstanceRecordVersion(
 					ddmFormInstanceRecordVersion);
 
+			_updateFileEntries(
+				user.getCompanyId(), ddmFormInstanceRecordId, fileEntries);
+
 			_deleteTempFileEntries(tempFileEntries);
 
 			return ddmFormInstanceRecord;
@@ -501,6 +516,9 @@ public class DDMFormInstanceRecordLocalServiceImpl
 			user.getCompanyId(), ddmFormInstance, ddmFormInstanceRecord,
 			ddmFormInstanceRecordVersion, ddmFormInstanceRecord.getGroupId(),
 			serviceContext, userId);
+
+		_updateFileEntries(
+			user.getCompanyId(), ddmFormInstanceRecordId, fileEntries);
 
 		_deleteTempFileEntries(tempFileEntries);
 
@@ -600,9 +618,16 @@ public class DDMFormInstanceRecordLocalServiceImpl
 		return formInstanceRecord;
 	}
 
+	@Activate
+	protected void activate() {
+		_ddmFormEmailNotificationSender = new DDMFormEmailNotificationSender(
+			_ddmFormFieldTypeServicesRegistry, _groupLocalService, _htmlParser,
+			_language, _mailService, _portal, _prefsProps, _userLocalService);
+	}
+
 	private void _addFileEntries(
-			long companyId, long ddmFormInstanceRecordId,
-			DDMFormValues ddmFormValues, long groupId,
+			long companyId, DDMFormValues ddmFormValues,
+			List<FileEntry> fileEntries, long groupId,
 			List<FileEntry> tempFileEntries)
 		throws PortalException {
 
@@ -641,7 +666,6 @@ public class DDMFormInstanceRecordLocalServiceImpl
 				DDMFormFieldTypeConstants.DOCUMENT_LIBRARY);
 		Map<String, List<DDMFormFieldValue>> ddmFormFieldValuesMap =
 			ddmFormValues.getDDMFormFieldValuesMap(true);
-		Role role = _roleLocalService.getRole(companyId, RoleConstants.GUEST);
 
 		for (List<DDMFormFieldValue> ddmFormFieldValues :
 				ddmFormFieldValuesMap.values()) {
@@ -682,9 +706,8 @@ public class DDMFormInstanceRecordLocalServiceImpl
 
 				FileEntry fileEntry =
 					PortletFileRepositoryUtil.addPortletFileEntry(
-						null, groupId, ddmFormDefaultUser.getUserId(),
-						DDMFormInstanceRecord.class.getName(),
-						ddmFormInstanceRecordId, DDMFormConstants.SERVICE_NAME,
+						null, groupId, ddmFormDefaultUser.getUserId(), null, 0,
+						DDMFormConstants.SERVICE_NAME,
 						ddmFormFolder.getFolderId(),
 						tempFileEntry.getContentStream(),
 						PortletFileRepositoryUtil.getUniqueFileName(
@@ -696,12 +719,6 @@ public class DDMFormInstanceRecordLocalServiceImpl
 				if (fileEntry == null) {
 					continue;
 				}
-
-				_resourcePermissionLocalService.setResourcePermissions(
-					companyId, DLFileEntry.class.getName(),
-					ResourceConstants.SCOPE_INDIVIDUAL,
-					String.valueOf(fileEntry.getFileEntryId()),
-					role.getRoleId(), new String[0]);
 
 				Value value = ddmFormFieldValue.getValue();
 
@@ -725,6 +742,7 @@ public class DDMFormInstanceRecordLocalServiceImpl
 							"uuid", fileEntry.getUuid()
 						)));
 
+				fileEntries.add(fileEntry);
 				tempFileEntries.add(tempFileEntry);
 			}
 		}
@@ -737,10 +755,11 @@ public class DDMFormInstanceRecordLocalServiceImpl
 
 		long recordId = counterLocalService.increment();
 
+		List<FileEntry> fileEntries = new ArrayList<>();
 		List<FileEntry> tempFileEntries = new ArrayList<>();
 
 		_addFileEntries(
-			user.getCompanyId(), recordId, ddmFormValues, groupId,
+			user.getCompanyId(), ddmFormValues, fileEntries, groupId,
 			tempFileEntries);
 
 		DDMFormInstanceRecord ddmFormInstanceRecord =
@@ -754,8 +773,14 @@ public class DDMFormInstanceRecordLocalServiceImpl
 		ddmFormInstanceRecord.setVersionUserId(user.getUserId());
 		ddmFormInstanceRecord.setVersionUserName(user.getFullName());
 
+		DDMFormInstanceVersion latestDDMFormInstanceVersion =
+			_ddmFormInstanceVersionLocalService.getLatestFormInstanceVersion(
+				ddmFormInstance.getFormInstanceId(),
+				WorkflowConstants.STATUS_APPROVED);
+
 		long ddmStorageId = _createDDMContent(
-			groupId, ddmFormInstance.getFormInstanceId(), ddmFormValues,
+			ddmFormInstance.getFormInstanceId(), ddmFormValues,
+			latestDDMFormInstanceVersion.getStructureVersionId(), groupId,
 			serviceContext);
 
 		ddmFormInstanceRecord.setStorageId(ddmStorageId);
@@ -763,7 +788,7 @@ public class DDMFormInstanceRecordLocalServiceImpl
 		ddmFormInstanceRecord.setFormInstanceId(
 			ddmFormInstance.getFormInstanceId());
 		ddmFormInstanceRecord.setFormInstanceVersion(
-			ddmFormInstance.getVersion());
+			latestDDMFormInstanceVersion.getVersion());
 		ddmFormInstanceRecord.setVersion(_VERSION_DEFAULT);
 
 		_setIpAddress(ddmFormInstanceRecord, serviceContext);
@@ -792,6 +817,8 @@ public class DDMFormInstanceRecordLocalServiceImpl
 			user.getCompanyId(), ddmFormInstance, ddmFormInstanceRecord,
 			ddmFormInstanceRecordVersion, groupId, serviceContext,
 			user.getUserId());
+
+		_updateFileEntries(user.getCompanyId(), recordId, fileEntries);
 
 		_deleteTempFileEntries(tempFileEntries);
 
@@ -870,7 +897,8 @@ public class DDMFormInstanceRecordLocalServiceImpl
 	}
 
 	private long _createDDMContent(
-			long groupId, long ddmFormInstanceId, DDMFormValues ddmFormValues,
+			long ddmFormInstanceId, DDMFormValues ddmFormValues,
+			long ddmStructureVersionId, long groupId,
 			ServiceContext serviceContext)
 		throws PortalException {
 
@@ -904,14 +932,9 @@ public class DDMFormInstanceRecordLocalServiceImpl
 			return primaryKey;
 		}
 
-		DDMStructure ddmStructure = ddmFormInstance.getStructure();
-
-		DDMStructureVersion ddmStructureVersion =
-			ddmStructure.getLatestStructureVersion();
-
 		_ddmStorageLinkLocalService.addStorageLink(
 			_portal.getClassNameId(DDMContent.class.getName()), primaryKey,
-			ddmStructureVersion.getStructureVersionId(), serviceContext);
+			ddmStructureVersionId, serviceContext);
 
 		return primaryKey;
 	}
@@ -1246,6 +1269,35 @@ public class DDMFormInstanceRecordLocalServiceImpl
 			).build());
 	}
 
+	private void _updateFileEntries(
+			long companyId, long ddmFormInstanceRecordId,
+			List<FileEntry> fileEntries)
+		throws PortalException {
+
+		Role role = _roleLocalService.getRole(companyId, RoleConstants.GUEST);
+
+		for (FileEntry fileEntry : fileEntries) {
+			DLFileEntry dlFileEntry = _dlFileEntryLocalService.fetchDLFileEntry(
+				fileEntry.getFileEntryId());
+
+			if (dlFileEntry == null) {
+				continue;
+			}
+
+			dlFileEntry.setClassName(DDMFormInstanceRecord.class.getName());
+			dlFileEntry.setClassPK(ddmFormInstanceRecordId);
+
+			dlFileEntry = _dlFileEntryLocalService.updateDLFileEntry(
+				dlFileEntry);
+
+			_resourcePermissionLocalService.setResourcePermissions(
+				companyId, DLFileEntry.class.getName(),
+				ResourceConstants.SCOPE_INDIVIDUAL,
+				String.valueOf(dlFileEntry.getFileEntryId()), role.getRoleId(),
+				new String[0]);
+		}
+	}
+
 	private void _updateFormInstanceRecordVersion(
 		User user, DDMFormInstanceRecordVersion ddmFormInstanceRecordVersion,
 		String formInstanceVersion, int status, String version,
@@ -1311,7 +1363,6 @@ public class DDMFormInstanceRecordLocalServiceImpl
 	@Reference
 	private ClassNameLocalService _classNameLocalService;
 
-	@Reference
 	private DDMFormEmailNotificationSender _ddmFormEmailNotificationSender;
 
 	@Reference
@@ -1336,6 +1387,10 @@ public class DDMFormInstanceRecordLocalServiceImpl
 	private DDMFormInstanceReportPersistence _ddmFormInstanceReportPersistence;
 
 	@Reference
+	private DDMFormInstanceVersionLocalService
+		_ddmFormInstanceVersionLocalService;
+
+	@Reference
 	private DDMFormValuesValidator _ddmFormValuesValidator;
 
 	@Reference
@@ -1348,6 +1403,15 @@ public class DDMFormInstanceRecordLocalServiceImpl
 	private DLAppLocalService _dlAppLocalService;
 
 	@Reference
+	private DLFileEntryLocalService _dlFileEntryLocalService;
+
+	@Reference
+	private GroupLocalService _groupLocalService;
+
+	@Reference
+	private HtmlParser _htmlParser;
+
+	@Reference
 	private IndexerRegistry _indexerRegistry;
 
 	@Reference
@@ -1357,7 +1421,13 @@ public class DDMFormInstanceRecordLocalServiceImpl
 	private LockLocalService _lockLocalService;
 
 	@Reference
+	private MailService _mailService;
+
+	@Reference
 	private Portal _portal;
+
+	@Reference
+	private PrefsProps _prefsProps;
 
 	@Reference
 	private ResourcePermissionLocalService _resourcePermissionLocalService;
