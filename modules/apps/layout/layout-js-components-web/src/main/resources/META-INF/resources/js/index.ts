@@ -13,6 +13,7 @@ export {
 	default as ColorPicker,
 	DEFAULT_TOKEN_LABEL,
 } from './components/color_picker/ColorPicker';
+export {default as DesignLibraryNameLabel} from './components/design_library_name_label/DesignLibraryNameLabel';
 export {default as DragPreview} from './components/drag_preview/DragPreview';
 export {default as ExperienceSelector} from './components/experience_selector/ExperienceSelector';
 export {default as Import} from './components/import/Import';
@@ -64,4 +65,5 @@ export {default as hideProductMenuIfPresent} from './utils/hideProductMenuIfPres
 export {default as isCtrlOrMeta} from './utils/isCtrlOrMeta';
 export {default as isNullOrUndefined} from './utils/isNullOrUndefined';
 export {default as isValidStyleValue} from './utils/isValidStyleValue';
+export {default as onProductMenuVisibleChange} from './utils/onProductMenuVisibleChange';
 export {default as preventIframeNavigation} from './utils/preventIframeNavigation';

@@ -11,8 +11,6 @@ import {mockEventDefinitionReq} from 'test/graphql-data';
 import {Provider} from 'react-redux';
 import {renderModal} from 'test/render-modal';
 
-jest.unmock('react-dom');
-
 const definition = data.mockEventDefinition(0, {
 	displayName: 'Display Name',
 	eventAttributeDefinitions: []
@@ -55,7 +53,7 @@ describe('EditAttributeEventModal', () => {
 			<DefaultComponent observer={observer} onClose={onClose} />
 		));
 
-		fireEvent.click(await screen.findByText('Cancel'));
+		fireEvent.click(await screen.findByText(/^cancel$/i));
 
 		expect(onClose).toHaveBeenCalledTimes(1);
 		expect(onClose).toHaveBeenCalledWith(false);

@@ -5,13 +5,13 @@
 
 import getCreationMenuItems from '../../src/main/resources/META-INF/resources/js/getCreationMenuItems';
 
-const mockOpenCreationModal = jest.fn();
+const mockOpenModuleModal = jest.fn();
 
 jest.mock(
-	'../../src/main/resources/META-INF/resources/js/openCreationModal',
+	'../../src/main/resources/META-INF/resources/js/openModuleModal',
 	() => ({
 		__esModule: true,
-		default: (item: unknown) => mockOpenCreationModal(item),
+		default: (item: unknown) => mockOpenModuleModal(item),
 	})
 );
 
@@ -64,6 +64,23 @@ const FRAGMENT = {
 	symbol: 'cards2',
 };
 
+const DISPLAY_PAGE_TEMPLATE = {
+	color: 'blue',
+	creationItems: [
+		{
+			href: 'http://localhost/select_display_page_master_layout',
+			id: 'add-display-page-template',
+			label: 'new-display-page-template',
+		},
+	],
+	defaultActionId: 'edit',
+	entryClassName:
+		'com.liferay.layout.page.template.model.LayoutPageTemplateEntry',
+	key: 'display-page-template',
+	label: 'Display Page Template',
+	symbol: 'web-content',
+};
+
 describe('getCreationMenuItems', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -96,13 +113,24 @@ describe('getCreationMenuItems', () => {
 		).toEqual(['new-basic-fragment', 'new-fragment-set']);
 	});
 
-	it('opens the creation modal for the clicked item', () => {
+	it('opens the creation modal of the clicked item', () => {
 		const [styleBookItem] = getCreationMenuItems([STYLE_BOOK]);
 
-		styleBookItem.onClick();
+		expect(styleBookItem.href).toBeUndefined();
 
-		expect(mockOpenCreationModal).toHaveBeenCalledWith(
+		styleBookItem.onClick?.();
+
+		expect(mockOpenModuleModal).toHaveBeenCalledWith(
 			STYLE_BOOK_CREATION_ITEM
 		);
+	});
+
+	it('links the item to its page', () => {
+		expect(getCreationMenuItems([DISPLAY_PAGE_TEMPLATE])).toEqual([
+			{
+				href: 'http://localhost/select_display_page_master_layout',
+				label: 'new-display-page-template',
+			},
+		]);
 	});
 });

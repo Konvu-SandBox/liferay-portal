@@ -53,7 +53,6 @@ import com.liferay.portal.kernel.model.LayoutBranch;
 import com.liferay.portal.kernel.model.LayoutRevision;
 import com.liferay.portal.kernel.model.LayoutSet;
 import com.liferay.portal.kernel.model.LayoutSetBranch;
-import com.liferay.portal.kernel.model.LayoutSetBranchConstants;
 import com.liferay.portal.kernel.model.LayoutTypePortlet;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.portlet.PortletPreferencesFactoryUtil;
@@ -94,8 +93,8 @@ import com.liferay.portal.kernel.xml.Document;
 import com.liferay.portal.kernel.xml.Element;
 import com.liferay.portal.kernel.xml.SAXReaderUtil;
 import com.liferay.portal.kernel.zip.ZipReader;
-import com.liferay.portal.kernel.zip.ZipReaderFactory;
 import com.liferay.portal.test.log.LogCapture;
+import com.liferay.portal.test.log.LogEntry;
 import com.liferay.portal.test.log.LoggerTestUtil;
 import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.Inject;
@@ -228,14 +227,30 @@ public class StagingImplTest {
 	public void testGetExceptionMessagesJSONObject() throws Exception {
 		Exception exception = new Exception(new ConnectException());
 
-		JSONObject jsonObject = _staging.getExceptionMessagesJSONObject(
-			LocaleUtil.getDefault(), exception, null);
+		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
+				"com.liferay.exportimport.internal.staging.StagingImpl",
+				LoggerTestUtil.ERROR)) {
 
-		Assert.assertEquals(
-			exception.getLocalizedMessage(), jsonObject.getString("message"));
-		Assert.assertEquals(
-			ServletResponseConstants.SC_FILE_CUSTOM_EXCEPTION,
-			jsonObject.getInt("status"));
+			JSONObject jsonObject = _staging.getExceptionMessagesJSONObject(
+				LocaleUtil.getDefault(), exception, null);
+
+			Assert.assertEquals(
+				exception.getLocalizedMessage(),
+				jsonObject.getString("message"));
+			Assert.assertEquals(
+				ServletResponseConstants.SC_FILE_CUSTOM_EXCEPTION,
+				jsonObject.getInt("status"));
+
+			List<LogEntry> logEntries = logCapture.getLogEntries();
+
+			Assert.assertEquals(logEntries.toString(), 1, logEntries.size());
+
+			LogEntry logEntry = logEntries.get(0);
+
+			Assert.assertEquals(
+				"Unexpected error: " + exception.getMessage(),
+				logEntry.getMessage());
+		}
 	}
 
 	@Test
@@ -800,7 +815,7 @@ public class StagingImplTest {
 
 		File larFile = new File(larFileNames.get(larFileNames.size() - 1));
 
-		try (ZipReader zipReader = _zipReaderFactory.getZipReader(larFile)) {
+		try (ZipReader zipReader = new ZipReader(larFile)) {
 			PortletDataContext portletDataContext =
 				PortletDataContextFactoryUtil.createImportPortletDataContext(
 					_group.getCompanyId(), _group.getGroupId(), parameterMap,
@@ -880,13 +895,11 @@ public class StagingImplTest {
 		Group stagingGroup = _group.getStagingGroup();
 
 		Assert.assertNotNull(
-			_layoutSetBranchLocalService.fetchLayoutSetBranch(
-				stagingGroup.getGroupId(), false,
-				LayoutSetBranchConstants.MASTER_BRANCH_NAME));
+			_layoutSetBranchLocalService.getMasterLayoutSetBranch(
+				stagingGroup.getGroupId(), false));
 		Assert.assertNotNull(
-			_layoutSetBranchLocalService.fetchLayoutSetBranch(
-				stagingGroup.getGroupId(), true,
-				LayoutSetBranchConstants.MASTER_BRANCH_NAME));
+			_layoutSetBranchLocalService.getMasterLayoutSetBranch(
+				stagingGroup.getGroupId(), true));
 	}
 
 	protected void enableLocalStaging(
@@ -1037,13 +1050,11 @@ public class StagingImplTest {
 						"branchingPublic")));
 
 			Assert.assertNotNull(
-				_layoutSetBranchLocalService.fetchLayoutSetBranch(
-					_remoteStagingGroup.getGroupId(), false,
-					LayoutSetBranchConstants.MASTER_BRANCH_NAME));
+				_layoutSetBranchLocalService.getMasterLayoutSetBranch(
+					_remoteStagingGroup.getGroupId(), false));
 			Assert.assertNotNull(
-				_layoutSetBranchLocalService.fetchLayoutSetBranch(
-					_remoteStagingGroup.getGroupId(), true,
-					LayoutSetBranchConstants.MASTER_BRANCH_NAME));
+				_layoutSetBranchLocalService.getMasterLayoutSetBranch(
+					_remoteStagingGroup.getGroupId(), true));
 		}
 	}
 
@@ -1692,8 +1703,5 @@ public class StagingImplTest {
 
 	@Inject
 	private StagingLocalService _stagingLocalService;
-
-	@Inject
-	private ZipReaderFactory _zipReaderFactory;
 
 }

@@ -3,8 +3,6 @@ import React from 'react';
 import RowActions from '../RowActions';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const WrappedComponent = props => (
 	<td className={getCN(props.className)}>
 		<RowActions {...props} />
@@ -17,7 +15,7 @@ describe('RowActions', () => {
 			<WrappedComponent actions={[{label: 'foo'}]} />
 		);
 
-		expect(getByRole('button', {name: 'Menu'})).toBeInTheDocument();
+		expect(getByRole('button', {name: /^menu$/i})).toBeInTheDocument();
 	});
 
 	it('should render with quick actions', () => {

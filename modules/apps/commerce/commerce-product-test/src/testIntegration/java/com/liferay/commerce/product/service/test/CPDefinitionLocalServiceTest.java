@@ -20,6 +20,7 @@ import com.liferay.commerce.product.constants.CPConfigurationEntrySettingConstan
 import com.liferay.commerce.product.constants.CPInstanceConstants;
 import com.liferay.commerce.product.constants.CommerceChannelAccountEntryRelConstants;
 import com.liferay.commerce.product.exception.CPDefinitionGroupIdException;
+import com.liferay.commerce.product.exception.NoSuchCPDefinitionException;
 import com.liferay.commerce.product.exception.NoSuchCProductException;
 import com.liferay.commerce.product.model.CPConfigurationEntry;
 import com.liferay.commerce.product.model.CPConfigurationEntrySetting;
@@ -51,6 +52,7 @@ import com.liferay.commerce.product.service.CProductLocalService;
 import com.liferay.commerce.product.service.CommerceCatalogLocalServiceUtil;
 import com.liferay.commerce.product.service.CommerceChannelAccountEntryRelLocalService;
 import com.liferay.commerce.product.service.CommerceChannelRelLocalService;
+import com.liferay.commerce.product.test.util.CPDefinitionTestUtil;
 import com.liferay.commerce.product.test.util.CPTestUtil;
 import com.liferay.commerce.product.type.simple.constants.SimpleCPTypeConstants;
 import com.liferay.commerce.product.util.comparator.CPDefinitionModifiedDateComparator;
@@ -501,39 +503,9 @@ public class CPDefinitionLocalServiceTest {
 
 	@Test
 	public void testAddOrUpdateCPDefinition() throws Exception {
-		frutillaRule.scenario(
-			"Add or update a product definition with a different group"
-		).given(
-			"A product definition in a catalog"
-		).when(
-			"The product definition is updated with a different group"
-		).then(
-			"A CPDefinitionGroupIdException is thrown"
-		).and(
-			"The product definition stays in its catalog"
-		);
-
-		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
-			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
-			false);
-
-		Assert.assertThrows(
-			CPDefinitionGroupIdException.class,
-			() -> _cpDefinitionLocalService.addOrUpdateCPDefinition(
-				cpDefinition1.getCProductExternalReferenceCode(),
-				TestPropsValues.getUserId(), RandomTestUtil.nextLong(), 0, 0,
-				false, false, null, null, 0, false, 0, null, null, 0, null, 1,
-				1, 0, 0, 2026, 1, 1, 0, 0, 2026, false, 0, false, 0, null, null,
-				null, RandomTestUtil.randomLocaleStringMap(), true,
-				SimpleCPTypeConstants.NAME, true, false, true, 0, null, false,
-				0, null, null, false, false, null, 0, 0,
-				WorkflowConstants.STATUS_APPROVED, _serviceContext));
-
-		CPDefinition cpDefinition2 = _cpDefinitionLocalService.getCPDefinition(
-			cpDefinition1.getCPDefinitionId());
-
-		Assert.assertEquals(
-			_commerceCatalog.getGroupId(), cpDefinition2.getGroupId());
+		_testAddOrUpdateCPDefinition();
+		_testAddOrUpdateCPDefinitionWithDifferentCProduct();
+		_testAddOrUpdateCPDefinitionWithDifferentGroup();
 	}
 
 	@Test
@@ -766,6 +738,7 @@ public class CPDefinitionLocalServiceTest {
 		_testCopyCPDefinitionDoesNotCopyDraftCPDefinition();
 		_testCopyCPDefinitionOptionRelExternalReferenceCodes();
 		_testCopyCPDefinitionReturnsExistingDraftCPDefinition();
+		_testCopyCPDefinitionWithDifferentGroupId();
 		_testCopyCPDefinitionWithSKUCombinations();
 		_testCopyCPDefinitionWithVersioningDisabled();
 	}
@@ -816,7 +789,7 @@ public class CPDefinitionLocalServiceTest {
 		Assert.assertEquals(
 			1,
 			_cpDefinitionLinkLocalService.getCPDefinitionLinksCount(
-				cpDefinition1.getCPDefinitionId()));
+				cpDefinition1.getCPDefinitionId(), "related"));
 
 		_cpDefinitionLocalService.deleteCPDefinition(
 			cpDefinition2.getCPDefinitionId());
@@ -824,7 +797,7 @@ public class CPDefinitionLocalServiceTest {
 		Assert.assertEquals(
 			0,
 			_cpDefinitionLinkLocalService.getCPDefinitionLinksCount(
-				cpDefinition1.getCPDefinitionId()));
+				cpDefinition1.getCPDefinitionId(), "related"));
 	}
 
 	@Test
@@ -1505,6 +1478,146 @@ public class CPDefinitionLocalServiceTest {
 			cpDefinition.getExpirationDate());
 	}
 
+	private void _testAddOrUpdateCPDefinition() throws Exception {
+		frutillaRule.scenario(
+			"Add or update a product definition"
+		).given(
+			"A catalog"
+		).when(
+			"A product is added with a new external reference code"
+		).and(
+			"The product is updated with its product definition ID"
+		).then(
+			"The product definition is added"
+		).and(
+			"The product definition is updated"
+		);
+
+		String externalReferenceCode = RandomTestUtil.randomString();
+
+		CPDefinition cpDefinition1 =
+			_cpDefinitionLocalService.addOrUpdateCPDefinition(
+				externalReferenceCode, TestPropsValues.getUserId(),
+				_commerceCatalog.getGroupId(), 0, 0, false, false, null, null,
+				0, false, 1, null, null, 0, null, 1, 1, 0, 0, 2026, 1, 1, 0, 0,
+				2026, false, 0, false, 0, null, null, null,
+				RandomTestUtil.randomLocaleStringMap(), true,
+				SimpleCPTypeConstants.NAME, true, false, true, 0, null, false,
+				1, null, null, false, false, null, 0, 0,
+				WorkflowConstants.STATUS_APPROVED, _serviceContext);
+
+		Assert.assertEquals(
+			externalReferenceCode,
+			cpDefinition1.getCProductExternalReferenceCode());
+
+		Map<Locale, String> nameMap = RandomTestUtil.randomLocaleStringMap();
+
+		CPDefinition cpDefinition2 =
+			_cpDefinitionLocalService.addOrUpdateCPDefinition(
+				externalReferenceCode, TestPropsValues.getUserId(),
+				_commerceCatalog.getGroupId(),
+				cpDefinition1.getCPDefinitionId(), 0, false, false, null, null,
+				0, false, 1, null, null, 0, null, 1, 1, 0, 0, 2026, 1, 1, 0, 0,
+				2026, false, 0, false, 0, null, null, null, nameMap, true,
+				SimpleCPTypeConstants.NAME, true, false, true, 0, null, false,
+				1, null, null, false, false, null, 0, 0,
+				WorkflowConstants.STATUS_APPROVED, _serviceContext);
+
+		Assert.assertEquals(
+			cpDefinition1.getCPDefinitionId(),
+			cpDefinition2.getCPDefinitionId());
+
+		Assert.assertEquals(
+			nameMap,
+			_cpDefinitionLocalService.getCPDefinitionNameMap(
+				cpDefinition1.getCPDefinitionId()));
+	}
+
+	private void _testAddOrUpdateCPDefinitionWithDifferentCProduct()
+		throws Exception {
+
+		frutillaRule.scenario(
+			"Add or update a product definition with a different product"
+		).given(
+			"Two product definitions in a catalog"
+		).when(
+			"The first product is updated with the product definition ID of " +
+				"the second product"
+		).then(
+			"A NoSuchCPDefinitionException is thrown"
+		).and(
+			"The second product definition is not updated"
+		);
+
+		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		CPDefinition cpDefinition2 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		Map<Locale, String> nameMap =
+			_cpDefinitionLocalService.getCPDefinitionNameMap(
+				cpDefinition2.getCPDefinitionId());
+
+		Assert.assertThrows(
+			NoSuchCPDefinitionException.class,
+			() -> _cpDefinitionLocalService.addOrUpdateCPDefinition(
+				cpDefinition1.getCProductExternalReferenceCode(),
+				TestPropsValues.getUserId(), _commerceCatalog.getGroupId(),
+				cpDefinition2.getCPDefinitionId(), 0, false, false, null, null,
+				0, false, 1, null, null, 0, null, 1, 1, 0, 0, 2026, 1, 1, 0, 0,
+				2026, false, 0, false, 0, null, null, null,
+				RandomTestUtil.randomLocaleStringMap(), true,
+				SimpleCPTypeConstants.NAME, true, false, true, 0, null, false,
+				1, null, null, false, false, null, 0, 0,
+				WorkflowConstants.STATUS_APPROVED, _serviceContext));
+
+		Assert.assertEquals(
+			nameMap,
+			_cpDefinitionLocalService.getCPDefinitionNameMap(
+				cpDefinition2.getCPDefinitionId()));
+	}
+
+	private void _testAddOrUpdateCPDefinitionWithDifferentGroup()
+		throws Exception {
+
+		frutillaRule.scenario(
+			"Add or update a product definition with a different group"
+		).given(
+			"A product definition in a catalog"
+		).when(
+			"The product definition is updated with a different group"
+		).then(
+			"A CPDefinitionGroupIdException is thrown"
+		).and(
+			"The product definition stays in its catalog"
+		);
+
+		CPDefinition cpDefinition1 = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		Assert.assertThrows(
+			CPDefinitionGroupIdException.class,
+			() -> _cpDefinitionLocalService.addOrUpdateCPDefinition(
+				cpDefinition1.getCProductExternalReferenceCode(),
+				TestPropsValues.getUserId(), RandomTestUtil.nextLong(), 0, 0,
+				false, false, null, null, 0, false, 1, null, null, 0, null, 1,
+				1, 0, 0, 2026, 1, 1, 0, 0, 2026, false, 0, false, 0, null, null,
+				null, RandomTestUtil.randomLocaleStringMap(), true,
+				SimpleCPTypeConstants.NAME, true, false, true, 0, null, false,
+				1, null, null, false, false, null, 0, 0,
+				WorkflowConstants.STATUS_APPROVED, _serviceContext));
+
+		CPDefinition cpDefinition2 = _cpDefinitionLocalService.getCPDefinition(
+			cpDefinition1.getCPDefinitionId());
+
+		Assert.assertEquals(
+			_commerceCatalog.getGroupId(), cpDefinition2.getGroupId());
+	}
+
 	private void _testCopyCPDefinition() throws Exception {
 		frutillaRule.scenario(
 			"Copy a product"
@@ -1769,10 +1882,57 @@ public class CPDefinitionLocalServiceTest {
 
 			Assert.assertEquals(
 				1,
-				_cpDefinitionLocalService.getCProductCPDefinitionsCount(
+				CPDefinitionTestUtil.getCProductCPDefinitionsCount(
 					cpDefinition1.getCProductId(),
 					WorkflowConstants.STATUS_DRAFT));
 		}
+	}
+
+	private void _testCopyCPDefinitionWithDifferentGroupId() throws Exception {
+		frutillaRule.scenario(
+			"Copy a product definition into a different group"
+		).given(
+			"A published product definition in a catalog"
+		).when(
+			"the product definition is copied into a different group"
+		).then(
+			"a CPDefinitionGroupIdException is thrown"
+		).and(
+			"the product carries no new version"
+		);
+
+		CPDefinition cpDefinition = CPTestUtil.addCPDefinitionFromCatalog(
+			_commerceCatalog.getGroupId(), SimpleCPTypeConstants.NAME, false,
+			false);
+
+		try (CompanyConfigurationTemporarySwapper
+				companyConfigurationTemporarySwapper =
+					new CompanyConfigurationTemporarySwapper(
+						TestPropsValues.getCompanyId(),
+						CProductVersionConfiguration.class.getName(),
+						HashMapDictionaryBuilder.<String, Object>put(
+							"enabled", true
+						).put(
+							"versionThreshold", 2
+						).build())) {
+
+			CommerceCatalog commerceCatalog =
+				CommerceCatalogLocalServiceUtil.addCommerceCatalog(
+					null, RandomTestUtil.randomString(),
+					RandomTestUtil.randomString(),
+					LocaleUtil.US.getDisplayLanguage(), _serviceContext);
+
+			Assert.assertThrows(
+				CPDefinitionGroupIdException.class,
+				() -> _cpDefinitionLocalService.copyCPDefinition(
+					cpDefinition.getCPDefinitionId(),
+					commerceCatalog.getGroupId(),
+					WorkflowConstants.STATUS_DRAFT));
+		}
+
+		CProduct cProduct = cpDefinition.getCProduct();
+
+		Assert.assertEquals(1, cProduct.getLatestVersion());
 	}
 
 	private void _testCopyCPDefinitionWithSKUCombinations() throws Exception {
@@ -1908,7 +2068,7 @@ public class CPDefinitionLocalServiceTest {
 
 		Assert.assertEquals(
 			1,
-			_cpDefinitionLocalService.getCProductCPDefinitionsCount(
+			CPDefinitionTestUtil.getCProductCPDefinitionsCount(
 				cpDefinition1.getCProductId(), WorkflowConstants.STATUS_DRAFT));
 	}
 
@@ -2639,7 +2799,7 @@ public class CPDefinitionLocalServiceTest {
 
 			Assert.assertEquals(
 				1,
-				_cpDefinitionLocalService.getCProductCPDefinitionsCount(
+				CPDefinitionTestUtil.getCProductCPDefinitionsCount(
 					cpDefinition1.getCProductId(),
 					WorkflowConstants.STATUS_DRAFT));
 		}
@@ -2968,7 +3128,7 @@ public class CPDefinitionLocalServiceTest {
 
 			Assert.assertEquals(
 				1,
-				_cpDefinitionLocalService.getCProductCPDefinitionsCount(
+				CPDefinitionTestUtil.getCProductCPDefinitionsCount(
 					cpDefinition1.getCProductId(),
 					WorkflowConstants.STATUS_DRAFT));
 		}

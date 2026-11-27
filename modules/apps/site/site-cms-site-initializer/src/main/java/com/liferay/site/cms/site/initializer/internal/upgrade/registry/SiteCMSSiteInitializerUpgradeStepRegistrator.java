@@ -6,7 +6,7 @@
 package com.liferay.site.cms.site.initializer.internal.upgrade.registry;
 
 import com.liferay.fragment.service.FragmentEntryLinkLocalService;
-import com.liferay.layout.importer.LayoutsImporter;
+import com.liferay.fragment.service.FragmentEntryLocalService;
 import com.liferay.layout.page.template.service.LayoutPageTemplateEntryLocalService;
 import com.liferay.layout.page.template.service.LayoutPageTemplateStructureLocalService;
 import com.liferay.object.constants.ObjectDefinitionConstants;
@@ -37,6 +37,8 @@ import com.liferay.site.cms.site.initializer.internal.upgrade.v3_0_3.CMSFileType
 import com.liferay.site.cms.site.initializer.internal.upgrade.v3_0_4.CMSFileTypeFriendlyURLUpgradeProcess;
 import com.liferay.site.cms.site.initializer.internal.upgrade.v3_0_5.CMSSpaceAdministratorRoleUpgradeProcess;
 import com.liferay.site.cms.site.initializer.internal.upgrade.v3_0_6.CMSPlanningAndTasksPagesUpgradeProcess;
+import com.liferay.site.cms.site.initializer.internal.upgrade.v3_0_7.CMSCommentRatingsUpgradeProcess;
+import com.liferay.site.cms.site.initializer.internal.upgrade.v3_0_8.CMSPageBarBackURLUpgradeProcess;
 import com.liferay.site.navigation.service.SiteNavigationMenuItemLocalService;
 import com.liferay.site.navigation.service.SiteNavigationMenuLocalService;
 
@@ -111,13 +113,26 @@ public class SiteCMSSiteInitializerUpgradeStepRegistrator
 		registry.register(
 			"3.0.5", "3.0.6",
 			new CMSPlanningAndTasksPagesUpgradeProcess(
-				_companyLocalService, _groupLocalService, _layoutLocalService,
+				_companyLocalService, _fragmentEntryLinkLocalService,
+				_groupLocalService, _layoutLocalService,
 				_layoutPageTemplateEntryLocalService,
-				_layoutPageTemplateStructureLocalService, _layoutsImporter,
+				_layoutPageTemplateStructureLocalService,
 				_resourcePermissionLocalService, _roleLocalService,
 				_segmentsExperienceLocalService,
 				_siteNavigationMenuItemLocalService,
 				_siteNavigationMenuLocalService, _userLocalService));
+
+		registry.register(
+			"3.0.6", "3.0.7",
+			new CMSCommentRatingsUpgradeProcess(
+				_classNameLocalService, _companyLocalService,
+				_objectDefinitionLocalService, _objectFolderLocalService));
+
+		registry.register(
+			"3.0.7", "3.0.8",
+			new CMSPageBarBackURLUpgradeProcess(
+				_companyLocalService, _fragmentEntryLinkLocalService,
+				_fragmentEntryLocalService, _groupLocalService));
 	}
 
 	@Reference
@@ -135,6 +150,9 @@ public class SiteCMSSiteInitializerUpgradeStepRegistrator
 	private FragmentEntryLinkLocalService _fragmentEntryLinkLocalService;
 
 	@Reference
+	private FragmentEntryLocalService _fragmentEntryLocalService;
+
+	@Reference
 	private GroupLocalService _groupLocalService;
 
 	@Reference
@@ -147,9 +165,6 @@ public class SiteCMSSiteInitializerUpgradeStepRegistrator
 	@Reference
 	private LayoutPageTemplateStructureLocalService
 		_layoutPageTemplateStructureLocalService;
-
-	@Reference
-	private LayoutsImporter _layoutsImporter;
 
 	@Reference
 	private ObjectDefinitionLocalService _objectDefinitionLocalService;
