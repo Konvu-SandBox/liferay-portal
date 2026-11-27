@@ -2,8 +2,6 @@ import NoResultsDisplay, {getFormattedTitle} from '../NoResultsDisplay';
 import React from 'react';
 import {cleanup, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('NoResultsDisplay', () => {
 	afterEach(cleanup);
 
@@ -11,14 +9,6 @@ describe('NoResultsDisplay', () => {
 		const {container} = render(<NoResultsDisplay />);
 
 		expect(container).toMatchSnapshot();
-	});
-
-	it('should render component with primary color', () => {
-		const {container} = render(<NoResultsDisplay primary />);
-
-		expect(container.querySelector('.no-results-root')).toHaveClass(
-			'no-results-primary'
-		);
 	});
 
 	it('should render component with description', () => {

@@ -11,8 +11,6 @@ import {
 } from 'test/graphql-data';
 import {Provider} from 'react-redux';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/api', () => ({
 	assets: {
 		fetchIndividualTopAssets: jest.fn(() => Promise.resolve({items: []})),
@@ -52,7 +50,7 @@ const renderEngagementSummary = (
 						individualName="Jane Doe"
 						{...props}
 					>
-						<div>{'No Individuals Data Synced'}</div>
+						<div>{'No Individuals Data Has Been Synced'}</div>
 					</EngagementSummary>
 				</MockedProvider>
 			</MemoryRouter>
@@ -85,7 +83,7 @@ describe('EngagementSummary', () => {
 			renderEngagementSummary({showEmptyState: true});
 
 			expect(
-				screen.getByText('No Individuals Data Synced')
+				screen.getByText(/^no individuals data has been synced$/i)
 			).toBeInTheDocument();
 			expect(screen.queryByText('TOP PAGES')).toBeNull();
 			expect(screen.queryByText('TOP ASSETS')).toBeNull();
@@ -116,7 +114,9 @@ describe('EngagementSummary', () => {
 			renderEngagementSummary({loading: true, showEmptyState: true});
 
 			expect(screen.getByText('TOP PAGES')).toBeInTheDocument();
-			expect(screen.queryByText('No Individuals Data Synced')).toBeNull();
+			expect(
+				screen.queryByText(/^no individuals data has been synced$/i)
+			).toBeNull();
 		});
 	});
 });

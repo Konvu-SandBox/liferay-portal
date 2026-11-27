@@ -16,8 +16,6 @@ long cpDefinitionId = cpDefinitionsDisplayContext.getCPDefinitionId();
 
 Map<String, String> contextParams = HashMapBuilder.<String, String>put(
 	"cpDefinitionId", String.valueOf(cpDefinitionId)
-).put(
-	"permissionUserId", String.valueOf(themeDisplay.getUserId())
 ).build();
 %>
 
@@ -71,15 +69,11 @@ Map<String, String> contextParams = HashMapBuilder.<String, String>put(
 		HashMapBuilder.<String, Object>put(
 			"accountGroupDataSetId", CommerceProductFDSNames.PRODUCT_ACCOUNT_GROUPS
 		).put(
-			"accountGroupItemSelectorURL", cpDefinitionsDisplayContext.getAccountGroupItemSelectorUrl()
+			"accountGroupIds", cpDefinitionsDisplayContext.getAccountGroupIds()
 		).put(
 			"channelDataSetId", CommerceProductFDSNames.PRODUCT_CHANNELS
 		).put(
-			"channelItemSelectorURL", cpDefinitionsDisplayContext.getChannelItemSelectorUrl()
-		).put(
-			"checkedAccountGroupIds", cpDefinitionsDisplayContext.getCheckedCommerceAccountGroupIds()
-		).put(
-			"checkedCommerceChannelIds", cpDefinitionsDisplayContext.getCheckedCommerceChannelIds()
+			"commerceChannelIds", cpDefinitionsDisplayContext.getCommerceChannelIds()
 		).put(
 			"productId", cpDefinition.getCProductId()
 		).build()

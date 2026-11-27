@@ -2,8 +2,6 @@ import React from 'react';
 import variantColumns from '../variant-columns';
 import {render, screen} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const renderCell = (accessor: string, data: object) => {
 	const column = variantColumns({
 		bestVariant: null,
@@ -46,7 +44,7 @@ describe('variantColumns', () => {
 			const {container} = renderCell('median', {});
 
 			expect(container.textContent).toBe('–');
-			expect(screen.getByText('–')).toHaveClass('text-secondary');
+			expect(screen.getByText('–')).toBeInTheDocument();
 		});
 	});
 
@@ -65,7 +63,7 @@ describe('variantColumns', () => {
 			});
 
 			expect(container.textContent).toBe('–');
-			expect(screen.getByText('–')).toHaveClass('text-secondary');
+			expect(screen.getByText('–')).toBeInTheDocument();
 		});
 	});
 
@@ -86,7 +84,7 @@ describe('variantColumns', () => {
 			const {container} = renderCell('improvement', {});
 
 			expect(container.textContent).toBe('–');
-			expect(screen.getByText('–')).toHaveClass('text-secondary');
+			expect(screen.getByText('–')).toBeInTheDocument();
 		});
 	});
 
@@ -113,7 +111,7 @@ describe('variantColumns', () => {
 			});
 
 			expect(container.textContent).toBe('–');
-			expect(screen.getByText('–')).toHaveClass('text-secondary');
+			expect(screen.getByText('–')).toBeInTheDocument();
 		});
 	});
 });

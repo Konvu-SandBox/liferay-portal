@@ -70,8 +70,6 @@ public class HttpInvoker {
 		httpResponse.setMessage(httpURLConnection.getResponseMessage());
 		httpResponse.setStatusCode(httpURLConnection.getResponseCode());
 
-		httpURLConnection.disconnect();
-
 		return httpResponse;
 	}
 
@@ -124,6 +122,12 @@ public class HttpInvoker {
 
 	public HttpInvoker path(String name, Object value) {
 		_path = _path.replaceFirst("\\{" + name + "\\}", Matcher.quoteReplacement(String.valueOf(value)));
+
+		return this;
+	}
+
+	public HttpInvoker timeout(int timeout) {
+		_timeout = timeout;
 
 		return this;
 	}
@@ -321,6 +325,11 @@ public class HttpInvoker {
 
 		HttpURLConnection httpURLConnection = _getHttpURLConnection(_httpMethod, urlString);
 
+		if (_timeout > 0) {
+			httpURLConnection.setConnectTimeout(_timeout);
+			httpURLConnection.setReadTimeout(_timeout);
+		}
+
 		if (_encodedUserNameAndPassword != null) {
 			httpURLConnection.setRequestProperty("Authorization", "Basic " + _encodedUserNameAndPassword);
 		}
@@ -347,7 +356,7 @@ public class HttpInvoker {
 
 		int responseCode = httpURLConnection.getResponseCode();
 
-		if (responseCode > 299) {
+		if (responseCode > 399) {
 			inputStream = httpURLConnection.getErrorStream();
 		}
 		else {
@@ -355,16 +364,21 @@ public class HttpInvoker {
 		}
 
 		if (inputStream != null) {
-			byte[] bytes = new byte[8192];
+			try {
+				byte[] bytes = new byte[8192];
 
-			while (true) {
-				int read = inputStream.read(bytes, 0, bytes.length);
+				while (true) {
+					int read = inputStream.read(bytes, 0, bytes.length);
 
-				if (read == -1) {
-					break;
+					if (read == -1) {
+						break;
+					}
+
+					byteArrayOutputStream.write(bytes, 0, read);
 				}
-
-				byteArrayOutputStream.write(bytes, 0, read);
+			}
+			finally {
+				inputStream.close();
 			}
 		}
 
@@ -433,5 +447,6 @@ public class HttpInvoker {
 	private final Map<String, String[]> _parameters = new LinkedHashMap<>();
 	private final Map<String, String> _parts = new LinkedHashMap<>();
 	private String _path;
+	private int _timeout;
 
 }

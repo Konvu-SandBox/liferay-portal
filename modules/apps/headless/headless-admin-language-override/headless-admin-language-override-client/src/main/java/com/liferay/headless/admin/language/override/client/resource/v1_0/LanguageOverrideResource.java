@@ -53,11 +53,13 @@ public interface LanguageOverrideResource {
 		throws Exception;
 
 	public Page<LanguageOverride> getLanguageOverridesPage(
-			String search, Pagination pagination, String sortString)
+			String search, String filterString, Pagination pagination,
+			String sortString)
 		throws Exception;
 
 	public HttpInvoker.HttpResponse getLanguageOverridesPageHttpResponse(
-			String search, Pagination pagination, String sortString)
+			String search, String filterString, Pagination pagination,
+			String sortString)
 		throws Exception;
 
 	public LanguageOverride postLanguageOverride(
@@ -76,14 +78,14 @@ public interface LanguageOverrideResource {
 		throws Exception;
 
 	public void postLanguageOverridesPageExportBatch(
-			String search, String sortString, String callbackURL,
-			String contentType, String fieldNames)
+			String search, String filterString, String sortString,
+			String callbackURL, String contentType, String fieldNames)
 		throws Exception;
 
 	public HttpInvoker.HttpResponse
 			postLanguageOverridesPageExportBatchHttpResponse(
-				String search, String sortString, String callbackURL,
-				String contentType, String fieldNames)
+				String search, String filterString, String sortString,
+				String callbackURL, String contentType, String fieldNames)
 		throws Exception;
 
 	public LanguageOverride putLanguageOverrideByExternalReferenceCode(
@@ -186,6 +188,12 @@ public interface LanguageOverrideResource {
 			return this;
 		}
 
+		public Builder timeout(int timeout) {
+			_timeout = timeout;
+
+			return this;
+		}
+
 		private Builder() {
 		}
 
@@ -198,6 +206,7 @@ public interface LanguageOverrideResource {
 		private Map<String, String> _parameters = new LinkedHashMap<>();
 		private int _port = 8080;
 		private String _scheme = "http";
+		private int _timeout;
 
 	}
 
@@ -294,6 +303,8 @@ public interface LanguageOverrideResource {
 
 				httpInvoker.parameter(entry.getKey(), entry.getValue());
 			}
+
+			httpInvoker.timeout(_builder._timeout);
 
 			httpInvoker.httpMethod(HttpInvoker.HttpMethod.DELETE);
 
@@ -403,6 +414,8 @@ public interface LanguageOverrideResource {
 				httpInvoker.parameter(entry.getKey(), entry.getValue());
 			}
 
+			httpInvoker.timeout(_builder._timeout);
+
 			httpInvoker.httpMethod(HttpInvoker.HttpMethod.GET);
 
 			httpInvoker.path(
@@ -421,12 +434,13 @@ public interface LanguageOverrideResource {
 		}
 
 		public Page<LanguageOverride> getLanguageOverridesPage(
-				String search, Pagination pagination, String sortString)
+				String search, String filterString, Pagination pagination,
+				String sortString)
 			throws Exception {
 
 			HttpInvoker.HttpResponse httpResponse =
 				getLanguageOverridesPageHttpResponse(
-					search, pagination, sortString);
+					search, filterString, pagination, sortString);
 
 			String content = httpResponse.getContent();
 
@@ -488,7 +502,8 @@ public interface LanguageOverrideResource {
 		}
 
 		public HttpInvoker.HttpResponse getLanguageOverridesPageHttpResponse(
-				String search, Pagination pagination, String sortString)
+				String search, String filterString, Pagination pagination,
+				String sortString)
 			throws Exception {
 
 			HttpInvoker httpInvoker = HttpInvoker.newHttpInvoker();
@@ -510,10 +525,16 @@ public interface LanguageOverrideResource {
 				httpInvoker.parameter(entry.getKey(), entry.getValue());
 			}
 
+			httpInvoker.timeout(_builder._timeout);
+
 			httpInvoker.httpMethod(HttpInvoker.HttpMethod.GET);
 
 			if (search != null) {
 				httpInvoker.parameter("search", String.valueOf(search));
+			}
+
+			if (filterString != null) {
+				httpInvoker.parameter("filter", filterString);
 			}
 
 			if (pagination != null) {
@@ -631,6 +652,8 @@ public interface LanguageOverrideResource {
 				httpInvoker.parameter(entry.getKey(), entry.getValue());
 			}
 
+			httpInvoker.timeout(_builder._timeout);
+
 			httpInvoker.httpMethod(HttpInvoker.HttpMethod.POST);
 
 			httpInvoker.path(
@@ -725,6 +748,8 @@ public interface LanguageOverrideResource {
 				httpInvoker.parameter(entry.getKey(), entry.getValue());
 			}
 
+			httpInvoker.timeout(_builder._timeout);
+
 			httpInvoker.httpMethod(HttpInvoker.HttpMethod.POST);
 
 			if (callbackURL != null) {
@@ -746,13 +771,14 @@ public interface LanguageOverrideResource {
 		}
 
 		public void postLanguageOverridesPageExportBatch(
-				String search, String sortString, String callbackURL,
-				String contentType, String fieldNames)
+				String search, String filterString, String sortString,
+				String callbackURL, String contentType, String fieldNames)
 			throws Exception {
 
 			HttpInvoker.HttpResponse httpResponse =
 				postLanguageOverridesPageExportBatchHttpResponse(
-					search, sortString, callbackURL, contentType, fieldNames);
+					search, filterString, sortString, callbackURL, contentType,
+					fieldNames);
 
 			String content = httpResponse.getContent();
 
@@ -804,8 +830,8 @@ public interface LanguageOverrideResource {
 
 		public HttpInvoker.HttpResponse
 				postLanguageOverridesPageExportBatchHttpResponse(
-					String search, String sortString, String callbackURL,
-					String contentType, String fieldNames)
+					String search, String filterString, String sortString,
+					String callbackURL, String contentType, String fieldNames)
 			throws Exception {
 
 			HttpInvoker httpInvoker = HttpInvoker.newHttpInvoker();
@@ -829,10 +855,16 @@ public interface LanguageOverrideResource {
 				httpInvoker.parameter(entry.getKey(), entry.getValue());
 			}
 
+			httpInvoker.timeout(_builder._timeout);
+
 			httpInvoker.httpMethod(HttpInvoker.HttpMethod.POST);
 
 			if (search != null) {
 				httpInvoker.parameter("search", String.valueOf(search));
+			}
+
+			if (filterString != null) {
+				httpInvoker.parameter("filter", filterString);
 			}
 
 			if (sortString != null) {
@@ -960,6 +992,8 @@ public interface LanguageOverrideResource {
 				httpInvoker.parameter(entry.getKey(), entry.getValue());
 			}
 
+			httpInvoker.timeout(_builder._timeout);
+
 			httpInvoker.httpMethod(HttpInvoker.HttpMethod.PUT);
 
 			httpInvoker.path(
@@ -989,4 +1023,4 @@ public interface LanguageOverrideResource {
 	}
 
 }
-// LIFERAY-REST-BUILDER-HASH:-1914571408
+// LIFERAY-REST-BUILDER-HASH:-1140600360
