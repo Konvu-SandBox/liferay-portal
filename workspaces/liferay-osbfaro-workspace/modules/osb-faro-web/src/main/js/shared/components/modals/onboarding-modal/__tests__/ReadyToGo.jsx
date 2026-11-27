@@ -4,8 +4,6 @@ import {BrowserRouter} from 'react-router-dom';
 import {cleanup, fireEvent, render} from '@testing-library/react';
 import {noop} from 'lodash';
 
-jest.unmock('react-dom');
-
 describe('ReadyToGo', () => {
 	afterEach(cleanup);
 
@@ -30,7 +28,7 @@ describe('ReadyToGo', () => {
 
 		expect(spy).not.toBeCalled();
 
-		fireEvent.click(queryByText('Done'));
+		fireEvent.click(queryByText(/^done$/i));
 
 		expect(spy).toBeCalled();
 	});

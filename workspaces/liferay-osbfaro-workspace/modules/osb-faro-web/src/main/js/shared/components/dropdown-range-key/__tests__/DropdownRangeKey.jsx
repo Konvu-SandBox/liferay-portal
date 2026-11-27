@@ -10,8 +10,6 @@ import {Provider} from 'react-redux';
 import {SEVEN_MONTHS} from 'shared/util/constants';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/hooks/useTimeZone', () => ({
 	useTimeZone: () => ({
 		timeZoneId: 'UTC'
@@ -76,32 +74,20 @@ describe('DropdownRangeKey', () => {
 		expect(container.querySelector('.lexicon-icon-filter')).toBeNull();
 	});
 
-	it('should render the trigger button borderless by default', async () => {
-		const {container} = render(
+	it('should focus the first additional period when showing more preset periods', async () => {
+		const {getByRole, getByText} = render(
 			<WrapperComponent>
-				<DropdownRangeKey />
+				<DropdownRangeKey legacy={false} />
 			</WrapperComponent>
 		);
 
-		await waitForLoadingToBeRemoved(container);
+		await waitForLoadingToBeRemoved(document.body);
 
-		expect(container.querySelector('.button-root')).toHaveClass(
-			'btn-outline-borderless'
-		);
-	});
+		fireEvent.click(getByRole('button', {name: /^select date range$/i}));
 
-	it('should render the trigger button bordered when the bordered prop is true', async () => {
-		const {container} = render(
-			<WrapperComponent>
-				<DropdownRangeKey bordered />
-			</WrapperComponent>
-		);
+		fireEvent.click(getByText(/^more preset periods$/i));
 
-		await waitForLoadingToBeRemoved(container);
-
-		expect(container.querySelector('.button-root')).not.toHaveClass(
-			'btn-outline-borderless'
-		);
+		expect(getByRole('menuitem', {name: /yesterday/i})).toHaveFocus();
 	});
 
 	it('should display a message with retention period for 13 months on date picker', async () => {

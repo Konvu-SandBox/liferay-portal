@@ -62,7 +62,9 @@ export class JournalEditArticlePage {
 			'#_com_liferay_journal_web_portlet_JournalPortlet_inputPermissionsViewRole'
 		);
 		this.journalPage = new JournalPage(page);
-		this.previewButton = page.getByLabel('A draft will be saved before');
+		this.previewButton = page.getByLabel(
+			/A draft will be saved before|Save as draft or publish the web content/
+		);
 		this.propertiesTab = page.getByRole('tab', {
 			name: /properties|propriétés/i,
 		});
@@ -282,7 +284,7 @@ export class JournalEditArticlePage {
 			.click();
 		await this.page.getByRole('button', {name: 'Edit link'}).click();
 		await this.page.getByRole('textbox', {name: 'Link URL'}).fill(url);
-		await this.page.getByRole('button', {name: 'Update'}).click();
+		await this.page.getByRole('button', {name: 'Done'}).click();
 	}
 
 	async expandFieldsPanel() {

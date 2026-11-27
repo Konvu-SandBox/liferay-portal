@@ -738,8 +738,9 @@ public class LayoutStructureRenderer {
 			jspWriter.write("\"style=\"color: inherit; text-decoration: ");
 			jspWriter.write("none;\" target=\"");
 			jspWriter.write(
-				_renderLayoutStructureDisplayContext.getContainerLinkTarget(
-					containerStyledLayoutStructureItem));
+				HtmlUtil.escapeAttribute(
+					_renderLayoutStructureDisplayContext.getContainerLinkTarget(
+						containerStyledLayoutStructureItem)));
 			jspWriter.write("\">");
 		}
 
@@ -1125,7 +1126,7 @@ public class LayoutStructureRenderer {
 					_renderFormRelationshipStyledLayoutStructureItemContent(
 						formRelationshipStyledLayoutStructureItem,
 						formRelationshipStyledLayoutStructureItemContentId,
-						infoForm, null);
+						infoForm);
 				}
 
 				for (InfoItemEntry infoItemEntry : infoItemEntries) {
@@ -1153,7 +1154,7 @@ public class LayoutStructureRenderer {
 					_renderFormRelationshipStyledLayoutStructureItemContent(
 						formRelationshipStyledLayoutStructureItem,
 						formRelationshipStyledLayoutStructureItemContentId,
-						infoForm, relatedLayoutDisplayPageObjectProvider);
+						infoForm);
 				}
 			}
 			else if (ListUtil.isEmpty(
@@ -1162,7 +1163,7 @@ public class LayoutStructureRenderer {
 				_renderFormRelationshipStyledLayoutStructureItemContent(
 					formRelationshipStyledLayoutStructureItem,
 					formRelationshipStyledLayoutStructureItemContentId,
-					infoForm, null);
+					infoForm);
 			}
 			else {
 				for (LayoutDisplayPageObjectProvider<?>
@@ -1187,7 +1188,7 @@ public class LayoutStructureRenderer {
 					_renderFormRelationshipStyledLayoutStructureItemContent(
 						formRelationshipStyledLayoutStructureItem,
 						formRelationshipStyledLayoutStructureItemContentId,
-						infoForm, relatedLayoutDisplayPageObjectProvider);
+						infoForm);
 				}
 			}
 
@@ -1264,9 +1265,7 @@ public class LayoutStructureRenderer {
 			FormRelationshipStyledLayoutStructureItem
 				formRelationshipStyledLayoutStructureItem,
 			String formRelationshipStyledLayoutStructureItemContentId,
-			InfoForm infoForm,
-			LayoutDisplayPageObjectProvider<?>
-				relatedLayoutDisplayPageObjectProvider)
+			InfoForm infoForm)
 		throws Exception {
 
 		JspWriter jspWriter = _pageContext.getOut();
@@ -1282,22 +1281,9 @@ public class LayoutStructureRenderer {
 		removeButtonTag.setBorderless(true);
 		removeButtonTag.setCssClass("d-none lfr-portal-tooltip mt-2");
 		removeButtonTag.setDisplayType("secondary");
-
-		if (relatedLayoutDisplayPageObjectProvider != null) {
-			removeButtonTag.setDynamicAttribute(
-				StringPool.BLANK, "data-classname",
-				relatedLayoutDisplayPageObjectProvider.getClassName());
-
-			removeButtonTag.setDynamicAttribute(
-				StringPool.BLANK, "data-external-reference-code",
-				relatedLayoutDisplayPageObjectProvider.
-					getExternalReferenceCode());
-		}
-
 		removeButtonTag.setDynamicAttribute(
 			StringPool.BLANK, "title",
 			LanguageUtil.get(_httpServletRequest, "remove"));
-
 		removeButtonTag.setIcon("times-circle");
 		removeButtonTag.setSmall(true);
 

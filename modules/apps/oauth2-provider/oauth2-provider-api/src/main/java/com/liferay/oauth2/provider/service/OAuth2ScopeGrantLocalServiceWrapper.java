@@ -114,19 +114,6 @@ public class OAuth2ScopeGrantLocalServiceWrapper
 	public com.liferay.oauth2.provider.model.OAuth2ScopeGrant
 			createOAuth2ScopeGrant(
 				long companyId, long oAuth2ApplicationScopeAliasesId,
-				String applicationName, String bundleSymbolicName, String scope)
-		throws com.liferay.oauth2.provider.exception.
-			DuplicateOAuth2ScopeGrantException {
-
-		return _oAuth2ScopeGrantLocalService.createOAuth2ScopeGrant(
-			companyId, oAuth2ApplicationScopeAliasesId, applicationName,
-			bundleSymbolicName, scope);
-	}
-
-	@Override
-	public com.liferay.oauth2.provider.model.OAuth2ScopeGrant
-			createOAuth2ScopeGrant(
-				long companyId, long oAuth2ApplicationScopeAliasesId,
 				String applicationName, String bundleSymbolicName, String scope,
 				java.util.List<String> scopeAliases)
 		throws com.liferay.oauth2.provider.exception.
@@ -357,19 +344,6 @@ public class OAuth2ScopeGrantLocalServiceWrapper
 	}
 
 	@Override
-	public java.util.Collection
-		<com.liferay.oauth2.provider.scope.liferay.LiferayOAuth2Scope>
-			getFilteredLiferayOAuth2Scopes(
-				long oAuth2ApplicationScopeAliasesId,
-				java.util.Collection
-					<com.liferay.oauth2.provider.scope.liferay.
-						LiferayOAuth2Scope> liferayOAuth2Scopes) {
-
-		return _oAuth2ScopeGrantLocalService.getFilteredLiferayOAuth2Scopes(
-			oAuth2ApplicationScopeAliasesId, liferayOAuth2Scopes);
-	}
-
-	@Override
 	public com.liferay.portal.kernel.dao.orm.IndexableActionableDynamicQuery
 		getIndexableActionableDynamicQuery() {
 
@@ -596,4 +570,4 @@ public class OAuth2ScopeGrantLocalServiceWrapper
 	private OAuth2ScopeGrantLocalService _oAuth2ScopeGrantLocalService;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1631311313
+// LIFERAY-SERVICE-BUILDER-HASH:274647330

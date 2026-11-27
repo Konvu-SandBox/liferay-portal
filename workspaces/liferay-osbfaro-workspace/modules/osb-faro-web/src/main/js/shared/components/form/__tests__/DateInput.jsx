@@ -7,8 +7,6 @@ import {mockPreferenceReq} from 'test/graphql-data';
 import {Provider} from 'react-redux';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = props => (
 	<Provider store={mockStore()}>
 		<MemoryRouter>
@@ -48,12 +46,10 @@ describe('DateInput', () => {
 	});
 
 	it('should render as required', () => {
-		const {queryByText} = render(
+		const {getByLabelText} = render(
 			<DefaultComponent label={labelContent} required />
 		);
 
-		expect(queryByText(labelContent).closest('label')).toHaveClass(
-			'required'
-		);
+		expect(getByLabelText(labelContent, {exact: false})).toBeRequired();
 	});
 });

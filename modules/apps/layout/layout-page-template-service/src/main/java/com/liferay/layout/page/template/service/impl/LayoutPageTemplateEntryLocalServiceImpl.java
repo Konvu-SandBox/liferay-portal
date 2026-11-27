@@ -7,6 +7,7 @@ package com.liferay.layout.page.template.service.impl;
 
 import com.liferay.asset.kernel.NoSuchClassTypeException;
 import com.liferay.design.library.util.DesignLibraryUtil;
+import com.liferay.document.library.kernel.service.DLAppLocalService;
 import com.liferay.dynamic.data.mapping.info.item.provider.DDMStructureInfoItemFormVariationsProvider;
 import com.liferay.dynamic.data.mapping.service.DDMStructureLinkLocalService;
 import com.liferay.info.item.InfoItemFormVariation;
@@ -23,6 +24,8 @@ import com.liferay.layout.page.template.exception.LayoutPageTemplateEntryGroupId
 import com.liferay.layout.page.template.exception.LayoutPageTemplateEntryLayoutPageTemplateCollectionIdException;
 import com.liferay.layout.page.template.exception.LayoutPageTemplateEntryLayoutPageTemplateEntryKeyException;
 import com.liferay.layout.page.template.exception.LayoutPageTemplateEntryNameException;
+import com.liferay.layout.page.template.exception.LayoutPageTemplateEntryPlidException;
+import com.liferay.layout.page.template.exception.LayoutPageTemplateEntryPreviewFileEntryIdException;
 import com.liferay.layout.page.template.exception.NoSuchPageTemplateEntryException;
 import com.liferay.layout.page.template.model.LayoutPageTemplateCollection;
 import com.liferay.layout.page.template.model.LayoutPageTemplateEntry;
@@ -47,6 +50,7 @@ import com.liferay.portal.kernel.model.LayoutConstants;
 import com.liferay.portal.kernel.model.LayoutPrototype;
 import com.liferay.portal.kernel.model.LayoutSet;
 import com.liferay.portal.kernel.model.ModelHintsUtil;
+import com.liferay.portal.kernel.model.Repository;
 import com.liferay.portal.kernel.model.ResourceConstants;
 import com.liferay.portal.kernel.model.SystemEventConstants;
 import com.liferay.portal.kernel.model.Theme;
@@ -74,7 +78,6 @@ import com.liferay.portal.kernel.util.File;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Localization;
-import com.liferay.portal.kernel.util.OrderByComparator;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.UnicodeProperties;
@@ -147,6 +150,8 @@ public class LayoutPageTemplateEntryLocalServiceImpl
 			groupId, layoutPageTemplateCollectionId, name, type,
 			defaultTemplate, status);
 		_validate(groupId, layoutPageTemplateCollectionId, type);
+		_validatePlid(_getLayoutGroupId(groupId, layoutPrototypeId), plid);
+		_validatePreviewFileEntryId(groupId, previewFileEntryId);
 
 		if (Validator.isNull(layoutPageTemplateEntryKey)) {
 			layoutPageTemplateEntryKey = _generateLayoutPageTemplateEntryKey(
@@ -421,7 +426,11 @@ public class LayoutPageTemplateEntryLocalServiceImpl
 		LayoutSet layoutSet = _layoutSetLocalService.fetchLayoutSet(
 			layoutPageTemplateEntry.getGroupId(), false);
 
-		if ((layout != null) && (layoutSet != null)) {
+		if ((layout != null) && (layoutSet != null) &&
+			(layout.getGroupId() == _getLayoutGroupId(
+				layoutPageTemplateEntry.getGroupId(),
+				layoutPageTemplateEntry.getLayoutPrototypeId()))) {
+
 			_layoutLocalService.deleteLayout(layout);
 		}
 
@@ -595,105 +604,6 @@ public class LayoutPageTemplateEntryLocalServiceImpl
 	}
 
 	@Override
-	public List<LayoutPageTemplateEntry> getLayoutPageTemplateEntries(
-		long groupId, long layoutPageTemplateCollectionId, int start, int end) {
-
-		return getLayoutPageTemplateEntries(
-			groupId, layoutPageTemplateCollectionId,
-			WorkflowConstants.STATUS_ANY, start, end);
-	}
-
-	@Override
-	public List<LayoutPageTemplateEntry> getLayoutPageTemplateEntries(
-		long groupId, long layoutPageTemplateCollectionId, int status,
-		int start, int end) {
-
-		if (status == WorkflowConstants.STATUS_ANY) {
-			return layoutPageTemplateEntryPersistence.findByG_L(
-				groupId, layoutPageTemplateCollectionId, start, end);
-		}
-
-		return layoutPageTemplateEntryPersistence.findByG_L_S(
-			groupId, layoutPageTemplateCollectionId, status, start, end);
-	}
-
-	@Override
-	public List<LayoutPageTemplateEntry> getLayoutPageTemplateEntries(
-		long groupId, long layoutPageTemplateCollectionId, int status,
-		int start, int end,
-		OrderByComparator<LayoutPageTemplateEntry> orderByComparator) {
-
-		if (status == WorkflowConstants.STATUS_ANY) {
-			return layoutPageTemplateEntryPersistence.findByG_L(
-				groupId, layoutPageTemplateCollectionId, start, end,
-				orderByComparator);
-		}
-
-		return layoutPageTemplateEntryPersistence.findByG_L_S(
-			groupId, layoutPageTemplateCollectionId, status, start, end,
-			orderByComparator);
-	}
-
-	@Override
-	public List<LayoutPageTemplateEntry> getLayoutPageTemplateEntries(
-		long groupId, long layoutPageTemplateCollectionId, int start, int end,
-		OrderByComparator<LayoutPageTemplateEntry> orderByComparator) {
-
-		return getLayoutPageTemplateEntries(
-			groupId, layoutPageTemplateCollectionId,
-			WorkflowConstants.STATUS_ANY, start, end, orderByComparator);
-	}
-
-	@Override
-	public List<LayoutPageTemplateEntry> getLayoutPageTemplateEntries(
-		long groupId, long layoutPageTemplateCollectionId, String name,
-		int status, int start, int end,
-		OrderByComparator<LayoutPageTemplateEntry> orderByComparator) {
-
-		if (status == WorkflowConstants.STATUS_ANY) {
-			if (Validator.isNull(name)) {
-				return layoutPageTemplateEntryPersistence.findByG_L(
-					groupId, layoutPageTemplateCollectionId, start, end,
-					orderByComparator);
-			}
-
-			return layoutPageTemplateEntryPersistence.findByG_L_LikeN(
-				groupId, layoutPageTemplateCollectionId, name, start, end,
-				orderByComparator);
-		}
-
-		if (Validator.isNull(name)) {
-			return layoutPageTemplateEntryPersistence.findByG_L_S(
-				groupId, layoutPageTemplateCollectionId, status, start, end,
-				orderByComparator);
-		}
-
-		return layoutPageTemplateEntryPersistence.findByG_L_LikeN_S(
-			groupId, layoutPageTemplateCollectionId, name, status, start, end,
-			orderByComparator);
-	}
-
-	@Override
-	public List<LayoutPageTemplateEntry> getLayoutPageTemplateEntries(
-		long groupId, long layoutPageTemplateCollectionId, String name,
-		int start, int end,
-		OrderByComparator<LayoutPageTemplateEntry> orderByComparator) {
-
-		return getLayoutPageTemplateEntries(
-			groupId, layoutPageTemplateCollectionId, name,
-			WorkflowConstants.STATUS_ANY, start, end, orderByComparator);
-	}
-
-	@Override
-	public List<LayoutPageTemplateEntry>
-		getLayoutPageTemplateEntriesByLayoutPrototypeId(
-			long layoutPrototypeId) {
-
-		return layoutPageTemplateEntryPersistence.findByLayoutPrototypeId(
-			layoutPrototypeId);
-	}
-
-	@Override
 	public LayoutPageTemplateEntry getLayoutPageTemplateEntry(
 			long groupId, String layoutPageTemplateEntryKey)
 		throws NoSuchPageTemplateEntryException {
@@ -800,6 +710,9 @@ public class LayoutPageTemplateEntryLocalServiceImpl
 		LayoutPageTemplateEntry layoutPageTemplateEntry =
 			layoutPageTemplateEntryPersistence.findByPrimaryKey(
 				layoutPageTemplateEntryId);
+
+		_validatePreviewFileEntryId(
+			layoutPageTemplateEntry.getGroupId(), previewFileEntryId);
 
 		long previousPreviewFileEntryId =
 			layoutPageTemplateEntry.getPreviewFileEntryId();
@@ -1219,6 +1132,26 @@ public class LayoutPageTemplateEntryLocalServiceImpl
 			String.valueOf(classTypeId));
 	}
 
+	private long _getLayoutGroupId(long defaultGroupId, long layoutPrototypeId)
+		throws PortalException {
+
+		if (layoutPrototypeId == 0) {
+			return defaultGroupId;
+		}
+
+		LayoutPrototype layoutPrototype =
+			_layoutPrototypeLocalService.fetchLayoutPrototype(
+				layoutPrototypeId);
+
+		if (layoutPrototype == null) {
+			return defaultGroupId;
+		}
+
+		Group group = layoutPrototype.getGroup();
+
+		return group.getGroupId();
+	}
+
 	private void _unsetDefaultLayoutPageTemplateEntry(
 		long classNameId, String classTypeKey,
 		long excludedLayoutPageTemplateEntryId, long groupId) {
@@ -1468,6 +1401,40 @@ public class LayoutPageTemplateEntryLocalServiceImpl
 		}
 	}
 
+	private void _validatePlid(long groupId, long plid) throws PortalException {
+		if (plid == 0) {
+			return;
+		}
+
+		Layout layout = _layoutLocalService.fetchLayout(plid);
+
+		if ((layout == null) || (layout.getGroupId() != groupId)) {
+			throw new LayoutPageTemplateEntryPlidException(groupId, plid);
+		}
+	}
+
+	private void _validatePreviewFileEntryId(
+			long groupId, long previewFileEntryId)
+		throws PortalException {
+
+		if (previewFileEntryId <= 0) {
+			return;
+		}
+
+		FileEntry fileEntry = _dlAppLocalService.fetchFileEntry(
+			previewFileEntryId);
+		Repository repository = _portletFileRepository.fetchPortletRepository(
+			groupId, LayoutAdminPortletKeys.GROUP_PAGES);
+
+		if ((fileEntry == null) || (repository == null) ||
+			(repository.getRepositoryId() != fileEntry.getRepositoryId())) {
+
+			throw new LayoutPageTemplateEntryPreviewFileEntryIdException(
+				"Unable to use file entry " + previewFileEntryId +
+					" as a preview");
+		}
+	}
+
 	private static final Log _log = LogFactoryUtil.getLog(
 		LayoutPageTemplateEntryLocalServiceImpl.class);
 
@@ -1479,6 +1446,9 @@ public class LayoutPageTemplateEntryLocalServiceImpl
 
 	@Reference
 	private DDMStructureLinkLocalService _ddmStructureLinkLocalService;
+
+	@Reference
+	private DLAppLocalService _dlAppLocalService;
 
 	@Reference
 	private File _file;

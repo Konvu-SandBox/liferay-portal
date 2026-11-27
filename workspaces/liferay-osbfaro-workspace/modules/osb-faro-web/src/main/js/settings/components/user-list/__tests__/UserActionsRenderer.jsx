@@ -3,8 +3,6 @@ import UserActionsRenderer from '../UserActionsRenderer';
 import {render} from '@testing-library/react';
 import {User} from 'shared/util/records';
 
-jest.unmock('react-dom');
-
 describe('UserActionsRenderer', () => {
 	it('should render', () => {
 		const {container} = render(
@@ -23,8 +21,8 @@ describe('UserActionsRenderer', () => {
 			/>
 		);
 
-		expect(findByText('Save')).toBeTruthy();
-		expect(findByText('Cancel')).toBeTruthy();
+		expect(findByText(/^save$/i)).toBeTruthy();
+		expect(findByText(/^cancel$/i)).toBeTruthy();
 	});
 
 	it('should render without row actions for the current user', () => {

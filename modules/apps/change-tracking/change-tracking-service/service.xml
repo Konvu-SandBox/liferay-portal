@@ -272,9 +272,6 @@
 
 		<!-- Finder methods -->
 
-		<finder name="CompanyId" return-type="Collection">
-			<finder-column name="companyId" />
-		</finder>
 		<finder name="CtCollectionId" return-type="Collection">
 			<finder-column name="ctCollectionId" />
 		</finder>
@@ -302,7 +299,7 @@
 		<column name="description" type="String" />
 		<column name="url" type="String" />
 		<column name="clientId" type="String" />
-		<column name="clientSecret" type="String" />
+		<column json-enabled="false" name="clientSecret" type="String" />
 
 		<!-- Order -->
 

@@ -41,6 +41,7 @@ import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.model.CompanyConstants;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.GroupConstants;
 import com.liferay.portal.kernel.model.Layout;
@@ -68,9 +69,7 @@ import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.util.WebKeys;
-import com.liferay.portal.kernel.xml.Document;
-import com.liferay.portal.kernel.xml.Element;
-import com.liferay.portal.kernel.xml.SAXReaderUtil;
+import com.liferay.portal.kernel.xml.XMLUtil;
 import com.liferay.segments.SegmentsEntryRetriever;
 import com.liferay.segments.constants.SegmentsWebKeys;
 import com.liferay.segments.context.RequestContextMapper;
@@ -201,13 +200,11 @@ public class AssetPublisherHelperImpl implements AssetPublisherHelper {
 		List<String> missingAssetEntryUuids = new ArrayList<>();
 
 		for (String assetEntryXml : assetEntryXmls) {
-			Document document = SAXReaderUtil.read(assetEntryXml);
+			String assetEntryUuid = XMLUtil.getElementText(
+				assetEntryXml, "asset-entry-uuid");
 
-			Element rootElement = document.getRootElement();
-
-			String assetEntryUuid = rootElement.elementText("asset-entry-uuid");
-
-			String assetEntryType = rootElement.elementText("asset-entry-type");
+			String assetEntryType = XMLUtil.getElementText(
+				assetEntryXml, "asset-entry-type");
 
 			AssetRendererFactory<?> assetRendererFactory =
 				AssetRendererFactoryRegistryUtil.
@@ -379,7 +376,9 @@ public class AssetPublisherHelperImpl implements AssetPublisherHelper {
 					SegmentsWebKeys.SEGMENTS_ANONYMOUS_USER_ID));
 
 			if (FeatureFlagManagerUtil.isEnabled(
-					assetListEntry.getCompanyId(), "LPD-109242")) {
+					assetListEntry.getCompanyId(), "LPD-109242") &&
+				!FeatureFlagManagerUtil.isEnabled(
+					CompanyConstants.SYSTEM, "LPD-78863")) {
 
 				InfoPage<AssetEntry> infoPage =
 					_assetListAssetEntryProvider.getAssetEntriesInfoPage(
@@ -679,15 +678,13 @@ public class AssetPublisherHelperImpl implements AssetPublisherHelper {
 				if (Validator.isNotNull(viewURL) &&
 					!Objects.equals(viewURL, noSuchEntryRedirect)) {
 
-					String redirect = ParamUtil.getString(
-						liferayPortletRequest, "redirect");
+					String redirect = AssetPublisherUtil.getRedirect(
+						liferayPortletRequest);
 
-					if (Validator.isNull(redirect)) {
-						redirect = _portal.getCurrentURL(liferayPortletRequest);
+					if (Validator.isNotNull(redirect)) {
+						viewURL = HttpComponentsUtil.setParameter(
+							viewURL, "redirect", redirect);
 					}
-
-					viewURL = HttpComponentsUtil.setParameter(
-						viewURL, "redirect", redirect);
 				}
 			}
 			catch (Exception exception) {
@@ -1366,11 +1363,8 @@ public class AssetPublisherHelperImpl implements AssetPublisherHelper {
 		while (iterator.hasNext()) {
 			String assetEntryXml = iterator.next();
 
-			Document document = SAXReaderUtil.read(assetEntryXml);
-
-			Element rootElement = document.getRootElement();
-
-			String assetEntryUuid = rootElement.elementText("asset-entry-uuid");
+			String assetEntryUuid = XMLUtil.getElementText(
+				assetEntryXml, "asset-entry-uuid");
 
 			if (!assetEntryUuids.contains(assetEntryUuid)) {
 				continue;
