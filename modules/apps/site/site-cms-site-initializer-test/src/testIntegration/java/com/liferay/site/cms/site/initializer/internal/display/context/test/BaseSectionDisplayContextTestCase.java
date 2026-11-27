@@ -10,6 +10,7 @@ import com.liferay.depot.constants.DepotRolesConstants;
 import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.service.DepotEntryLocalService;
 import com.liferay.frontend.data.set.model.FDSActionDropdownItem;
+import com.liferay.frontend.data.set.test.util.FrontendDataSetTestUtil;
 import com.liferay.frontend.taglib.clay.servlet.taglib.util.CreationMenu;
 import com.liferay.frontend.taglib.clay.servlet.taglib.util.DropdownItem;
 import com.liferay.info.localized.InfoLocalizedValue;
@@ -771,15 +772,55 @@ public abstract class BaseSectionDisplayContextTestCase
 		return filterString + " and status in (0, 2, 3, 1, 7)";
 	}
 
+	protected void assertFDSActionDropdownItemIds(
+		String[] expectedIds,
+		List<FDSActionDropdownItem> fdsActionDropdownItems) {
+
+		Assert.assertArrayEquals(
+			expectedIds,
+			TransformUtil.transformToArray(
+				fdsActionDropdownItems,
+				fdsActionDropdownItem -> {
+					Map<String, Object> data =
+						(Map<String, Object>)fdsActionDropdownItem.get("data");
+
+					return (String)data.get("id");
+				},
+				String.class));
+	}
+
+	protected void assertUpdateDatesFDSActionDropdownItem(
+		FDSActionDropdownItem fdsActionDropdownItem) {
+
+		FrontendDataSetTestUtil.assertFDSActionDropdownItem(
+			"calendar", "update-dates-menu", "Update Dates", null, "contextual",
+			null, fdsActionDropdownItem);
+
+		List<FDSActionDropdownItem> fdsActionDropdownItems =
+			(List<FDSActionDropdownItem>)fdsActionDropdownItem.get("items");
+
+		Assert.assertEquals(
+			fdsActionDropdownItems.toString(), 2,
+			fdsActionDropdownItems.size());
+
+		FrontendDataSetTestUtil.assertFDSActionDropdownItem(
+			null, "update-expiration-date", "Expiration Date", null,
+			fdsActionDropdownItems.get(0));
+		FrontendDataSetTestUtil.assertFDSActionDropdownItem(
+			null, "update-review-date", "Review Date", null,
+			fdsActionDropdownItems.get(1));
+	}
+
 	protected String getAdditionalAPIURLParameters() throws Exception {
 		return StringBundler.concat(
 			"emptySearch=true&filter=",
 			appendStatus(appendGroupIds(getFilterString())),
-			"&nestedFields=embedded,embeddedTaxonomyCategory,",
+			"&nestedFields=embedded,embedded.images,embeddedTaxonomyCategory,",
 			"file.metadata,file.previewURL,file.thumbnailURL,",
 			"modifiedBy,numberOfObjectEntries,numberOfObjectEntryFolders,",
 			"systemProperties.collaboratorBrief,",
-			"systemProperties.objectDefinitionBrief&sort=dateModified:desc");
+			"systemProperties.objectDefinitionBrief&nestedFieldsDepth=2&",
+			"sort=dateModified:desc");
 	}
 
 	protected List<FDSActionDropdownItem> getBulkActionDropdownItems()

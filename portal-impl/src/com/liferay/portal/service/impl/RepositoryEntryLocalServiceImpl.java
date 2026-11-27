@@ -12,8 +12,11 @@ import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.RepositoryEntry;
 import com.liferay.portal.kernel.model.User;
+import com.liferay.portal.kernel.service.SQLStateAcceptor;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.persistence.UserPersistence;
+import com.liferay.portal.kernel.spring.aop.Property;
+import com.liferay.portal.kernel.spring.aop.Retry;
 import com.liferay.portal.service.base.RepositoryEntryLocalServiceBaseImpl;
 
 import java.util.List;
@@ -84,12 +87,28 @@ public class RepositoryEntryLocalServiceImpl
 	}
 
 	@Override
+	@Retry(
+		acceptor = SQLStateAcceptor.class,
+		properties = {
+			@Property(
+				name = SQLStateAcceptor.SQLSTATE,
+				value = SQLStateAcceptor.SQLSTATE_INTEGRITY_CONSTRAINT_VIOLATION
+			)
+		}
+	)
 	public RepositoryEntry getRepositoryEntry(
 			long userId, long groupId, long repositoryId, String objectId)
 		throws PortalException {
 
 		RepositoryEntry repositoryEntry = repositoryEntryPersistence.fetchByR_M(
 			repositoryId, objectId);
+
+		if (repositoryEntry != null) {
+			return repositoryEntry;
+		}
+
+		repositoryEntry = repositoryEntryPersistence.fetchByR_M(
+			repositoryId, objectId, false);
 
 		if (repositoryEntry != null) {
 			return repositoryEntry;
@@ -113,6 +132,19 @@ public class RepositoryEntryLocalServiceImpl
 
 		RepositoryEntry repositoryEntry =
 			repositoryEntryPersistence.findByPrimaryKey(repositoryEntryId);
+
+		RepositoryEntry mappedRepositoryEntry =
+			repositoryEntryPersistence.fetchByR_M(
+				repositoryEntry.getRepositoryId(), mappedId);
+
+		if ((mappedRepositoryEntry != null) &&
+			(mappedRepositoryEntry.getRepositoryEntryId() !=
+				repositoryEntryId)) {
+
+			repositoryEntryPersistence.remove(mappedRepositoryEntry);
+
+			repositoryEntryPersistence.flush();
+		}
 
 		repositoryEntry.setMappedId(mappedId);
 

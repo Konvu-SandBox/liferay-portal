@@ -33,6 +33,7 @@ import com.liferay.commerce.product.exception.CPDefinitionMetaKeywordsException;
 import com.liferay.commerce.product.exception.CPDefinitionMetaTitleException;
 import com.liferay.commerce.product.exception.CPDefinitionProductTypeNameException;
 import com.liferay.commerce.product.exception.CPDefinitionSubscriptionLengthException;
+import com.liferay.commerce.product.exception.NoSuchCPDefinitionException;
 import com.liferay.commerce.product.model.CPAttachmentFileEntry;
 import com.liferay.commerce.product.model.CPConfigurationEntry;
 import com.liferay.commerce.product.model.CPConfigurationEntrySetting;
@@ -459,6 +460,21 @@ public class CPDefinitionLocalServiceImpl
 
 				if (cpDefinitionId == 0) {
 					cpDefinitionId = cProduct.getPublishedCPDefinitionId();
+				}
+				else {
+					CPDefinition cpDefinition =
+						cpDefinitionPersistence.findByPrimaryKey(
+							cpDefinitionId);
+
+					if (cpDefinition.getCProductId() !=
+							cProduct.getCProductId()) {
+
+						throw new NoSuchCPDefinitionException(
+							StringBundler.concat(
+								"Commerce product definition ", cpDefinitionId,
+								" does not belong to commerce product ",
+								cProduct.getCProductId()));
+					}
 				}
 
 				CPDefinition cpDefinition =
@@ -912,6 +928,13 @@ public class CPDefinitionLocalServiceImpl
 
 		CPDefinition sourceCPDefinition =
 			cpDefinitionPersistence.findByPrimaryKey(sourceCPDefinitionId);
+
+		if (sourceCPDefinition.getGroupId() != groupId) {
+			throw new CPDefinitionGroupIdException(
+				StringBundler.concat(
+					"Commerce product definition ", sourceCPDefinitionId,
+					" does not belong to group ", groupId));
+		}
 
 		CProduct sourceCProduct = _cProductPersistence.fetchByPrimaryKey(
 			sourceCPDefinition.getCProductId());
@@ -1870,28 +1893,6 @@ public class CPDefinitionLocalServiceImpl
 		throws PortalException {
 
 		return cpDefinitionPersistence.findByC_V(cProductId, version);
-	}
-
-	@Override
-	public List<CPDefinition> getCProductCPDefinitions(
-		long cProductId, int status, int start, int end) {
-
-		return cpDefinitionPersistence.findByC_S(
-			cProductId, status, start, end);
-	}
-
-	@Override
-	public List<CPDefinition> getCProductCPDefinitions(
-		long cProductId, int status, int start, int end,
-		OrderByComparator<CPDefinition> orderByComparator) {
-
-		return cpDefinitionPersistence.findByC_S(
-			cProductId, status, start, end, orderByComparator);
-	}
-
-	@Override
-	public int getCProductCPDefinitionsCount(long cProductId, int status) {
-		return cpDefinitionPersistence.countByC_S(cProductId, status);
 	}
 
 	@Override

@@ -219,10 +219,6 @@ public interface RedirectNotFoundEntryLocalService
 		long redirectNotFoundEntryId);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public RedirectNotFoundEntry fetchRedirectNotFoundEntry(
-		long groupId, String url);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public ActionableDynamicQuery getActionableDynamicQuery();
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
@@ -268,11 +264,6 @@ public interface RedirectNotFoundEntryLocalService
 		long groupId, Date minModifiedDate, int start, int end,
 		OrderByComparator<RedirectNotFoundEntry> orderByComparator);
 
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public List<RedirectNotFoundEntry> getRedirectNotFoundEntries(
-		long groupId, int start, int end,
-		OrderByComparator<RedirectNotFoundEntry> orderByComparator);
-
 	/**
 	 * Returns the number of redirect not found entries.
 	 *
@@ -282,15 +273,8 @@ public interface RedirectNotFoundEntryLocalService
 	public int getRedirectNotFoundEntriesCount();
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public int getRedirectNotFoundEntriesCount(long groupId);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public int getRedirectNotFoundEntriesCount(
 		long groupId, Boolean ignored, Date minModifiedDate);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public int getRedirectNotFoundEntriesCount(
-		long groupId, Date minModifiedDate);
 
 	/**
 	 * Returns the redirect not found entry with the primary key.
@@ -324,4 +308,4 @@ public interface RedirectNotFoundEntryLocalService
 		RedirectNotFoundEntry redirectNotFoundEntry);
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:922957065
+// LIFERAY-SERVICE-BUILDER-HASH:1583300307

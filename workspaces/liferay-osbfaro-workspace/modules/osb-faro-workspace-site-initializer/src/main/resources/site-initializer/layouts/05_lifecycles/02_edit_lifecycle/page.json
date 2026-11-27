@@ -1,0 +1,32 @@
+{
+	"friendlyURL": "/edit-lifecycle",
+	"hidden": true,
+	"name": "Edit Lifecycle",
+	"name_i18n": {
+		"en_US": "Edit Lifecycle"
+	},
+	"permissions": [
+		{
+			"actionIds": [
+			],
+			"roleName": "Guest",
+			"scope": 4
+		},
+		{
+			"actionIds": [
+				"VIEW"
+			],
+			"roleName": "Site Member",
+			"scope": 4
+		}
+	],
+	"private": false,
+	"system": false,
+	"type": "Content",
+	"typeSettings": [
+		{
+			"key": "faroRequirement",
+			"value": "ldp"
+		}
+	]
+}

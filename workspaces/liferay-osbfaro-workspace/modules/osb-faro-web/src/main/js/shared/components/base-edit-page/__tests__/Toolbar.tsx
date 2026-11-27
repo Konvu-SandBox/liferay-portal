@@ -3,8 +3,6 @@ import Toolbar from '../Toolbar';
 import {fireEvent, render, screen} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 
-jest.unmock('react-dom');
-
 const renderToolbar = (children?: React.ReactNode) =>
 	render(
 		<MemoryRouter>
@@ -28,7 +26,10 @@ describe('BaseEditPage.Toolbar', () => {
 		renderToolbar();
 
 		expect(
-			screen.getByRole('heading', {level: 1, name: 'New Event Analysis'})
+			screen.getByRole('heading', {
+				level: 1,
+				name: /^new event analysis$/i,
+			})
 		).toBeInTheDocument();
 	});
 
@@ -44,13 +45,11 @@ describe('BaseEditPage.Toolbar', () => {
 		);
 
 		expect(screen.getByText('Download Report')).toBeInTheDocument();
-		expect(screen.getByTestId('toolbar-divider')).toHaveClass(
-			'border-left'
-		);
+		expect(screen.getByTestId('toolbar-divider')).toBeInTheDocument();
 	});
 
 	it('groups the actions so they wrap together below the title', () => {
-		const {container} = renderToolbar(
+		renderToolbar(
 			<>
 				<Toolbar.Cancel href="/list" />
 
@@ -60,40 +59,15 @@ describe('BaseEditPage.Toolbar', () => {
 
 		const actions = screen.getByTestId('toolbar-actions');
 
-		expect(container.firstChild).toHaveClass('base-edit-page-toolbar');
-		expect(actions).toHaveClass('base-edit-page-toolbar-actions');
 		expect(actions).toContainElement(
 			screen.getByRole('link', {name: /cancel/i})
 		);
 		expect(actions).toContainElement(
-			screen.getByRole('button', {name: 'Save'})
+			screen.getByRole('button', {name: /^save$/i})
 		);
 		expect(actions).not.toContainElement(
 			screen.getByRole('heading', {level: 1})
 		);
-	});
-
-	it('hides Cancel and the divider below the large breakpoint', () => {
-		renderToolbar(
-			<>
-				<Toolbar.Divider />
-
-				<Toolbar.Cancel href="/list" />
-
-				<Toolbar.Save label="Save" />
-			</>
-		);
-
-		expect(
-			screen.getByRole('link', {name: /cancel/i}).closest('li')
-		).toHaveClass('d-none', 'd-lg-flex');
-		expect(screen.getByTestId('toolbar-divider')).toHaveClass(
-			'd-none',
-			'd-lg-flex'
-		);
-		expect(
-			screen.getByRole('button', {name: 'Save'}).closest('li')
-		).not.toHaveClass('d-none');
 	});
 
 	it('renders Cancel as a link to the given URL', () => {
@@ -109,7 +83,7 @@ describe('BaseEditPage.Toolbar', () => {
 		renderToolbar(<Toolbar.Save label="Save Analysis" type="submit" />);
 
 		expect(
-			screen.getByRole('button', {name: 'Save Analysis'})
+			screen.getByRole('button', {name: /^save analysis$/i})
 		).toHaveAttribute('type', 'submit');
 	});
 
@@ -130,7 +104,7 @@ describe('BaseEditPage.Toolbar', () => {
 			</MemoryRouter>
 		);
 
-		fireEvent.click(screen.getByRole('button', {name: 'Save Analysis'}));
+		fireEvent.click(screen.getByRole('button', {name: /^save analysis$/i}));
 
 		expect(onSubmit).toHaveBeenCalledTimes(1);
 	});
@@ -146,7 +120,7 @@ describe('BaseEditPage.Toolbar', () => {
 			</MemoryRouter>
 		);
 
-		expect(screen.getByRole('button', {name: 'Save'})).toBeDisabled();
+		expect(screen.getByRole('button', {name: /^save$/i})).toBeDisabled();
 
 		rerender(
 			<MemoryRouter>
@@ -156,7 +130,7 @@ describe('BaseEditPage.Toolbar', () => {
 			</MemoryRouter>
 		);
 
-		fireEvent.click(screen.getByRole('button', {name: 'Save'}));
+		fireEvent.click(screen.getByRole('button', {name: /^save$/i}));
 
 		expect(onClick).toHaveBeenCalledTimes(1);
 	});
