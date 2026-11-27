@@ -33,7 +33,7 @@ import com.liferay.layout.page.template.service.LayoutPageTemplateEntryService;
 import com.liferay.layout.page.template.service.LayoutPageTemplateStructureLocalService;
 import com.liferay.layout.util.structure.LayoutStructure;
 import com.liferay.layout.utility.page.model.LayoutUtilityPageEntry;
-import com.liferay.layout.utility.page.service.LayoutUtilityPageEntryLocalService;
+import com.liferay.layout.utility.page.service.LayoutUtilityPageEntryService;
 import com.liferay.petra.function.UnsafeTriConsumer;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringPool;
@@ -205,7 +205,7 @@ public class LayoutsExporterImpl implements LayoutsExporter {
 
 		for (long layoutUtilityPageEntryId : layoutUtilityPageEntryIds) {
 			LayoutUtilityPageEntry layoutUtilityPageEntry =
-				_layoutUtilityPageEntryLocalService.fetchLayoutUtilityPageEntry(
+				_layoutUtilityPageEntryService.fetchLayoutUtilityPageEntry(
 					layoutUtilityPageEntryId);
 
 			_populateLayoutUtilityPageEntriesZipWriter(
@@ -681,8 +681,7 @@ public class LayoutsExporterImpl implements LayoutsExporter {
 		_layoutPageTemplateStructureLocalService;
 
 	@Reference
-	private LayoutUtilityPageEntryLocalService
-		_layoutUtilityPageEntryLocalService;
+	private LayoutUtilityPageEntryService _layoutUtilityPageEntryService;
 
 	@Reference
 	private ZipWriterFactory _zipWriterFactory;
