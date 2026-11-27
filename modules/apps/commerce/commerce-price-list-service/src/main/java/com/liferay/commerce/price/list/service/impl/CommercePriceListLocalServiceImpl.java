@@ -59,7 +59,6 @@ import com.liferay.portal.kernel.cache.PortalCache;
 import com.liferay.portal.kernel.dao.orm.QueryDefinition;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.ResourceConstants;
@@ -92,7 +91,6 @@ import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.LinkedHashMapBuilder;
-import com.liferay.portal.kernel.util.OrderByComparator;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.ProxyFactory;
 import com.liferay.portal.kernel.util.StringUtil;
@@ -804,21 +802,6 @@ public class CommercePriceListLocalServiceImpl
 	}
 
 	@Override
-	public List<CommercePriceList> getCommercePriceLists(
-		long[] groupIds, long companyId, int status, int start, int end,
-		OrderByComparator<CommercePriceList> orderByComparator) {
-
-		if (status == WorkflowConstants.STATUS_ANY) {
-			return commercePriceListPersistence.findByG_C_NotS(
-				groupIds, companyId, WorkflowConstants.STATUS_IN_TRASH, start,
-				end, orderByComparator);
-		}
-
-		return commercePriceListPersistence.findByG_C_S(
-			groupIds, companyId, status, start, end, orderByComparator);
-	}
-
-	@Override
 	public List<CommercePriceList>
 		getCommercePriceListsByAccountAndChannelAndOrderTypeId(
 			long groupId, long commerceAccountId, long commerceChannelId,
@@ -1013,19 +996,6 @@ public class CommercePriceListLocalServiceImpl
 	}
 
 	@Override
-	public int getCommercePriceListsCount(
-		long[] groupIds, long companyId, int status) {
-
-		if (status == WorkflowConstants.STATUS_ANY) {
-			return commercePriceListPersistence.countByG_C_NotS(
-				groupIds, companyId, WorkflowConstants.STATUS_IN_TRASH);
-		}
-
-		return commercePriceListPersistence.countByG_C_S(
-			groupIds, companyId, status);
-	}
-
-	@Override
 	public CommercePriceList getOrAddEmptyCommercePriceList(
 			String externalReferenceCode, long groupId, long companyId,
 			long userId)
@@ -1052,19 +1022,6 @@ public class CommercePriceListLocalServiceImpl
 			this::fetchCommercePriceListByExternalReferenceCode,
 			this::getCommercePriceListByExternalReferenceCode,
 			CommercePriceList.class.getName());
-	}
-
-	@Override
-	public Hits search(SearchContext searchContext) {
-		try {
-			Indexer<CommercePriceList> indexer =
-				IndexerRegistryUtil.nullSafeGetIndexer(CommercePriceList.class);
-
-			return indexer.search(searchContext);
-		}
-		catch (Exception exception) {
-			throw new SystemException(exception);
-		}
 	}
 
 	@Override
@@ -1109,6 +1066,15 @@ public class CommercePriceListLocalServiceImpl
 	public void setCatalogBasePriceList(
 			long groupId, long commercePriceListId, String type)
 		throws PortalException {
+
+		CommercePriceList commercePriceList =
+			commercePriceListPersistence.findByPrimaryKey(commercePriceListId);
+
+		if ((commercePriceList.getGroupId() != groupId) ||
+			!Objects.equals(commercePriceList.getType(), type)) {
+
+			throw new NoSuchPriceListException();
+		}
 
 		CommercePriceList baseCommercePriceList =
 			commercePriceListPersistence.fetchByG_CBPL_T_First(

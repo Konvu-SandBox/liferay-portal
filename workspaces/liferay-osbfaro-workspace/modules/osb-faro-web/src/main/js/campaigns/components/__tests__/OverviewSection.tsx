@@ -6,8 +6,6 @@ import {RangeKeyTimeRanges} from 'shared/util/constants';
 import {RangeSelectors} from 'shared/types';
 import {TrendClassification} from 'segment/types';
 
-jest.unmock('react-dom');
-
 const buildRangeSelectors = (
 	rangeKey: RangeKeyTimeRanges,
 	rangeStart = '',
@@ -55,10 +53,10 @@ describe('OverviewSection', () => {
 		);
 
 		expect(getByText('OVERVIEW')).toBeInTheDocument();
-		expect(getByText('Campaigns')).toBeInTheDocument();
-		expect(getByText('Accounts Touched')).toBeInTheDocument();
-		expect(getByText('Pipeline Value')).toBeInTheDocument();
-		expect(getByText('Closed Won')).toBeInTheDocument();
+		expect(getByText(/^campaigns$/i)).toBeInTheDocument();
+		expect(getByText(/^accounts touched$/i)).toBeInTheDocument();
+		expect(getByText(/^pipeline value$/i)).toBeInTheDocument();
+		expect(getByText(/^closed won$/i)).toBeInTheDocument();
 	});
 
 	it('should leave the range to the page selector rather than the header', () => {

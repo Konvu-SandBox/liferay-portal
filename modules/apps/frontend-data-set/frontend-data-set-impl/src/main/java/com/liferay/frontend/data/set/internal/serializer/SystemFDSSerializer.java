@@ -8,17 +8,15 @@ package com.liferay.frontend.data.set.internal.serializer;
 import com.liferay.frontend.data.set.SystemFDSEntry;
 import com.liferay.frontend.data.set.SystemFDSEntryRegistry;
 import com.liferay.frontend.data.set.action.FDSBulkActions;
-import com.liferay.frontend.data.set.action.FDSBulkActionsRegistry;
 import com.liferay.frontend.data.set.action.FDSCreationMenu;
 import com.liferay.frontend.data.set.action.FDSCreationMenuRegistry;
 import com.liferay.frontend.data.set.action.FDSItemsActions;
 import com.liferay.frontend.data.set.action.FDSItemsActionsRegistry;
+import com.liferay.frontend.data.set.filter.BaseSelectionFDSFilter;
 import com.liferay.frontend.data.set.filter.FDSFilter;
 import com.liferay.frontend.data.set.filter.FDSFilterContextContributor;
-import com.liferay.frontend.data.set.filter.FDSFilterContextContributorRegistry;
 import com.liferay.frontend.data.set.filter.FDSFilterRegistry;
 import com.liferay.frontend.data.set.filter.GroupedFDSFilters;
-import com.liferay.frontend.data.set.filter.GroupedFDSFiltersRegistry;
 import com.liferay.frontend.data.set.model.FDSActionDropdownItem;
 import com.liferay.frontend.data.set.model.FDSSortItem;
 import com.liferay.frontend.data.set.serializer.FDSSerializer;
@@ -26,15 +24,19 @@ import com.liferay.frontend.data.set.sort.FDSSorts;
 import com.liferay.frontend.data.set.sort.FDSSortsRegistry;
 import com.liferay.frontend.data.set.view.FDSView;
 import com.liferay.frontend.data.set.view.FDSViewContextContributor;
-import com.liferay.frontend.data.set.view.FDSViewContextContributorRegistry;
 import com.liferay.frontend.data.set.view.FDSViewRegistry;
 import com.liferay.frontend.taglib.clay.servlet.taglib.util.CreationMenu;
 import com.liferay.object.rest.manager.v1_0.ObjectEntryManagerRegistry;
 import com.liferay.object.service.ObjectDefinitionLocalService;
+import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMap;
+import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMapFactory;
+import com.liferay.petra.string.StringBundler;
 import com.liferay.portal.kernel.json.JSONArray;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.language.LanguageUtil;
+import com.liferay.portal.kernel.log.Log;
+import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.PortalUtil;
@@ -44,12 +46,18 @@ import com.liferay.portal.kernel.util.Validator;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.osgi.framework.BundleContext;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 
 /**
@@ -78,7 +86,7 @@ public class SystemFDSSerializer
 	@Override
 	public String serializeAPIURL(
 		String fdsName, HttpServletRequest httpServletRequest,
-		boolean interpolate, JSONObject tokenResolutionsJSONObject) {
+		boolean interpolate, JSONObject fdsAPIURLTokenResolutionsJSONObject) {
 
 		SystemFDSEntry systemFDSEntry =
 			systemFDSEntryRegistry.getSystemFDSEntry(fdsName);
@@ -91,7 +99,7 @@ public class SystemFDSSerializer
 			httpServletRequest, systemFDSEntry.getRESTApplication(),
 			systemFDSEntry.getRESTEndpoint(), systemFDSEntry.getRESTSchema()
 		).setTokenResolutions(
-			tokenResolutionsJSONObject
+			fdsAPIURLTokenResolutionsJSONObject
 		).build(
 			interpolate
 		);
@@ -100,7 +108,7 @@ public class SystemFDSSerializer
 	@Override
 	public String serializeAdditionalAPIURLParameters(
 		String fdsName, HttpServletRequest httpServletRequest,
-		boolean interpolate, JSONObject tokenResolutionsJSONObject) {
+		boolean interpolate, JSONObject fdsAPIURLTokenResolutionsJSONObject) {
 
 		SystemFDSEntry systemFDSEntry =
 			systemFDSEntryRegistry.getSystemFDSEntry(fdsName);
@@ -115,7 +123,7 @@ public class SystemFDSSerializer
 		).addQueryString(
 			systemFDSEntry.getAdditionalAPIURLParameters(httpServletRequest)
 		).setTokenResolutions(
-			tokenResolutionsJSONObject
+			fdsAPIURLTokenResolutionsJSONObject
 		).buildQueryString(
 			interpolate
 		);
@@ -126,7 +134,7 @@ public class SystemFDSSerializer
 		String fdsName, HttpServletRequest httpServletRequest) {
 
 		FDSBulkActions fdsBulkActions =
-			fdsBulkActionsRegistry.getFDSBulkActions(fdsName);
+			_fdsBulkActionsServiceTrackerMap.getService(fdsName);
 
 		if (fdsBulkActions == null) {
 			return Collections.emptyList();
@@ -156,21 +164,27 @@ public class SystemFDSSerializer
 
 		JSONArray jsonArray = JSONUtil.putAll();
 
-		Locale locale = PortalUtil.getLocale(httpServletRequest);
-
-		_serializeFilters(fdsFilters, jsonArray, locale);
+		_serializeFilters(fdsFilters, httpServletRequest, jsonArray, null);
 		_serializeFilters(
-			fdsFilterRegistry.getFDSFilters(fdsName), jsonArray, locale);
+			fdsFilterRegistry.getFDSFilters(fdsName), httpServletRequest,
+			jsonArray, null);
 
 		return jsonArray;
 	}
 
 	@Override
 	public JSONArray serializeFilters(
-		String fdsName, HttpServletRequest httpServletRequest) {
+		String fdsName, HttpServletRequest httpServletRequest,
+		Map<String, JSONObject>
+			selectionFilterFDSAPIURLTokenResolutionsJSONObjects) {
 
-		return serializeFilters(
-			Collections.emptyList(), fdsName, httpServletRequest);
+		JSONArray jsonArray = JSONUtil.putAll();
+
+		_serializeFilters(
+			fdsFilterRegistry.getFDSFilters(fdsName), httpServletRequest,
+			jsonArray, selectionFilterFDSAPIURLTokenResolutionsJSONObjects);
+
+		return jsonArray;
 	}
 
 	@Override
@@ -180,7 +194,7 @@ public class SystemFDSSerializer
 		JSONArray jsonArray = JSONUtil.putAll();
 
 		GroupedFDSFilters groupedFDSFilters =
-			groupedFDSFiltersRegistry.getGroupedFDSFilters(fdsName);
+			_groupedFDSFiltersServiceTrackerMap.getService(fdsName);
 
 		if (groupedFDSFilters == null) {
 			return jsonArray;
@@ -324,6 +338,59 @@ public class SystemFDSSerializer
 	}
 
 	@Override
+	public Map<String, String> serializeSelectionFilterAPIURLs(
+		String fdsName, HttpServletRequest httpServletRequest,
+		boolean interpolate,
+		Map<String, JSONObject>
+			selectionFilterFDSAPIURLTokenResolutionsJSONObjects) {
+
+		Map<String, String> selectionFilterAPIURLs = new LinkedHashMap<>();
+
+		for (FDSFilter fdsFilter : fdsFilterRegistry.getFDSFilters(fdsName)) {
+			String apiURL = _buildSelectionFilterAPIURL(
+				_getSelectionFilterAPIURL(fdsFilter), fdsFilter,
+				httpServletRequest, interpolate,
+				selectionFilterFDSAPIURLTokenResolutionsJSONObjects);
+
+			if (Validator.isNull(apiURL)) {
+				continue;
+			}
+
+			selectionFilterAPIURLs.put(fdsFilter.getId(), apiURL);
+		}
+
+		return selectionFilterAPIURLs;
+	}
+
+	@Override
+	public boolean serializeShowColumnsVisibility(
+		String fdsName, HttpServletRequest httpServletRequest) {
+
+		SystemFDSEntry systemFDSEntry =
+			systemFDSEntryRegistry.getSystemFDSEntry(fdsName);
+
+		if (systemFDSEntry == null) {
+			return _systemFDSEntry.getShowColumnsVisibility();
+		}
+
+		return systemFDSEntry.getShowColumnsVisibility();
+	}
+
+	@Override
+	public boolean serializeShowPagination(
+		String fdsName, HttpServletRequest httpServletRequest) {
+
+		SystemFDSEntry systemFDSEntry =
+			systemFDSEntryRegistry.getSystemFDSEntry(fdsName);
+
+		if (systemFDSEntry == null) {
+			return _systemFDSEntry.getShowPagination();
+		}
+
+		return systemFDSEntry.getShowPagination();
+	}
+
+	@Override
 	public boolean serializeShowSearch(
 		String fdsName, HttpServletRequest httpServletRequest) {
 
@@ -409,24 +476,26 @@ public class SystemFDSSerializer
 			);
 
 			List<FDSViewContextContributor> fdsViewContextContributors =
-				fdsViewContextContributorRegistry.getFDSViewContextContributors(
+				_fdsViewContextContributorsServiceTrackerMap.getService(
 					fdsView.getContentRenderer());
 
-			for (FDSViewContextContributor fdsViewContextContributor :
-					fdsViewContextContributors) {
+			if (fdsViewContextContributors != null) {
+				for (FDSViewContextContributor fdsViewContextContributor :
+						fdsViewContextContributors) {
 
-				Map<String, Object> fdsViewContext =
-					fdsViewContextContributor.getFDSViewContext(
-						fdsView, PortalUtil.getLocale(httpServletRequest));
+					Map<String, Object> fdsViewContext =
+						fdsViewContextContributor.getFDSViewContext(
+							fdsView, PortalUtil.getLocale(httpServletRequest));
 
-				if (fdsViewContext == null) {
-					continue;
-				}
+					if (fdsViewContext == null) {
+						continue;
+					}
 
-				for (Map.Entry<String, Object> entry :
-						fdsViewContext.entrySet()) {
+					for (Map.Entry<String, Object> entry :
+							fdsViewContext.entrySet()) {
 
-					jsonObject.put(entry.getKey(), entry.getValue());
+						jsonObject.put(entry.getKey(), entry.getValue());
+					}
 				}
 			}
 
@@ -436,15 +505,35 @@ public class SystemFDSSerializer
 		return jsonArray;
 	}
 
-	@Reference
-	protected FDSBulkActionsRegistry fdsBulkActionsRegistry;
+	@Activate
+	protected void activate(BundleContext bundleContext) {
+		_fdsBulkActionsServiceTrackerMap =
+			ServiceTrackerMapFactory.openSingleValueMap(
+				bundleContext, FDSBulkActions.class, "frontend.data.set.name");
+		_fdsFilterContextContributorsServiceTrackerMap =
+			ServiceTrackerMapFactory.openMultiValueMap(
+				bundleContext, FDSFilterContextContributor.class,
+				"frontend.data.set.filter.type");
+		_fdsViewContextContributorsServiceTrackerMap =
+			ServiceTrackerMapFactory.openMultiValueMap(
+				bundleContext, FDSViewContextContributor.class,
+				"frontend.data.set.view.name");
+		_groupedFDSFiltersServiceTrackerMap =
+			ServiceTrackerMapFactory.openSingleValueMap(
+				bundleContext, GroupedFDSFilters.class,
+				"frontend.data.set.name");
+	}
+
+	@Deactivate
+	protected void deactivate() {
+		_fdsBulkActionsServiceTrackerMap.close();
+		_fdsFilterContextContributorsServiceTrackerMap.close();
+		_fdsViewContextContributorsServiceTrackerMap.close();
+		_groupedFDSFiltersServiceTrackerMap.close();
+	}
 
 	@Reference
 	protected FDSCreationMenuRegistry fdsCreationMenuRegistry;
-
-	@Reference
-	protected FDSFilterContextContributorRegistry
-		fdsFilterContextContributorRegistry;
 
 	@Reference
 	protected FDSFilterRegistry fdsFilterRegistry;
@@ -456,26 +545,101 @@ public class SystemFDSSerializer
 	protected FDSSortsRegistry fdsSortsRegistry;
 
 	@Reference
-	protected FDSViewContextContributorRegistry
-		fdsViewContextContributorRegistry;
-
-	@Reference
 	protected FDSViewRegistry fdsViewRegistry;
-
-	@Reference
-	protected GroupedFDSFiltersRegistry groupedFDSFiltersRegistry;
 
 	@Reference
 	protected SystemFDSEntryRegistry systemFDSEntryRegistry;
 
+	private String _buildSelectionFilterAPIURL(
+		String apiURL, FDSFilter fdsFilter,
+		HttpServletRequest httpServletRequest, boolean interpolate,
+		Map<String, JSONObject>
+			selectionFilterFDSAPIURLTokenResolutionsJSONObjects) {
+
+		if (Validator.isNull(apiURL)) {
+			return null;
+		}
+
+		JSONObject tokenResolutionsJSONObject = null;
+
+		if (selectionFilterFDSAPIURLTokenResolutionsJSONObjects != null) {
+			tokenResolutionsJSONObject =
+				selectionFilterFDSAPIURLTokenResolutionsJSONObjects.get(
+					fdsFilter.getId());
+		}
+
+		return createFDSAPIURLBuilder(
+			apiURL, httpServletRequest
+		).setTokenResolutions(
+			tokenResolutionsJSONObject
+		).build(
+			interpolate
+		);
+	}
+
+	private String _getSelectionFilterAPIURL(FDSFilter fdsFilter) {
+		if (!fdsFilter.isEnabled() ||
+			!(fdsFilter instanceof BaseSelectionFDSFilter)) {
+
+			return null;
+		}
+
+		BaseSelectionFDSFilter baseSelectionFDSFilter =
+			(BaseSelectionFDSFilter)fdsFilter;
+
+		if (!baseSelectionFDSFilter.isAutocompleteEnabled()) {
+			return null;
+		}
+
+		String apiURL = baseSelectionFDSFilter.getAPIURL();
+
+		if (Validator.isNull(apiURL)) {
+			return null;
+		}
+
+		return apiURL;
+	}
+
+	private boolean _hasTokens(String apiURL) {
+		if (Validator.isNull(apiURL)) {
+			return false;
+		}
+
+		Matcher matcher = _pattern.matcher(apiURL);
+
+		return matcher.find();
+	}
+
 	private void _serializeFilters(
-		List<FDSFilter> fdsFilters, JSONArray jsonArray, Locale locale) {
+		List<FDSFilter> fdsFilters, HttpServletRequest httpServletRequest,
+		JSONArray jsonArray,
+		Map<String, JSONObject>
+			selectionFilterFDSAPIURLTokenResolutionsJSONObjects) {
+
+		Locale locale = PortalUtil.getLocale(httpServletRequest);
 
 		ResourceBundle resourceBundle = ResourceBundleUtil.getBundle(
 			"content.Language", locale, getClass());
 
 		for (FDSFilter fdsFilter : fdsFilters) {
 			if (!fdsFilter.isEnabled()) {
+				continue;
+			}
+
+			String apiURL = _buildSelectionFilterAPIURL(
+				_getSelectionFilterAPIURL(fdsFilter), fdsFilter,
+				httpServletRequest, true,
+				selectionFilterFDSAPIURLTokenResolutionsJSONObjects);
+
+			if (_hasTokens(apiURL)) {
+				if (_log.isDebugEnabled()) {
+					_log.debug(
+						StringBundler.concat(
+							"Omitting selection filter ", fdsFilter.getId(),
+							" because its API URL has unresolved tokens: ",
+							apiURL));
+				}
+
 				continue;
 			}
 
@@ -492,30 +656,41 @@ public class SystemFDSSerializer
 			);
 
 			List<FDSFilterContextContributor> fdsFilterContextContributors =
-				fdsFilterContextContributorRegistry.
-					getFDSFilterContextContributors(fdsFilter.getType());
+				_fdsFilterContextContributorsServiceTrackerMap.getService(
+					fdsFilter.getType());
 
-			for (FDSFilterContextContributor fdsFilterContextContributor :
-					fdsFilterContextContributors) {
+			if (fdsFilterContextContributors != null) {
+				for (FDSFilterContextContributor fdsFilterContextContributor :
+						fdsFilterContextContributors) {
 
-				Map<String, Object> fdsFilterContext =
-					fdsFilterContextContributor.getFDSFilterContext(
-						fdsFilter, locale);
+					Map<String, Object> fdsFilterContext =
+						fdsFilterContextContributor.getFDSFilterContext(
+							fdsFilter, locale);
 
-				if (fdsFilterContext == null) {
-					continue;
+					if (fdsFilterContext == null) {
+						continue;
+					}
+
+					for (Map.Entry<String, Object> entry :
+							fdsFilterContext.entrySet()) {
+
+						jsonObject.put(entry.getKey(), entry.getValue());
+					}
 				}
+			}
 
-				for (Map.Entry<String, Object> entry :
-						fdsFilterContext.entrySet()) {
-
-					jsonObject.put(entry.getKey(), entry.getValue());
-				}
+			if (Validator.isNotNull(apiURL)) {
+				jsonObject.put("apiURL", apiURL);
 			}
 
 			jsonArray.put(jsonObject);
 		}
 	}
+
+	private static final Log _log = LogFactoryUtil.getLog(
+		SystemFDSSerializer.class);
+
+	private static final Pattern _pattern = Pattern.compile("\\{(.*?)\\}");
 
 	private static final SystemFDSEntry _systemFDSEntry = new SystemFDSEntry() {
 
@@ -558,6 +733,15 @@ public class SystemFDSSerializer
 		}
 
 	};
+
+	private ServiceTrackerMap<String, FDSBulkActions>
+		_fdsBulkActionsServiceTrackerMap;
+	private ServiceTrackerMap<String, List<FDSFilterContextContributor>>
+		_fdsFilterContextContributorsServiceTrackerMap;
+	private ServiceTrackerMap<String, List<FDSViewContextContributor>>
+		_fdsViewContextContributorsServiceTrackerMap;
+	private ServiceTrackerMap<String, GroupedFDSFilters>
+		_groupedFDSFiltersServiceTrackerMap;
 
 	@Reference
 	private ObjectDefinitionLocalService _objectDefinitionLocalService;

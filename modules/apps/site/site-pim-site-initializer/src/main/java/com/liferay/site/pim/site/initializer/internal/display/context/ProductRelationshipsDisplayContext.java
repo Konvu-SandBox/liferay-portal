@@ -103,7 +103,7 @@ public class ProductRelationshipsDisplayContext {
 				String.valueOf(
 					_fdsSerializer.serializeFilters(
 						PIMFDSNames.PRODUCT_RELATIONSHIP_SELECTOR,
-						_httpServletRequest))
+						_httpServletRequest, null))
 			).putData(
 				"scopeKey", String.valueOf(objectEntry.getGroupId())
 			).putData(
@@ -218,7 +218,8 @@ public class ProductRelationshipsDisplayContext {
 					objectEntry.getGroupId(), ") and not (entryClassPK in (",
 					objectEntry.getObjectEntryId())),
 			"{relatedObjectEntryIds}", URLCodec.encodeURL("))"),
-			"&nestedFields=embedded,systemProperties.objectDefinitionBrief");
+			"&nestedFields=embedded,embedded.images,",
+			"systemProperties.objectDefinitionBrief&nestedFieldsDepth=2");
 	}
 
 	private ThemeDisplay _getThemeDisplay() {

@@ -4,7 +4,7 @@
 		"auto_approve": false,
 		"parallelism": 10,
 		"provider": "gcp",
-		"version": "3.0.0"
+		"version": "4.0.0"
 	},
 	"platformComponents": {
 		"values": {
@@ -17,6 +17,11 @@
 	},
 	"project_id": "your-gcp-project-id",
 	"region": "us-central1",
+	"setup": {
+		"database": {
+			"engine": "postgresql"
+		}
+	},
 	"terraform": {
 		"platform": {
 			"keda_config": {

@@ -1661,6 +1661,14 @@ export class PageEditorPage {
 			.waitFor();
 	}
 
+	async openImageSelector(imageId: string) {
+		await this.selectEditable(imageId, 'image-square');
+
+		await this.page.getByTitle('Select Image').click();
+
+		return this.page.frameLocator('iframe[title="Select"]');
+	}
+
 	async openMappingSelector() {
 		await this.selectItemMappingButton.click();
 
@@ -1844,19 +1852,18 @@ export class PageEditorPage {
 
 		await expect(item).toBeVisible();
 
-		await item.click();
+		await clickAndExpectToBeHidden({
+			target: this.page.locator('iframe[title="Select"]'),
+			trigger: item,
+		});
 
 		await expect(this.previewItemSelectorButton).toHaveText(itemName);
 	}
 
 	async selectDirectImage(fileName: string, imageId: string) {
-		await this.selectEditable(imageId, 'image-square');
+		const itemSelector = await this.openImageSelector(imageId);
 
-		await this.page.getByTitle('Select Image').click();
-
-		const articleCard = this.page
-			.frameLocator('iframe[title="Select"]')
-			.getByText(fileName, {exact: false});
+		const articleCard = itemSelector.getByText(fileName, {exact: false});
 
 		await clickAndExpectToBeHidden({
 			target: this.page.locator('.modal-dialog'),

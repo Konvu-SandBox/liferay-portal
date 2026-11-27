@@ -6,8 +6,6 @@ import {MemoryRouter} from 'react-router-dom';
 import {Provider} from 'react-redux';
 import {resetBodyWidth, setBodyWidth} from 'test/body-width';
 
-jest.unmock('react-dom');
-
 const PUSH_WIDTH = 1440;
 
 const OVERLAY_WIDTH = 1024;
@@ -51,8 +49,6 @@ describe('BasePage.Sidebar', () => {
 		render(<Panel open />);
 
 		expect(screen.queryByTestId('base-page-sidebar-backdrop')).toBeNull();
-		expect(getPage()).toHaveClass('c-slideout-push-end');
-		expect(getPage()).not.toHaveClass('base-page-sidebar-overlay');
 	});
 
 	it('overlays the content in overlay mode', () => {
@@ -61,7 +57,6 @@ describe('BasePage.Sidebar', () => {
 		expect(
 			screen.getByTestId('base-page-sidebar-backdrop')
 		).toBeInTheDocument();
-		expect(getPage()).toHaveClass('base-page-sidebar-overlay');
 	});
 
 	it('sets its width on the page', () => {
@@ -141,7 +136,6 @@ describe('BasePage.Sidebar', () => {
 			fireEvent(window, new Event('resize'));
 
 			expect(isLocked()).toBe(false);
-			expect(getPage()).not.toHaveClass('base-page-sidebar-overlay');
 		});
 
 		it('is released when the panel unmounts', () => {

@@ -1,5 +1,3 @@
-jest.unmock('react-dom');
-
 import ClayModal from '@clayui/modal';
 import mockStore from 'test/mock-store';
 import React from 'react';
@@ -47,8 +45,8 @@ describe('ReportIssue', () => {
 
 		await waitForLoadingToBeRemoved(document.body);
 
-		expect(queryByText('Issue Title')).toBeTruthy();
-		expect(queryByText('Description')).toBeTruthy();
+		expect(queryByText(/^issue title$/i)).toBeTruthy();
+		expect(queryByText(/^description$/i)).toBeTruthy();
 		expect(document.body).toMatchSnapshot();
 	});
 });
