@@ -724,12 +724,40 @@ function serializeDefinition(xmlNamespace, metadata, nodes, transitions) {
 					cdata(jsonStringify(item.data.inputVariables || []))
 				)
 			);
+
+			if (item.data.modelName) {
+				buffer.push(
+					createTagWithEscapedContent(
+						'model-name',
+						item.data.modelName
+					)
+				);
+			}
+
+			if (item.data.modelProvider) {
+				buffer.push(
+					createTagWithEscapedContent(
+						'model-provider',
+						item.data.modelProvider
+					)
+				);
+			}
 			buffer.push(
 				XMLUtil.create(
 					'output-variables',
 					cdata(jsonStringify(item.data.outputVariables || []))
 				)
 			);
+
+			if (item.data.parameters?.length) {
+				buffer.push(
+					XMLUtil.create(
+						'parameters',
+						cdata(jsonStringify(item.data.parameters))
+					)
+				);
+			}
+
 			buffer.push(XMLUtil.create('prompt', cdata(prompt ? prompt : '')));
 			buffer.push(
 				XMLUtil.create('rag', cdata(jsonStringify(item.data.rag || {})))
@@ -801,6 +829,12 @@ function serializeDefinition(xmlNamespace, metadata, nodes, transitions) {
 
 		if (item.type === 'service') {
 			buffer.push(
+				XMLUtil.create(
+					'input-variables',
+					cdata(jsonStringify(item.data.inputVariables || []))
+				)
+			);
+			buffer.push(
 				createTagWithEscapedContent(
 					'java-delegate',
 					item.data.javaDelegate || ''
@@ -808,6 +842,13 @@ function serializeDefinition(xmlNamespace, metadata, nodes, transitions) {
 			);
 
 			appendXMLLabels(buffer, item.data.label);
+
+			buffer.push(
+				XMLUtil.create(
+					'output-variables',
+					cdata(jsonStringify(item.data.outputVariables || []))
+				)
+			);
 		}
 
 		const nodeTransitions = transitions.filter(

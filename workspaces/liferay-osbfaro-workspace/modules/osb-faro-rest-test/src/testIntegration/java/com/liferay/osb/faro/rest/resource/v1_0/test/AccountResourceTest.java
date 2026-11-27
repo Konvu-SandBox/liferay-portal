@@ -12,6 +12,7 @@ import com.liferay.osb.faro.engine.client.model.AccountLifecycleStage;
 import com.liferay.osb.faro.engine.client.model.Results;
 import com.liferay.osb.faro.rest.resource.v1_0.AccountResource;
 import com.liferay.osb.faro.service.FaroProjectLocalService;
+import com.liferay.portal.kernel.search.Sort;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
@@ -96,18 +97,111 @@ public class AccountResourceTest extends BaseAccountResourceTestCase {
 		super.testGetWorkspaceGroupChannelAccountsPageWithSortString();
 	}
 
-	@Ignore
 	@Override
 	@Test
-	public void testGraphQLGetWorkspaceGroupAccount() throws Exception {
-		super.testGraphQLGetWorkspaceGroupAccount();
+	public void testGetWorkspaceGroupChannelCampaignAccountsPage()
+		throws Exception {
+
+		AtomicReference<Object[]> atomicReference = new AtomicReference<>();
+
+		AccountResource accountResource = ReflectionTestUtil.getFieldValue(
+			this, "_accountResource");
+
+		ContactsEngineClient contactsEngineClient =
+			ReflectionTestUtil.getAndSetFieldValue(
+				accountResource, "_contactsEngineClient",
+				(ContactsEngineClient)ProxyUtil.newProxyInstance(
+					ContactsEngineClient.class.getClassLoader(),
+					new Class<?>[] {ContactsEngineClient.class},
+					(proxy, method, arguments) -> {
+						atomicReference.set(arguments);
+
+						return new Results<>();
+					}));
+		FaroProjectLocalService faroProjectLocalService =
+			ReflectionTestUtil.getAndSetFieldValue(
+				accountResource, "_faroProjectLocalService",
+				(FaroProjectLocalService)ProxyUtil.newProxyInstance(
+					FaroProjectLocalService.class.getClassLoader(),
+					new Class<?>[] {FaroProjectLocalService.class},
+					(proxy, method, arguments) -> null));
+
+		String campaignId = RandomTestUtil.randomString();
+		long channelId = RandomTestUtil.randomLong();
+		String search = RandomTestUtil.randomString();
+
+		try {
+			accountResource.getWorkspaceGroupChannelCampaignAccountsPage(
+				testGroup.getGroupId(), String.valueOf(channelId), campaignId,
+				null, "LAST_7_DAYS", null, search, Pagination.of(2, 10),
+				new Sort[] {new Sort("lastActivityDate", true)});
+		}
+		finally {
+			ReflectionTestUtil.setFieldValue(
+				accountResource, "_contactsEngineClient", contactsEngineClient);
+			ReflectionTestUtil.setFieldValue(
+				accountResource, "_faroProjectLocalService",
+				faroProjectLocalService);
+		}
+
+		Object[] objects = atomicReference.get();
+
+		Assert.assertNull(objects[1]);
+		Assert.assertNull(objects[2]);
+		Assert.assertEquals(channelId, objects[3]);
+		Assert.assertNull(objects[4]);
+		Assert.assertEquals(campaignId, objects[5]);
+		Assert.assertEquals(search, objects[6]);
+		Assert.assertEquals(7, objects[8]);
+		Assert.assertEquals("lastActivityDate:desc", objects[10]);
+		Assert.assertEquals(2, objects[11]);
+		Assert.assertEquals(10, objects[12]);
 	}
 
 	@Ignore
 	@Override
 	@Test
-	public void testGraphQLGetWorkspaceGroupAccountNotFound() throws Exception {
-		super.testGraphQLGetWorkspaceGroupAccountNotFound();
+	public void testGetWorkspaceGroupChannelCampaignAccountsPageWithPagination()
+		throws Exception {
+
+		super.testGetWorkspaceGroupChannelCampaignAccountsPageWithPagination();
+	}
+
+	@Ignore
+	@Override
+	@Test
+	public void testGetWorkspaceGroupChannelCampaignAccountsPageWithSortDateTime()
+		throws Exception {
+
+		super.
+			testGetWorkspaceGroupChannelCampaignAccountsPageWithSortDateTime();
+	}
+
+	@Ignore
+	@Override
+	@Test
+	public void testGetWorkspaceGroupChannelCampaignAccountsPageWithSortDouble()
+		throws Exception {
+
+		super.testGetWorkspaceGroupChannelCampaignAccountsPageWithSortDouble();
+	}
+
+	@Ignore
+	@Override
+	@Test
+	public void testGetWorkspaceGroupChannelCampaignAccountsPageWithSortInteger()
+		throws Exception {
+
+		super.testGetWorkspaceGroupChannelCampaignAccountsPageWithSortInteger();
+	}
+
+	@Ignore
+	@Override
+	@Test
+	public void testGetWorkspaceGroupChannelCampaignAccountsPageWithSortString()
+		throws Exception {
+
+		super.testGetWorkspaceGroupChannelCampaignAccountsPageWithSortString();
 	}
 
 	private AccountLifecycle _addAccountLifecycle(
@@ -209,7 +303,7 @@ public class AccountResourceTest extends BaseAccountResourceTestCase {
 
 		Assert.assertEquals("2", objects[1]);
 		Assert.assertEquals(
-			"(lifecycleStatus@lifecycle-2 in ('stage-2'))", objects[3]);
+			"(lifecycleStatus@lifecycle-2 in ('stage-2'))", objects[4]);
 	}
 
 	private void _testGetWorkspaceGroupChannelAccountsPageWithLifecycleStage()
@@ -220,7 +314,7 @@ public class AccountResourceTest extends BaseAccountResourceTestCase {
 
 		Assert.assertNull(objects[1]);
 		Assert.assertEquals(
-			"(lifecycleStatus@lifecycle-1 in ('stage-1'))", objects[3]);
+			"(lifecycleStatus@lifecycle-1 in ('stage-1'))", objects[4]);
 	}
 
 	private void _testGetWorkspaceGroupChannelAccountsPageWithUnknownLifecycleStage()
@@ -234,7 +328,7 @@ public class AccountResourceTest extends BaseAccountResourceTestCase {
 		catch (BadRequestException badRequestException) {
 			Assert.assertEquals(
 				"No account lifecycle stage was found with the name " +
-					"\"PIPELINE\"",
+					"\"PIPELINE\". Valid stages: At Risk.",
 				badRequestException.getMessage());
 		}
 	}
@@ -245,7 +339,7 @@ public class AccountResourceTest extends BaseAccountResourceTestCase {
 		Object[] objects = _getWorkspaceGroupChannelAccountsPage(null, null);
 
 		Assert.assertNull(objects[1]);
-		Assert.assertNull(objects[3]);
+		Assert.assertNull(objects[4]);
 	}
 
 }

@@ -8,6 +8,7 @@ package com.liferay.asset.entry.rel.service.impl;
 import com.liferay.asset.entry.rel.model.AssetEntryAssetCategoryRel;
 import com.liferay.asset.entry.rel.model.AssetEntryAssetCategoryRelTable;
 import com.liferay.asset.entry.rel.service.base.AssetEntryAssetCategoryRelLocalServiceBaseImpl;
+import com.liferay.asset.entry.rel.util.comparator.AssetEntryAssetCategoryRelAssetCategoryIdComparator;
 import com.liferay.asset.kernel.model.AssetEntry;
 import com.liferay.asset.kernel.model.AssetEntryTable;
 import com.liferay.asset.kernel.model.AssetRenderer;
@@ -15,6 +16,7 @@ import com.liferay.asset.kernel.service.AssetEntryLocalService;
 import com.liferay.petra.sql.dsl.DSLQueryFactoryUtil;
 import com.liferay.petra.sql.dsl.query.DSLQuery;
 import com.liferay.portal.aop.AopService;
+import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.mass.delete.MassDeleteCacheThreadLocal;
@@ -25,6 +27,9 @@ import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -147,14 +152,6 @@ public class AssetEntryAssetCategoryRelLocalServiceImpl
 	}
 
 	@Override
-	public AssetEntryAssetCategoryRel fetchAssetEntryAssetCategoryRel(
-		long assetEntryId, long assetCategoryId) {
-
-		return assetEntryAssetCategoryRelPersistence.fetchByA_A(
-			assetEntryId, assetCategoryId);
-	}
-
-	@Override
 	public long[] getAssetCategoryPrimaryKeys(long assetEntryId) {
 		List<AssetEntryAssetCategoryRel> assetEntryAssetCategoryRels =
 			getAssetEntryAssetCategoryRelsByAssetEntryId(assetEntryId);
@@ -174,38 +171,10 @@ public class AssetEntryAssetCategoryRelLocalServiceImpl
 
 	@Override
 	public List<AssetEntryAssetCategoryRel>
-		getAssetEntryAssetCategoryRelsByAssetCategoryId(
-			long assetCategoryId, int start, int end) {
-
-		return assetEntryAssetCategoryRelPersistence.findByAssetCategoryId(
-			assetCategoryId, start, end);
-	}
-
-	@Override
-	public List<AssetEntryAssetCategoryRel>
-		getAssetEntryAssetCategoryRelsByAssetCategoryId(
-			long assetCategoryId, int start, int end,
-			OrderByComparator<AssetEntryAssetCategoryRel> orderByComparator) {
-
-		return assetEntryAssetCategoryRelPersistence.findByAssetCategoryId(
-			assetCategoryId, start, end, orderByComparator);
-	}
-
-	@Override
-	public List<AssetEntryAssetCategoryRel>
 		getAssetEntryAssetCategoryRelsByAssetEntryId(long assetEntryId) {
 
 		return assetEntryAssetCategoryRelPersistence.findByAssetEntryId(
 			assetEntryId);
-	}
-
-	@Override
-	public List<AssetEntryAssetCategoryRel>
-		getAssetEntryAssetCategoryRelsByAssetEntryId(
-			long assetEntryId, int start, int end) {
-
-		return assetEntryAssetCategoryRelPersistence.findByAssetEntryId(
-			assetEntryId, start, end);
 	}
 
 	@Override
@@ -216,6 +185,34 @@ public class AssetEntryAssetCategoryRelLocalServiceImpl
 
 		return assetEntryAssetCategoryRelPersistence.findByAssetEntryId(
 			assetEntryId, start, end, orderByComparator);
+	}
+
+	@Override
+	public Map<Long, List<AssetEntryAssetCategoryRel>>
+		getAssetEntryAssetCategoryRelsByAssetEntryIds(long[] assetEntryIds) {
+
+		if (assetEntryIds.length == 0) {
+			return Collections.emptyMap();
+		}
+
+		Map<Long, List<AssetEntryAssetCategoryRel>>
+			assetEntryAssetCategoryRelsMap = new HashMap<>();
+
+		for (AssetEntryAssetCategoryRel assetEntryAssetCategoryRel :
+				assetEntryAssetCategoryRelPersistence.findByAssetEntryId(
+					assetEntryIds, QueryUtil.ALL_POS, QueryUtil.ALL_POS,
+					AssetEntryAssetCategoryRelAssetCategoryIdComparator.
+						getInstance(true))) {
+
+			List<AssetEntryAssetCategoryRel> assetEntryAssetCategoryRels =
+				assetEntryAssetCategoryRelsMap.computeIfAbsent(
+					assetEntryAssetCategoryRel.getAssetEntryId(),
+					assetEntryId -> new ArrayList<>());
+
+			assetEntryAssetCategoryRels.add(assetEntryAssetCategoryRel);
+		}
+
+		return assetEntryAssetCategoryRelsMap;
 	}
 
 	@Override
@@ -252,16 +249,6 @@ public class AssetEntryAssetCategoryRelLocalServiceImpl
 		);
 
 		return _assetEntryLocalService.dslQueryCount(dslQuery);
-	}
-
-	@Override
-	public long[] getAssetEntryPrimaryKeys(long assetCategoryId) {
-		List<AssetEntryAssetCategoryRel> assetEntryAssetCategoryRels =
-			getAssetEntryAssetCategoryRelsByAssetCategoryId(assetCategoryId);
-
-		return ListUtil.toLongArray(
-			assetEntryAssetCategoryRels,
-			AssetEntryAssetCategoryRel::getAssetEntryId);
 	}
 
 	private void _reindex(AssetEntry assetEntry) {

@@ -9,6 +9,7 @@ import com.liferay.exportimport.kernel.lar.PortletDataContext;
 import com.liferay.friendly.url.exception.NoSuchFriendlyURLEntryLocalizationException;
 import com.liferay.friendly.url.model.FriendlyURLEntry;
 import com.liferay.friendly.url.model.FriendlyURLEntryLocalization;
+import com.liferay.friendly.url.model.FriendlyURLEntryTitles;
 import com.liferay.petra.function.UnsafeFunction;
 import com.liferay.petra.sql.dsl.query.DSLQuery;
 import com.liferay.portal.kernel.change.tracking.CTAware;
@@ -370,11 +371,6 @@ public interface FriendlyURLEntryLocalService
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public FriendlyURLEntryLocalization getFriendlyURLEntryLocalization(
-			long groupId, long classNameId, String urlTitle)
-		throws NoSuchFriendlyURLEntryLocalizationException;
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public FriendlyURLEntryLocalization getFriendlyURLEntryLocalization(
 			long groupId, long classNameId, String languageId, String urlTitle)
 		throws NoSuchFriendlyURLEntryLocalizationException;
 
@@ -400,6 +396,10 @@ public interface FriendlyURLEntryLocalService
 	public FriendlyURLEntry getMainFriendlyURLEntry(
 			long classNameId, long classPK)
 		throws PortalException;
+
+	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+	public Map<Long, FriendlyURLEntryTitles> getMainFriendlyURLEntryTitles(
+		long classNameId, long[] classPKs);
 
 	/**
 	 * Returns the OSGi service identifier.
@@ -457,11 +457,6 @@ public interface FriendlyURLEntryLocalService
 
 	public FriendlyURLEntry updateFriendlyURLEntry(
 			long friendlyURLEntryId, long classNameId, long classPK,
-			String defaultLanguageId, Map<String, String> urlTitleMap)
-		throws PortalException;
-
-	public FriendlyURLEntry updateFriendlyURLEntry(
-			long friendlyURLEntryId, long classNameId, long classPK,
 			String defaultLanguageId, Map<String, String> urlTitleMap,
 			ServiceContext serviceContext)
 		throws PortalException;
@@ -479,10 +474,6 @@ public interface FriendlyURLEntryLocalService
 
 	public FriendlyURLEntryLocalization updateFriendlyURLLocalization(
 		FriendlyURLEntryLocalization friendlyURLEntryLocalization);
-
-	public FriendlyURLEntryLocalization updateFriendlyURLLocalization(
-			long friendlyURLLocalizationId, String urlTitle)
-		throws PortalException;
 
 	public void validate(
 			long groupId, long classNameId, long parentClassPK, long classPK,
@@ -532,4 +523,4 @@ public interface FriendlyURLEntryLocalService
 		throws E;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-945327983
+// LIFERAY-SERVICE-BUILDER-HASH:1629702325

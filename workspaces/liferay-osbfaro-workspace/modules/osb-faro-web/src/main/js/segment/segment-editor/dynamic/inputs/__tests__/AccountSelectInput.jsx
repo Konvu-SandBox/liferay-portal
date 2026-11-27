@@ -6,8 +6,6 @@ import {createCustomValueMap} from '../../utils/custom-inputs';
 import {Property} from 'shared/util/records';
 import {PropertyTypes} from '../../utils/constants';
 
-jest.unmock('react-dom');
-
 const getMockValue = (propertyName, operatorName, value) =>
 	createCustomValueMap([
 		{key: 'criterionGroup', value: [{operatorName, propertyName, value}]}
@@ -92,8 +90,8 @@ describe('AccountSelectInput', () => {
 	it('should render the entity, the property and the operator of the criterion', () => {
 		const {getAllByText, getByText} = render(<DefaultComponent />);
 
-		expect(getByText('Account')).toBeInTheDocument();
-		expect(getAllByText('Lifecycle')[0]).toBeInTheDocument();
+		expect(getByText(/^account$/i)).toBeInTheDocument();
+		expect(getAllByText(/^lifecycle$/i)[0]).toBeInTheDocument();
 		expect(getByText('is')).toBeInTheDocument();
 	});
 
@@ -105,14 +103,14 @@ describe('AccountSelectInput', () => {
 		);
 
 		await waitFor(() =>
-			expect(getByLabelText('Lifecycle')).not.toBeDisabled()
+			expect(getByLabelText(/^lifecycle$/i)).not.toBeDisabled()
 		);
 
-		fireEvent.click(getByLabelText('Lifecycle'));
+		fireEvent.click(getByLabelText(/^lifecycle$/i));
 
 		const options = getAllByRole('option');
 
-		expect(options[0]).toHaveTextContent('Customer');
+		expect(options[0]).toHaveTextContent(/customer/i);
 		expect(options[1]).toHaveTextContent('Partner');
 
 		fireEvent.click(options[1]);
@@ -131,10 +129,10 @@ describe('AccountSelectInput', () => {
 		const {getByLabelText, getByText} = render(<DefaultComponent />);
 
 		await waitFor(() =>
-			expect(getByLabelText('Lifecycle')).not.toBeDisabled()
+			expect(getByLabelText(/^lifecycle$/i)).not.toBeDisabled()
 		);
 
-		expect(getByText('Add Stage').closest('button')).toBeDisabled();
+		expect(getByText(/^add stage$/i).closest('button')).toBeDisabled();
 	});
 
 	it('should list the stages of the selected lifecycle sorted by display order', async () => {
@@ -151,15 +149,15 @@ describe('AccountSelectInput', () => {
 			/>
 		);
 
-		await findByText('Customer');
+		await findByText(/^customer$/i);
 
-		fireEvent.click(getByText('Add Stage'));
+		fireEvent.click(getByText(/^add stage$/i));
 
 		const items = getAllByRole('option');
 
 		expect(items).toHaveLength(2);
-		expect(items[0]).toHaveTextContent('Aware');
-		expect(items[1]).toHaveTextContent('Engaged');
+		expect(items[0]).toHaveTextContent(/aware/i);
+		expect(items[1]).toHaveTextContent(/engaged/i);
 
 		fireEvent.click(items[1]);
 
@@ -186,9 +184,9 @@ describe('AccountSelectInput', () => {
 			/>
 		);
 
-		await findByText('Engaged');
+		await findByText(/^engaged$/i);
 
-		fireEvent.focus(getByRole('combobox', {name: 'Stages'}));
+		fireEvent.focus(getByRole('combobox', {name: /^stages$/i}));
 
 		const items = getAllByRole('option');
 
@@ -227,14 +225,14 @@ describe('AccountSelectInput', () => {
 				/>
 			);
 
-		await findByText('Customer');
+		await findByText(/^customer$/i);
 
-		expect(queryByRole('combobox', {name: 'Stages'})).toBeNull();
+		expect(queryByRole('combobox', {name: /^stages$/i})).toBeNull();
 
-		fireEvent.click(getByText('Add Stage'));
+		fireEvent.click(getByText(/^add stage$/i));
 
-		expect(getByRole('combobox', {name: 'Stages'})).toHaveFocus();
-		expect(queryByText('Add Stage')).toBeNull();
+		expect(getByRole('combobox', {name: /^stages$/i})).toHaveFocus();
+		expect(queryByText(/^add stage$/i)).toBeNull();
 	});
 
 	it('should show the Add Stage button when closing the stages input without selecting a stage', async () => {
@@ -248,16 +246,16 @@ describe('AccountSelectInput', () => {
 			/>
 		);
 
-		await findByText('Customer');
+		await findByText(/^customer$/i);
 
-		fireEvent.click(getByText('Add Stage'));
+		fireEvent.click(getByText(/^add stage$/i));
 
-		fireEvent.keyDown(getByRole('combobox', {name: 'Stages'}), {
+		fireEvent.keyDown(getByRole('combobox', {name: /^stages$/i}), {
 			key: 'Escape'
 		});
 
-		expect(queryByRole('combobox', {name: 'Stages'})).toBeNull();
-		expect(getByText('Add Stage')).toBeInTheDocument();
+		expect(queryByRole('combobox', {name: /^stages$/i})).toBeNull();
+		expect(getByText(/^add stage$/i)).toBeInTheDocument();
 	});
 
 	it('should keep the stages input after selecting the first stage', async () => {
@@ -271,13 +269,13 @@ describe('AccountSelectInput', () => {
 			/>
 		);
 
-		await findByText('Customer');
+		await findByText(/^customer$/i);
 
-		fireEvent.click(getByText('Add Stage'));
-		fireEvent.click(getByRole('option', {name: 'Aware'}));
+		fireEvent.click(getByText(/^add stage$/i));
+		fireEvent.click(getByRole('option', {name: /^aware$/i}));
 
-		expect(getByRole('combobox', {name: 'Stages'})).toBeInTheDocument();
-		expect(getByText('Aware')).toBeInTheDocument();
+		expect(getByRole('combobox', {name: /^stages$/i})).toBeInTheDocument();
+		expect(getByText(/^aware$/i)).toBeInTheDocument();
 	});
 
 	it('should show the Add Stage button after removing every stage', async () => {
@@ -291,12 +289,12 @@ describe('AccountSelectInput', () => {
 			/>
 		);
 
-		await findByText('Engaged');
+		await findByText(/^engaged$/i);
 
 		fireEvent.click(getByLabelText('Remove Engaged'));
 
-		expect(queryByRole('combobox', {name: 'Stages'})).toBeNull();
-		expect(getByText('Add Stage')).toBeInTheDocument();
+		expect(queryByRole('combobox', {name: /^stages$/i})).toBeNull();
+		expect(getByText(/^add stage$/i)).toBeInTheDocument();
 	});
 
 	it('should show the Add Stage button after clearing every stage', async () => {
@@ -310,12 +308,12 @@ describe('AccountSelectInput', () => {
 			/>
 		);
 
-		await findByText('Engaged');
+		await findByText(/^engaged$/i);
 
-		fireEvent.click(getByLabelText('Clear All'));
+		fireEvent.click(getByLabelText(/^clear all$/i));
 
-		expect(queryByRole('combobox', {name: 'Stages'})).toBeNull();
-		expect(getByText('Add Stage')).toBeInTheDocument();
+		expect(queryByRole('combobox', {name: /^stages$/i})).toBeNull();
+		expect(getByText(/^add stage$/i)).toBeInTheDocument();
 	});
 
 	it('should show the Add Stage button after changing the lifecycle while adding stages', async () => {
@@ -330,14 +328,14 @@ describe('AccountSelectInput', () => {
 				/>
 			);
 
-		await findByText('Customer');
+		await findByText(/^customer$/i);
 
-		fireEvent.click(getByText('Add Stage'));
-		fireEvent.click(getByLabelText('Lifecycle'));
+		fireEvent.click(getByText(/^add stage$/i));
+		fireEvent.click(getByLabelText(/^lifecycle$/i));
 		fireEvent.click(getByRole('option', {name: 'Partner'}));
 
-		expect(queryByRole('combobox', {name: 'Stages'})).toBeNull();
-		expect(getByText('Add Stage')).toBeInTheDocument();
+		expect(queryByRole('combobox', {name: /^stages$/i})).toBeNull();
+		expect(getByText(/^add stage$/i)).toBeInTheDocument();
 	});
 
 	it('should match the lifecycle at any stage after removing every stage', async () => {
@@ -354,7 +352,7 @@ describe('AccountSelectInput', () => {
 			/>
 		);
 
-		await findByText('Engaged');
+		await findByText(/^engaged$/i);
 
 		fireEvent.click(getByLabelText('Remove Engaged'));
 
@@ -400,11 +398,11 @@ describe('AccountSelectInput', () => {
 			/>
 		);
 
-		await findByText('Engaged');
+		await findByText(/^engaged$/i);
 
-		expect(getByText('Aware')).toBeInTheDocument();
+		expect(getByText(/^aware$/i)).toBeInTheDocument();
 
-		fireEvent.click(getByLabelText('Clear All'));
+		fireEvent.click(getByLabelText(/^clear all$/i));
 
 		expect(getItems(onChange)).toEqual([
 			{
@@ -429,9 +427,9 @@ describe('AccountSelectInput', () => {
 			/>
 		);
 
-		await findByText('Customer');
+		await findByText(/^customer$/i);
 
-		fireEvent.click(getByText('Customer'));
+		fireEvent.click(getByText(/^customer$/i));
 		fireEvent.click(getAllByRole('option')[1]);
 
 		expect(getItems(onChange)).toEqual([
@@ -457,13 +455,13 @@ describe('AccountSelectInput', () => {
 			/>
 		);
 
-		await findByText('Customer');
+		await findByText(/^customer$/i);
 
-		fireEvent.click(getByText('Customer'));
+		fireEvent.click(getByText(/^customer$/i));
 		fireEvent.click(getAllByRole('option')[0]);
 
 		expect(onChange).not.toHaveBeenCalled();
-		expect(getByText('Engaged')).toBeInTheDocument();
+		expect(getByText(/^engaged$/i)).toBeInTheDocument();
 	});
 
 	it('should not show the stages of a lifecycle that does not exist', async () => {
@@ -478,11 +476,11 @@ describe('AccountSelectInput', () => {
 		);
 
 		await waitFor(() =>
-			expect(getByLabelText('Lifecycle')).not.toBeDisabled()
+			expect(getByLabelText(/^lifecycle$/i)).not.toBeDisabled()
 		);
 
 		expect(queryByText('erc-stage-3001')).toBeNull();
-		expect(queryByLabelText('Clear All')).toBeNull();
+		expect(queryByLabelText(/^clear all$/i)).toBeNull();
 	});
 
 	it('should show a stage that does not exist as undefined', async () => {
@@ -496,7 +494,7 @@ describe('AccountSelectInput', () => {
 			/>
 		);
 
-		await findByText('Undefined Stage');
+		await findByText(/^undefined stage$/i);
 
 		expect(queryByText('deleted-stage')).toBeNull();
 	});
