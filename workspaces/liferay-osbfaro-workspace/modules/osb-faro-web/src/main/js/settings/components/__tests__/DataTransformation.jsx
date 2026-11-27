@@ -11,8 +11,6 @@ import {Provider} from 'react-redux';
 import {render} from '@testing-library/react';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const defaultProps = {
 	groupId: '23',
 	id: '123',
@@ -87,7 +85,7 @@ describe('DataTransformation', () => {
 
 		await waitForLoadingToBeRemoved(document.body);
 
-		expect(getByText('Done')).not.toBeDisabled();
+		expect(getByText(/^done$/i)).not.toBeDisabled();
 	});
 
 	it('should render w/ the done button disabled if there are duplicate CSV field mappings', async () => {
@@ -115,6 +113,6 @@ describe('DataTransformation', () => {
 
 		await waitForLoadingToBeRemoved(document.body);
 
-		expect(getByText('Done')).toBeDisabled();
+		expect(getByText(/^done$/i)).toBeDisabled();
 	});
 });

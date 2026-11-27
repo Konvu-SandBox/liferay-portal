@@ -14,8 +14,6 @@ const defaultProps = {
 	interestId: 1
 };
 
-jest.unmock('react-dom');
-
 describe('InterestDetails', () => {
 	it('should render', async () => {
 		const {container, getByText} = render(
@@ -26,7 +24,7 @@ describe('InterestDetails', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(getByText('Back to Interests')).toBeInTheDocument();
+		expect(getByText(/^back to interests$/i)).toBeInTheDocument();
 	});
 
 	it('should render an active pages list tab', async () => {
@@ -38,8 +36,8 @@ describe('InterestDetails', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(getByText('Active Pages')).toBeTruthy();
-		expect(getByText('Active Pages').parentElement).toHaveClass('active');
+		expect(getByText(/^active pages$/i)).toBeTruthy();
+		expect(getByText(/^active pages$/i).parentElement).toHaveClass('active');
 	});
 
 	it('should render an inactive pages list tab', async () => {
@@ -51,7 +49,7 @@ describe('InterestDetails', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(getByText('Inactive Pages')).toBeTruthy();
-		expect(getByText('Inactive Pages').parentElement).toHaveClass('active');
+		expect(getByText(/^inactive pages$/i)).toBeTruthy();
+		expect(getByText(/^inactive pages$/i).parentElement).toHaveClass('active');
 	});
 });

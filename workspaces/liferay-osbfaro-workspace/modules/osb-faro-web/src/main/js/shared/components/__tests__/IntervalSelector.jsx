@@ -2,8 +2,6 @@ import IntervalSelector from '../IntervalSelector';
 import React from 'react';
 import {cleanup, fireEvent, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('IntervalSelector', () => {
 	afterEach(cleanup);
 
@@ -18,14 +16,14 @@ describe('IntervalSelector', () => {
 			<IntervalSelector activeInterval='W' onChange={jest.fn()} />
 		);
 
-		expect(getByText('W')).not.toHaveClass('.active');
+		expect(getByText(/^w$/i)).not.toHaveClass('.active');
 	});
 
 	it('should call the onChange callback when an interval is clicked', () => {
 		const spy = jest.fn();
 		const {getByText} = render(<IntervalSelector onChange={spy} />);
 
-		fireEvent.click(getByText('M'));
+		fireEvent.click(getByText(/^m$/i));
 
 		expect(spy).toHaveBeenCalled();
 	});

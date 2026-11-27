@@ -60,6 +60,7 @@ import com.liferay.object.service.ObjectFolderLocalService;
 import com.liferay.object.service.ObjectRelationshipLocalService;
 import com.liferay.object.test.util.ObjectDefinitionTestUtil;
 import com.liferay.object.test.util.TreeTestUtil;
+import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
@@ -84,6 +85,7 @@ import com.liferay.portal.kernel.test.AssertUtils;
 import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
 import com.liferay.portal.kernel.test.util.CompanyTestUtil;
+import com.liferay.portal.kernel.test.util.FeatureFlagTestUtil;
 import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.HTTPTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
@@ -106,6 +108,7 @@ import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.kernel.workflow.WorkflowDefinition;
 import com.liferay.portal.language.LanguageResources;
 import com.liferay.portal.odata.entity.EntityField;
+import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.vulcan.util.LocalizedMapUtil;
 import com.liferay.portal.workflow.constants.WorkflowDefinitionConstants;
@@ -433,6 +436,7 @@ public class ObjectDefinitionResourceTest
 		_testPatchObjectDefinitionWithPermissions();
 	}
 
+	@FeatureFlag("LPD-108620")
 	@LazyReferencing
 	@Override
 	@Test
@@ -774,6 +778,7 @@ public class ObjectDefinitionResourceTest
 		_testPostObjectDefinitionWithAllowStandaloneObjectEntry();
 		_testPostObjectDefinitionWithAssigneeObjectField();
 		_testPostObjectDefinitionWithPermissions();
+		_testPostObjectDefinitionWithRelationshipObjectField();
 		_testPostObjectDefinitionWithSystemAggregationObjectField();
 		_testPostObjectDefinitionWithWorkflowDefinitionLinks();
 	}
@@ -2879,90 +2884,101 @@ public class ObjectDefinitionResourceTest
 	private void _testGetObjectDefinitionWithWorkflowDefinitionLink()
 		throws Exception {
 
-		// Company scope
+		try (SafeCloseable safeCloseable =
+				FeatureFlagTestUtil.setFeatureFlagsWithSafeCloseable(
+					true, "LPD-49856")) {
 
-		ObjectDefinition objectDefinition = _addObjectDefinition(
-			randomObjectDefinition());
+			// Company scope
 
-		WorkflowDefinition workflowDefinition1 =
-			_workflowDefinitionManager.getWorkflowDefinition(
-				TestPropsValues.getCompanyId(),
-				WorkflowDefinitionConstants.
-					EXTERNAL_REFERENCE_CODE_SINGLE_APPROVER);
+			ObjectDefinition objectDefinition = _addObjectDefinition(
+				randomObjectDefinition());
 
-		WorkflowDefinitionLink workflowDefinitionLink1 =
-			new WorkflowDefinitionLink() {
-				{
-					groupExternalReferenceCode = StringPool.BLANK;
-					workflowDefinitionName = workflowDefinition1.getName();
-				}
-			};
+			WorkflowDefinition workflowDefinition1 =
+				_workflowDefinitionManager.getWorkflowDefinition(
+					TestPropsValues.getCompanyId(),
+					WorkflowDefinitionConstants.
+						EXTERNAL_REFERENCE_CODE_SINGLE_APPROVER);
 
-		_workflowDefinitionLinkLocalService.addWorkflowDefinitionLink(
-			null, TestPropsValues.getUserId(), TestPropsValues.getCompanyId(),
-			0, objectDefinition.getClassName(), objectDefinition.getId(), 0,
-			workflowDefinitionLink1.getWorkflowDefinitionName(), 0);
+			WorkflowDefinitionLink workflowDefinitionLink1 =
+				new WorkflowDefinitionLink() {
+					{
+						groupExternalReferenceCode = StringPool.BLANK;
+						workflowDefinitionExternalReferenceCode =
+							workflowDefinition1.getExternalReferenceCode();
+						workflowDefinitionName = workflowDefinition1.getName();
+					}
+				};
 
-		objectDefinition = objectDefinitionResource.getObjectDefinition(
-			objectDefinition.getId());
+			_workflowDefinitionLinkLocalService.addWorkflowDefinitionLink(
+				null, TestPropsValues.getUserId(),
+				TestPropsValues.getCompanyId(), 0,
+				objectDefinition.getClassName(), objectDefinition.getId(), 0,
+				workflowDefinitionLink1.getWorkflowDefinitionName(), 0);
 
-		Assert.assertEquals(
-			new WorkflowDefinitionLink[] {workflowDefinitionLink1},
-			objectDefinition.getWorkflowDefinitionLinks());
+			objectDefinition = objectDefinitionResource.getObjectDefinition(
+				objectDefinition.getId());
 
-		// Site scope
+			Assert.assertEquals(
+				new WorkflowDefinitionLink[] {workflowDefinitionLink1},
+				objectDefinition.getWorkflowDefinitionLinks());
 
-		Group group1 = GroupTestUtil.addGroup();
+			// Site scope
 
-		objectDefinition = randomObjectDefinition();
+			Group group1 = GroupTestUtil.addGroup();
 
-		objectDefinition.setScope(ObjectDefinitionConstants.SCOPE_SITE);
+			objectDefinition = randomObjectDefinition();
 
-		objectDefinition = _addObjectDefinition(objectDefinition);
+			objectDefinition.setScope(ObjectDefinitionConstants.SCOPE_SITE);
 
-		workflowDefinitionLink1.setGroupExternalReferenceCode(
-			group1.getExternalReferenceCode());
+			objectDefinition = _addObjectDefinition(objectDefinition);
 
-		_workflowDefinitionLinkLocalService.addWorkflowDefinitionLink(
-			null, TestPropsValues.getUserId(), TestPropsValues.getCompanyId(),
-			group1.getGroupId(), objectDefinition.getClassName(),
-			objectDefinition.getId(), 0,
-			workflowDefinitionLink1.getWorkflowDefinitionName(), 0);
+			workflowDefinitionLink1.setGroupExternalReferenceCode(
+				group1.getExternalReferenceCode());
 
-		Group group2 = GroupTestUtil.addGroup();
+			_workflowDefinitionLinkLocalService.addWorkflowDefinitionLink(
+				null, TestPropsValues.getUserId(),
+				TestPropsValues.getCompanyId(), group1.getGroupId(),
+				objectDefinition.getClassName(), objectDefinition.getId(), 0,
+				workflowDefinitionLink1.getWorkflowDefinitionName(), 0);
 
-		String content = workflowDefinition1.getContentAsXML();
+			Group group2 = GroupTestUtil.addGroup();
 
-		WorkflowDefinition workflowDefinition2 =
-			_workflowDefinitionManager.deployWorkflowDefinition(
-				content.getBytes(), TestPropsValues.getCompanyId(), null,
-				RandomTestUtil.randomString(), RandomTestUtil.randomString(),
-				TestPropsValues.getUserId());
+			String content = workflowDefinition1.getContentAsXML();
 
-		WorkflowDefinitionLink workflowDefinitionLink2 =
-			new WorkflowDefinitionLink() {
-				{
-					groupExternalReferenceCode =
-						group2.getExternalReferenceCode();
-					workflowDefinitionName = workflowDefinition2.getName();
-				}
-			};
+			WorkflowDefinition workflowDefinition2 =
+				_workflowDefinitionManager.deployWorkflowDefinition(
+					content.getBytes(), TestPropsValues.getCompanyId(), null,
+					RandomTestUtil.randomString(),
+					RandomTestUtil.randomString(), TestPropsValues.getUserId());
 
-		_workflowDefinitionLinkLocalService.addWorkflowDefinitionLink(
-			null, TestPropsValues.getUserId(), TestPropsValues.getCompanyId(),
-			group2.getGroupId(), objectDefinition.getClassName(),
-			objectDefinition.getId(), 0,
-			workflowDefinitionLink2.getWorkflowDefinitionName(), 0);
+			WorkflowDefinitionLink workflowDefinitionLink2 =
+				new WorkflowDefinitionLink() {
+					{
+						groupExternalReferenceCode =
+							group2.getExternalReferenceCode();
+						workflowDefinitionExternalReferenceCode =
+							workflowDefinition2.getExternalReferenceCode();
+						workflowDefinitionName = workflowDefinition2.getName();
+					}
+				};
 
-		objectDefinition = objectDefinitionResource.getObjectDefinition(
-			objectDefinition.getId());
+			_workflowDefinitionLinkLocalService.addWorkflowDefinitionLink(
+				null, TestPropsValues.getUserId(),
+				TestPropsValues.getCompanyId(), group2.getGroupId(),
+				objectDefinition.getClassName(), objectDefinition.getId(), 0,
+				workflowDefinitionLink2.getWorkflowDefinitionName(), 0);
 
-		Assert.assertEquals(
-			new HashSet<>(
-				Arrays.asList(
-					workflowDefinitionLink1, workflowDefinitionLink2)),
-			new HashSet<>(
-				Arrays.asList(objectDefinition.getWorkflowDefinitionLinks())));
+			objectDefinition = objectDefinitionResource.getObjectDefinition(
+				objectDefinition.getId());
+
+			Assert.assertEquals(
+				new HashSet<>(
+					Arrays.asList(
+						workflowDefinitionLink1, workflowDefinitionLink2)),
+				new HashSet<>(
+					Arrays.asList(
+						objectDefinition.getWorkflowDefinitionLinks())));
+		}
 	}
 
 	private void _testGetObjectDefinitionsPage(
@@ -3365,6 +3381,63 @@ public class ObjectDefinitionResourceTest
 			ResourceConstants.SCOPE_COMPANY,
 			String.valueOf(TestPropsValues.getCompanyId()), role1.getRoleId(),
 			ActionKeys.DELETE);
+	}
+
+	private void _testPostObjectDefinitionWithRelationshipObjectField()
+		throws Exception {
+
+		_testPostObjectDefinitionWithRelationshipObjectField(
+			ObjectRelationshipConstants.TYPE_ONE_TO_MANY, null);
+		_testPostObjectDefinitionWithRelationshipObjectField(
+			ObjectRelationshipConstants.TYPE_ONE_TO_MANY,
+			ObjectField.RelationshipType.ONE_TO_MANY);
+		_testPostObjectDefinitionWithRelationshipObjectField(
+			ObjectRelationshipConstants.TYPE_ONE_TO_ONE,
+			ObjectField.RelationshipType.ONE_TO_ONE);
+	}
+
+	private void _testPostObjectDefinitionWithRelationshipObjectField(
+			String expectedObjectRelationshipType,
+			ObjectField.RelationshipType objectFieldRelationshipType)
+		throws Exception {
+
+		ObjectDefinition objectDefinition2 = randomObjectDefinition();
+
+		String objectDefinition1ExternalReferenceCode =
+			RandomTestUtil.randomString();
+
+		ObjectField relationshipObjectField = _createRelationshipObjectField(
+			objectDefinition1ExternalReferenceCode);
+
+		String objectRelationshipExternalReferenceCode =
+			RandomTestUtil.randomString();
+
+		relationshipObjectField.setObjectRelationshipExternalReferenceCode(
+			objectRelationshipExternalReferenceCode);
+
+		relationshipObjectField.setRelationshipType(
+			objectFieldRelationshipType);
+
+		objectDefinition2.setObjectFields(
+			ArrayUtil.append(
+				objectDefinition2.getObjectFields(), relationshipObjectField));
+
+		_addObjectDefinition(objectDefinition2);
+
+		ObjectDefinition objectDefinition1 =
+			objectDefinitionResource.getObjectDefinitionByExternalReferenceCode(
+				objectDefinition1ExternalReferenceCode);
+
+		com.liferay.object.model.ObjectRelationship
+			serviceBuilderObjectRelationship =
+				_objectRelationshipLocalService.
+					fetchObjectRelationshipByExternalReferenceCode(
+						objectRelationshipExternalReferenceCode,
+						objectDefinition1.getId());
+
+		Assert.assertEquals(
+			expectedObjectRelationshipType,
+			serviceBuilderObjectRelationship.getType());
 	}
 
 	private void _testPostObjectDefinitionWithSystemAggregationObjectField()

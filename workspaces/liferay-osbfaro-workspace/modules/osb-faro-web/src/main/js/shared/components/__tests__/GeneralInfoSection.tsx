@@ -2,8 +2,6 @@ import React from 'react';
 import {GeneralInfoSection} from '../GeneralInfoSection';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('GeneralInfoSection', () => {
 	const mockConfig = [
 		{
@@ -118,7 +116,7 @@ describe('GeneralInfoSection', () => {
 			/>
 		);
 
-		expect(getByText('User Profile')).toBeTruthy();
+		expect(getByText(/^user profile$/i)).toBeTruthy();
 	});
 
 	it('should render multiple sections with their respective items', () => {

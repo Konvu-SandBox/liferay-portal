@@ -5,8 +5,6 @@ import {act, fireEvent, render, screen} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const TestComponent = ({propertyGroupsIList}) => (
 	<div>
 		{propertyGroupsIList &&
@@ -130,6 +128,26 @@ describe('WithPropertyGroups', () => {
 		await waitForLoadingToBeRemoved(container);
 
 		expect(container).toMatchSnapshot();
+	});
+
+	it('should not offer campaigns in real-time segments', async () => {
+		const WrappedComponent = withPropertyGroups(TestComponent);
+
+		const {container} = render(
+			<MemoryRouter>
+				<WrappedComponent
+					channelId='123'
+					groupId='123'
+					type='REAL_TIME'
+				/>
+			</MemoryRouter>
+		);
+
+		jest.runAllTimers();
+
+		await waitForLoadingToBeRemoved(container);
+
+		expect(screen.queryByText('Campaigns')).not.toBeInTheDocument();
 	});
 
 	// The editor is composed onto this HOC, and a remount here takes its

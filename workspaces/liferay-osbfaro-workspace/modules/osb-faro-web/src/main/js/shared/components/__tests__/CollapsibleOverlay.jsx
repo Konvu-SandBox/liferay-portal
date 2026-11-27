@@ -2,8 +2,6 @@ import CollapsibleOverlay from '../CollapsibleOverlay';
 import React from 'react';
 import {cleanup, fireEvent, render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('CollapsibleOverlay', () => {
 	afterEach(cleanup);
 
@@ -26,7 +24,7 @@ describe('CollapsibleOverlay', () => {
 			<CollapsibleOverlay onClose={onCloseSpy} visible />
 		);
 
-		fireEvent.click(getByLabelText('Close'));
+		fireEvent.click(getByLabelText(/^close$/i));
 
 		expect(onCloseSpy).toHaveBeenCalled();
 	});
