@@ -85,6 +85,7 @@
 		<suppress checks="CSPTagMissingAttributesCheck" files="portal-web/test/functional/com/liferay/portalweb/tests/enduser/documentmanagement/documentsadministration/dependencies/adt_media_gallery_carousel\.ftl" />
 		<suppress checks="CSPTagMissingAttributesCheck" files="workspaces/.*" />
 		<suppress checks="GetterUtilCheck" files="portal-kernel/test/unit/com/liferay/portal/kernel/util/GetterUtilTest\.java" />
+		<suppress checks="GradleDependencyArtifactsCheck" files="workspaces/.*" />
 		<suppress checks="GradleDependencyConfigurationCheck" files="workspaces/.*" />
 		<suppress checks="GradleMissingDependenciesForUpgradeJava21Check" files="workspaces/.*" />
 		<suppress checks="IllegalImportsCheck" files="util-slf4j/src/com/liferay/util/slf4j/LiferayLoggerFactory\.java" />
@@ -134,7 +135,6 @@
 		<suppress checks="JavaXMLSecurityCheck" files="portal-impl/src/com/liferay/portal/util/InitUtil.java" />
 		<suppress checks="JavaXMLSecurityCheck" files="portal-impl/src/com/liferay/portal/xml/SAXReaderFactory\.java" />
 		<suppress checks="JavaXMLSecurityCheck" files="portal-kernel/src/com/liferay/portal/kernel/internal/log4j/Log4jConfigUtil\.java" />
-		<suppress checks="JavaXMLSecurityCheck" files="util-java/src/com/liferay/util/xml/XMLMergerRunner\.java" />
 		<suppress checks="JSPIllegalSyntaxCheck" files="modules/apps/portal-remote/portal-remote-json-web-service-web/src/main/resources/META-INF/resources/action\.jsp" />
 		<suppress checks="JSPLanguageKeysCheck" files="portal-web/docroot/html/portal/saml/.*" />
 		<suppress checks="LocaleUtilCheck" files="portal-kernel/src/com/liferay/portal/kernel/util/LocaleUtil\.java" />
