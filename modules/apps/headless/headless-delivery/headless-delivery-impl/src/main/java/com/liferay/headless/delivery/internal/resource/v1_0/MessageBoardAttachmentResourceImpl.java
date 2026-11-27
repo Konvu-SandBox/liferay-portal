@@ -7,7 +7,7 @@ package com.liferay.headless.delivery.internal.resource.v1_0;
 
 import com.liferay.document.library.helper.DLURLHelper;
 import com.liferay.headless.delivery.dto.v1_0.MessageBoardAttachment;
-import com.liferay.headless.delivery.dto.v1_0.util.ContentValueUtil;
+import com.liferay.headless.delivery.internal.dto.v1_0.util.ContentValueUtil;
 import com.liferay.headless.delivery.resource.v1_0.MessageBoardAttachmentResource;
 import com.liferay.message.boards.constants.MBConstants;
 import com.liferay.message.boards.model.MBMessage;
@@ -205,7 +205,7 @@ public class MessageBoardAttachmentResourceImpl
 		return _toMessageBoardAttachment(
 			_portletFileRepository.addPortletFileEntry(
 				null, mbMessage.getGroupId(), contextUser.getUserId(),
-				MBMessage.class.getName(), mbMessage.getClassPK(),
+				MBMessage.class.getName(), mbMessage.getMessageId(),
 				MBConstants.SERVICE_NAME, folder.getFolderId(),
 				binaryFile.getInputStream(), binaryFile.getFileName(),
 				StringPool.BLANK, false));

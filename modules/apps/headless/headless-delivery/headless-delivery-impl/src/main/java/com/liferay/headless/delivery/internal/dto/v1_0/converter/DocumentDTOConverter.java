@@ -13,7 +13,7 @@ import com.liferay.adaptive.media.image.mime.type.AMImageMimeTypeProvider;
 import com.liferay.adaptive.media.image.processor.AMImageAttribute;
 import com.liferay.adaptive.media.processor.AMProcessor;
 import com.liferay.asset.kernel.model.AssetTag;
-import com.liferay.asset.kernel.service.AssetCategoryLocalService;
+import com.liferay.asset.kernel.service.AssetCategoryService;
 import com.liferay.asset.kernel.service.AssetEntryLocalService;
 import com.liferay.asset.kernel.service.AssetTagLocalService;
 import com.liferay.asset.link.service.AssetLinkLocalService;
@@ -38,10 +38,10 @@ import com.liferay.headless.delivery.dto.v1_0.ContentField;
 import com.liferay.headless.delivery.dto.v1_0.Document;
 import com.liferay.headless.delivery.dto.v1_0.DocumentType;
 import com.liferay.headless.delivery.dto.v1_0.TaxonomyCategoryBrief;
-import com.liferay.headless.delivery.dto.v1_0.util.ContentFieldUtil;
-import com.liferay.headless.delivery.dto.v1_0.util.ContentValueUtil;
 import com.liferay.headless.delivery.dto.v1_0.util.CreatorUtil;
 import com.liferay.headless.delivery.internal.dto.v1_0.util.AggregateRatingUtil;
+import com.liferay.headless.delivery.internal.dto.v1_0.util.ContentFieldUtil;
+import com.liferay.headless.delivery.internal.dto.v1_0.util.ContentValueUtil;
 import com.liferay.headless.delivery.internal.dto.v1_0.util.DisplayPageRendererUtil;
 import com.liferay.headless.delivery.internal.dto.v1_0.util.RelatedContentUtil;
 import com.liferay.headless.delivery.internal.dto.v1_0.util.TaxonomyCategoryBriefUtil;
@@ -229,7 +229,7 @@ public class DocumentDTOConverter
 				setSizeInBytes(fileEntry::getSize);
 				setTaxonomyCategoryBriefs(
 					() -> TransformUtil.transformToArray(
-						_assetCategoryLocalService.getCategories(
+						_assetCategoryService.getCategories(
 							DLFileEntry.class.getName(),
 							fileEntry.getFileEntryId()),
 						assetCategory ->
@@ -416,7 +416,7 @@ public class DocumentDTOConverter
 	private AMImageMimeTypeProvider _amImageMimeTypeProvider;
 
 	@Reference
-	private AssetCategoryLocalService _assetCategoryLocalService;
+	private AssetCategoryService _assetCategoryService;
 
 	@Reference
 	private AssetEntryLocalService _assetEntryLocalService;
