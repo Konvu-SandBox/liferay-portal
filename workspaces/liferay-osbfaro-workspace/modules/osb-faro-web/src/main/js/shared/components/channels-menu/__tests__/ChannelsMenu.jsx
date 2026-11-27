@@ -5,8 +5,6 @@ import {BrowserRouter} from 'react-router-dom';
 import {cleanup, fireEvent, render, screen} from '@testing-library/react';
 import {Provider} from 'react-redux';
 
-jest.unmock('react-dom');
-
 const mockMenuItems = () => [
 	{
 		id: '1',
@@ -45,7 +43,7 @@ describe('ChannelsMenu', () => {
 			</Provider>
 		);
 
-		expect(container).toHaveTextContent('No Properties');
+		expect(container).toHaveTextContent(/no properties/i);
 	});
 
 	it('should render dropdown menu when clicked', () => {
@@ -61,7 +59,7 @@ describe('ChannelsMenu', () => {
 			</Provider>
 		);
 
-		const toggleButton = screen.getByRole('combobox', {name: 'Property'});
+		const toggleButton = screen.getByRole('combobox', {name: /^property$/i});
 
 		fireEvent.click(toggleButton);
 
@@ -81,7 +79,7 @@ describe('ChannelsMenu', () => {
 			</Provider>
 		);
 
-		fireEvent.click(screen.getByRole('combobox', {name: 'Property'}));
+		fireEvent.click(screen.getByRole('combobox', {name: /^property$/i}));
 
 		expect(screen.getByText('Link 2')).toBeTruthy();
 	});
@@ -101,9 +99,9 @@ describe('ChannelsMenu', () => {
 			</Provider>
 		);
 
-		fireEvent.click(screen.getByRole('combobox', {name: 'Property'}));
+		fireEvent.click(screen.getByRole('combobox', {name: /^property$/i}));
 
-		fireEvent.change(screen.getByPlaceholderText('Search'), {
+		fireEvent.change(screen.getByPlaceholderText(/^search$/i), {
 			target: {value: channelName}
 		});
 

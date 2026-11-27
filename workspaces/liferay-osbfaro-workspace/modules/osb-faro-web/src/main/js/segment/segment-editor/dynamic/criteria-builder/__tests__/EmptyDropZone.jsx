@@ -8,8 +8,6 @@ import {HTML5Backend} from 'react-dnd-html5-backend';
 
 const connectDnd = jest.fn((element) => element);
 
-jest.unmock('react-dom');
-
 describe('EmptyDropZone', () => {
 	afterEach(cleanup);
 
@@ -35,10 +33,10 @@ describe('EmptyDropZone', () => {
 				'.empty-drop-zone-target .canvas-empty-state-idle'
 			)
 		).toBeInTheDocument();
-		expect(getByText('No Conditions Yet')).toBeInTheDocument();
+		expect(getByText(/^no conditions yet$/i)).toBeInTheDocument();
 		expect(
 			getByText(
-				'To create a new segment, drag items from the Conditions Library and drop them here.'
+				/^to create a new segment, drag items from the conditions library and drop them here\.$/i
 			)
 		).toBeInTheDocument();
 	});

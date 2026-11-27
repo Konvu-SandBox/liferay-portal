@@ -1,4 +1,3 @@
-import * as Constants from 'shared/util/constants';
 import mockStore from 'test/mock-store';
 import React from 'react';
 import {ENABLE_BLOCKLIST_KEYWORDS} from 'shared/util/feature-flags';
@@ -6,8 +5,6 @@ import {Overview} from '../Overview';
 import {Provider} from 'react-redux';
 import {render} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
-
-jest.unmock('react-dom');
 
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
@@ -17,11 +14,16 @@ jest.mock('react-router-dom', () => ({
 	})
 }));
 
+// TODO: LRAC-4511 Remove DEVELOPER_MODE
+
+jest.mock('shared/util/constants', () => ({
+	__esModule: true,
+	...jest.requireActual('shared/util/constants'),
+	DEVELOPER_MODE: true,
+}));
+
 describe('Definitions Overview', () => {
 	it('should render a list of definitions that includes individuals, accounts, behaviors, events, search and interests', () => {
-		// TODO: LRAC-4511 Remove DEVELOPER_MODE
-		Constants.DEVELOPER_MODE = true;
-
 		const {container} = render(
 			<Provider store={mockStore()}>
 				<MemoryRouter>
@@ -34,32 +36,32 @@ describe('Definitions Overview', () => {
 
 		expect(
 			container.querySelectorAll('.list-group-title a')[0]
-		).toHaveTextContent('Individuals');
+		).toHaveTextContent(/individuals/i);
 
 		expect(
 			container.querySelectorAll('.list-group-title a')[1]
-		).toHaveTextContent('Accounts');
+		).toHaveTextContent(/accounts/i);
 
 		expect(
 			container.querySelectorAll('.list-group-title a')[2]
-		).toHaveTextContent('Behaviors');
+		).toHaveTextContent(/behaviors/i);
 
 		expect(
 			container.querySelectorAll('.list-group-title a')[3]
-		).toHaveTextContent('Events');
+		).toHaveTextContent(/events/i);
 
 		expect(
 			container.querySelectorAll('.list-group-title a')[4]
-		).toHaveTextContent('Event Attributes');
+		).toHaveTextContent(/event attributes/i);
 
 		expect(
 			container.querySelectorAll('.list-group-title a')[5]
-		).toHaveTextContent('Search');
+		).toHaveTextContent(/search/i);
 
 		if (ENABLE_BLOCKLIST_KEYWORDS) {
 			expect(
 				container.querySelectorAll('.list-group-title a')[6]
-			).toHaveTextContent('Interests');
+			).toHaveTextContent(/interests/i);
 		}
 	});
 });

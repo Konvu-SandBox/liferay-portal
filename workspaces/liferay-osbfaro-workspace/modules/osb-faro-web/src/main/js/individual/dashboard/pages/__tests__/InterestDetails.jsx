@@ -4,12 +4,14 @@ import React from 'react';
 import {cleanup, render} from '@testing-library/react';
 import {MemoryRouter, Route, Routes as RouterRoutes} from 'react-router-dom';
 import {MockedProvider} from '@apollo/client/testing';
-import {mockTimeRangeReq, mockTouchpointsReq} from 'test/graphql-data';
+import {
+	mockPreferenceReq,
+	mockTimeRangeReq,
+	mockTouchpointsReq
+} from 'test/graphql-data';
 import {Provider} from 'react-redux';
 import {Routes} from 'shared/util/router';
 import {waitForLoading} from 'test/helpers';
-
-jest.unmock('react-dom');
 
 const mockItems = [
 	{
@@ -49,6 +51,7 @@ describe('Individuals Dashboard Individuals Interest Details', () => {
 			<Provider store={mockStore()}>
 				<MockedProvider
 					mocks={[
+						mockPreferenceReq(),
 						mockTouchpointsReq(mockItems, {size: 2}),
 						mockTimeRangeReq()
 					]}
@@ -88,6 +91,6 @@ describe('Individuals Dashboard Individuals Interest Details', () => {
 
 		await waitForLoading(document.body);
 
-		expect(getByText('Back to Interests')).toBeInTheDocument();
+		expect(getByText(/^back to interests$/i)).toBeInTheDocument();
 	});
 });

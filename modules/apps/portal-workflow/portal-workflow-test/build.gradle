@@ -2,6 +2,7 @@ dependencies {
 	testIntegrationImplementation group: "org.osgi", name: "osgi.core", version: "6.0.0"
 	testIntegrationImplementation group: "org.skyscreamer", name: "jsonassert", version: "1.2.3"
 	testIntegrationImplementation project(":apps:blogs:blogs-api")
+	testIntegrationImplementation project(":apps:blogs:blogs-test-util")
 	testIntegrationImplementation project(":apps:change-tracking:change-tracking-test-util")
 	testIntegrationImplementation project(":apps:document-library:document-library-test-util")
 	testIntegrationImplementation project(":apps:knowledge-base:knowledge-base-api")
@@ -10,5 +11,6 @@ dependencies {
 	testIntegrationImplementation project(":apps:portal-workflow:portal-workflow-api")
 	testIntegrationImplementation project(":apps:portal-workflow:portal-workflow-kaleo-api")
 	testIntegrationImplementation project(":apps:product-navigation:product-navigation-personal-menu-api")
+	testIntegrationImplementation project(":apps:site:site-cms-site-initializer-api")
 	testIntegrationImplementation project(":test:arquillian-extension-junit-bridge")
 }

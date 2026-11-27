@@ -1,5 +1,5 @@
+import {useDataSources} from 'shared/context/dataSources';
 
-import * as useDataSources from 'shared/context/dataSources';
 import client from 'shared/apollo/client';
 import EventAnalysisList from '../List';
 import mockStore from 'test/mock-store';
@@ -14,8 +14,6 @@ import {Provider} from 'react-redux';
 import {Routes} from 'shared/util/router';
 import {useRequest} from 'shared/hooks/useRequest';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
-
-jest.unmock('react-dom');
 
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
@@ -74,7 +72,10 @@ const WrappedComponent = ({eventAnalyses}) => (
 		</ApolloProvider>
 	</Provider>
 );
-const mockUseDataSource = useDataSources;
+jest.mock('shared/context/dataSources', () => ({
+	...jest.requireActual('shared/context/dataSources'),
+	useDataSources: jest.fn(),
+}));
 
 describe('Event Analysis List', () => {
 	beforeEach(() => {
@@ -82,7 +83,7 @@ describe('Event Analysis List', () => {
 	});
 
 	it('should render', async () => {
-		mockUseDataSource.useDataSources = jest.fn(() => mockSuccessState);
+		useDataSources.mockReturnValue(mockSuccessState);
 
 		const {container} = render(
 			<WrappedComponent eventAnalyses={eventAnalysis} />
@@ -133,18 +134,18 @@ describe('Event Analysis List', () => {
 
 describe('EventAnalysisList with no Data Source', () => {
 	it('should render EmptyState', () => {
-		mockUseDataSource.useDataSources = jest.fn(() => mockEmptyState);
+		useDataSources.mockReturnValue(mockEmptyState);
 
 		const {getByText} = render(
 			<WrappedComponent eventAnalyses={eventAnalysis} />
 		);
 
-		expect(getByText('No Data Sources Connected')).toBeInTheDocument();
+		expect(getByText(/^no data sources are connected$/i)).toBeInTheDocument();
 		expect(
-			getByText('Connect a data source to get started.')
+			getByText(/^connect a data source to get started\.$/i)
 		).toBeInTheDocument();
 		expect(
-			getByText('Access our documentation to learn more.')
+			getByText(/^access our documentation to learn more\.$/i)
 		).toBeInTheDocument();
 	});
 });
@@ -163,13 +164,13 @@ describe('Event Analysis List - Feature Limits', () => {
 			})
 		);
 
-		mockUseDataSource.useDataSources = jest.fn(() => mockSuccessState);
+		useDataSources.mockReturnValue(mockSuccessState);
 
 		const {getByText} = render(
 			<WrappedComponent eventAnalyses={eventAnalysis} />
 		);
 
-		const createButton = getByText('Create Analysis').closest('a');
+		const createButton = getByText(/^create analysis$/i).closest('a');
 		expect(createButton).not.toHaveClass('disabled');
 	});
 
@@ -185,13 +186,13 @@ describe('Event Analysis List - Feature Limits', () => {
 				]
 			})
 		);
-		mockUseDataSource.useDataSources = jest.fn(() => mockSuccessState);
+		useDataSources.mockReturnValue(mockSuccessState);
 
 		const {container, getByText} = render(
 			<WrappedComponent eventAnalyses={eventAnalysis} />
 		);
 
-		const createButton = getByText('Create Analysis').closest('a');
+		const createButton = getByText(/^create analysis$/i).closest('a');
 		expect(createButton).toHaveClass('disabled');
 
 		expect(
@@ -212,13 +213,13 @@ describe('Event Analysis List - Feature Limits', () => {
 			})
 		);
 
-		mockUseDataSource.useDataSources = jest.fn(() => mockSuccessState);
+		useDataSources.mockReturnValue(mockSuccessState);
 
 		const {getByText} = render(
 			<WrappedComponent eventAnalyses={eventAnalysis} />
 		);
 
-		const createButton = getByText('Create Analysis').closest('a');
+		const createButton = getByText(/^create analysis$/i).closest('a');
 		expect(createButton).not.toHaveClass('disabled');
 	});
 });

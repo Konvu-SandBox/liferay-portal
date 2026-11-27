@@ -1,15 +1,17 @@
 import * as data from 'test/data';
 import * as ODataUtil from '../odata';
-import * as Utils from '../utils';
 import {
 	ALL_APPLICATION_IDS,
 	ALL_EVENT_IDS,
 	ATTRIBUTE_PROPERTY_PREFIX,
 	CustomFunctionOperators,
 	FunctionalOperators,
+	NotOperators,
 	RelationalOperators,
 } from '../constants';
-import {createCustomValueMap} from '../custom-inputs';
+import {CAMPAIGN_PROPERTY} from '../properties';
+import {createCustomValueMap, getCampaignIds} from '../custom-inputs';
+import {getDefaultValue} from '../../criteria-sidebar/CriteriaSidebarCollapse';
 import {CustomValue} from 'shared/util/records';
 import {List, Map} from 'immutable';
 
@@ -24,12 +26,12 @@ function testConversionToAndFrom(testQuery, queryConjunction) {
 	expect(translatedString).toEqual(testQuery);
 }
 
-describe('odata', () => {
-	beforeAll(() => {
-		Utils.generateGroupId = jest.fn(() => 'group_01');
-		Utils.generateRowId = jest.fn(() => 'row_01');
-	});
+// Group and row ids are a namespace plus a uuid, so this pins them to
+// group_01 and row_01.
 
+jest.mock('uuid', () => ({v4: () => '01'}));
+
+describe('odata', () => {
 	describe('convertBetweenToSubstring', () => {
 		it('should convert between to substring', () => {
 			expect(
@@ -958,6 +960,58 @@ describe('odata', () => {
 			const testQuery = "(givenName eq 'O''Brien')";
 
 			testConversionToAndFrom(testQuery);
+		});
+	});
+
+	describe('campaigns.filter', () => {
+		it('should write the selected campaigns as the filter the engine reads', () => {
+			const value = getDefaultValue(CAMPAIGN_PROPERTY).setIn(
+				['criterionGroup', 'items', 0, 'value'],
+				List(['c1', 'c2'])
+			);
+
+			expect(
+				ODataUtil.buildQueryString([
+					{
+						operatorName: CustomFunctionOperators.CampaignsFilter,
+						propertyName: 'id',
+						value,
+					},
+				])
+			).toBe("campaigns.filter(filter='(id in (''c1'',''c2''))')");
+		});
+
+		it('should translate the campaigns a segment includes to map and back to string', () => {
+			testConversionToAndFrom(
+				"(campaigns.filter(filter='(id in (''c1'',''c2''))'))"
+			);
+		});
+
+		it('should translate the campaigns a segment excludes to map and back to string', () => {
+			testConversionToAndFrom(
+				"((not campaigns.filter(filter='(id in (''c1''))')))"
+			);
+		});
+
+		it('should read excluded campaigns back as a campaign criterion', () => {
+			const {items} = ODataUtil.translateQueryToCriteria(
+				"((not campaigns.filter(filter='(id in (''c1'',''c2''))')))"
+			);
+
+			expect(items[0].operatorName).toBe(NotOperators.NotCampaignsFilter);
+			expect(
+				items[0].value
+					.getIn(['criterionGroup', 'items', 0, 'value'])
+					.toJS()
+			).toEqual(['c1', 'c2']);
+		});
+
+		it('should read a campaign compared with eq as a single campaign', () => {
+			const {items} = ODataUtil.translateQueryToCriteria(
+				"(campaigns.filter(filter='(id eq ''c1'')'))"
+			);
+
+			expect(getCampaignIds(items[0].value)).toEqual(['c1']);
 		});
 	});
 

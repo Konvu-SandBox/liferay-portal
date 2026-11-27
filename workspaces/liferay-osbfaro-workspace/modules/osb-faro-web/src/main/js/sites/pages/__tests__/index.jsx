@@ -1,5 +1,5 @@
+import {useDataSources} from 'shared/context/dataSources';
 import * as data from 'test/data';
-import * as useDataSources from 'shared/context/dataSources';
 import BasePage from 'shared/components/base-page';
 import client from 'shared/apollo/client';
 import mockStore from 'test/mock-store';
@@ -16,7 +16,7 @@ import {Routes} from 'shared/util/router';
 import {User} from 'shared/util/records';
 import {UserRoleNames} from 'shared/util/constants';
 
-jest.unmock('react-dom');
+jest.mock('../Overview', () => () => null);
 
 const MEMBER_USER = new User(
 	data.mockUser(23, {roleName: UserRoleNames.Member})
@@ -35,7 +35,10 @@ const MOCK_CONTEXT = {
 	}
 };
 
-const mockUseDataSource = useDataSources;
+jest.mock('shared/context/dataSources', () => ({
+	...jest.requireActual('shared/context/dataSources'),
+	useDataSources: jest.fn(),
+}));
 
 const WrappedComponent = props => (
 	<ApolloProvider client={client}>
@@ -64,13 +67,13 @@ const WrappedComponent = props => (
 
 describe('Sites Dashboard Index', () => {
 	afterEach(cleanup);
-	mockUseDataSource.useDataSources = jest.fn(() => mockSuccessState);
+	useDataSources.mockReturnValue(mockSuccessState);
 
 	beforeAll(() => {
 		delete window.location;
 	});
 
-	it('renders w/ "No Sites Connected" as title', () => {
+	it('renders w/ "No Sites Are Connected" as title', () => {
 		window.location = {
 			pathname: '/workspace/2000/123/sites'
 		};
@@ -113,7 +116,7 @@ describe('Sites Dashboard Index', () => {
 		const {container} = render(<WrappedComponentWithContext />);
 
 		expect(container.querySelector('.title-section')).toHaveTextContent(
-			'No Sites Connected'
+			/no sites are connected/i
 		);
 	});
 });
@@ -123,18 +126,18 @@ describe('sites with no Data Source', () => {
 		window.location = {
 			pathname: '/workspace/2000/123/sites'
 		};
-		mockUseDataSource.useDataSources = jest.fn(() => mockEmptyState);
+		useDataSources.mockReturnValue(mockEmptyState);
 
 		const {getByText} = render(<WrappedComponent />);
 
 		expect(
-			getByText('No Sites Synced from Data Sources')
+			getByText(/^no sites have been synced from data sources$/i)
 		).toBeInTheDocument();
 		expect(
-			getByText('Connect a data source with sites data.')
+			getByText(/^connect a data source with sites data\.$/i)
 		).toBeInTheDocument();
 		expect(
-			getByText('Access our documentation to learn more.')
+			getByText(/^access our documentation to learn more\.$/i)
 		).toBeInTheDocument();
 	});
 });

@@ -1,5 +1,5 @@
 import * as API from 'shared/api';
-import * as useStatefulPaginationModule from 'shared/hooks/useStatefulPagination';
+import {useStatefulPagination} from 'shared/hooks/useStatefulPagination';
 
 import IndividualsList from '../IndividualsList';
 import React from 'react';
@@ -7,11 +7,9 @@ import {AccountTypes} from 'segment/segment-editor/dynamic/utils/constants';
 import {createOrderIOMap, NAME} from 'shared/util/pagination';
 import {Map, Set} from 'immutable';
 import {RangeKeyTimeRanges} from 'shared/util/constants';
-import {render} from '@testing-library/react';
+import {fireEvent, render} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
-
-jest.unmock('react-dom');
 
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
@@ -21,8 +19,22 @@ jest.mock('react-router-dom', () => ({
 	}),
 }));
 
+const {useStatefulPagination: actualUseStatefulPagination} = jest.requireActual(
+	'shared/hooks/useStatefulPagination'
+);
+
+jest.mock('shared/hooks/useStatefulPagination', () => ({
+	...jest.requireActual('shared/hooks/useStatefulPagination'),
+	useStatefulPagination: jest.fn(),
+}));
+
+const mockedUseStatefulPagination = useStatefulPagination as jest.Mock;
+
 describe('Individuals List', () => {
 	beforeEach(() => {
+		mockedUseStatefulPagination.mockImplementation(
+			actualUseStatefulPagination
+		);
 
 		// @ts-ignore
 		API.individuals.fetchFieldValues.mockReturnValue(
@@ -87,7 +99,7 @@ describe('Individuals List', () => {
 
 		await waitForLoadingToBeRemoved(document.body);
 
-		expect(getByText('Individual Profiles')).toBeInTheDocument();
+		expect(getByText(/^individual profiles$/i)).toBeInTheDocument();
 		expect(getByText('Test Test')).toBeInTheDocument();
 	});
 
@@ -132,16 +144,85 @@ describe('Individuals List', () => {
 		await waitForLoadingToBeRemoved(document.body);
 
 		expect(
-			getByText('No Individuals Synced from Data Sources')
+			getByText(/^no individuals have been synced from data sources$/i)
 		).toBeInTheDocument();
 
 		expect(
-			getByText('Connect a data source with people data.')
+			getByText(/^connect a data source with people data\.$/i)
 		).toBeInTheDocument();
 
 		expect(
-			getByText('Access our documentation to learn more.')
+			getByText(/^access our documentation to learn more\.$/i)
 		).toBeInTheDocument();
+	});
+
+	it('sends the selected campaign to the search API', async () => {
+
+		// @ts-ignore
+		API.individuals.search.mockReturnValue(
+			Promise.resolve({items: [], total: 0})
+		);
+
+		render(
+			<MemoryRouter>
+				<IndividualsList campaignId="7" />
+			</MemoryRouter>
+		);
+
+		await waitForLoadingToBeRemoved(document.body);
+
+		expect(API.individuals.search as jest.Mock).toHaveBeenCalledWith(
+			expect.objectContaining({campaignId: '7'})
+		);
+	});
+
+	it('renders the filtered empty state when the campaign has no individuals', async () => {
+
+		// @ts-ignore
+		API.individuals.search.mockReturnValue(
+			Promise.resolve({items: [], total: 0})
+		);
+
+		const {getByText, queryByText} = render(
+			<MemoryRouter>
+				<IndividualsList campaignId="7" onClearFilters={jest.fn()} />
+			</MemoryRouter>
+		);
+
+		await waitForLoadingToBeRemoved(document.body);
+
+		expect(getByText(/^no results were found$/i)).toBeInTheDocument();
+		expect(
+			getByText(/^review your filters and try again\.$/i)
+		).toBeInTheDocument();
+		expect(getByText(/^clear filters$/i)).toBeInTheDocument();
+		expect(
+			queryByText('No Individuals Synced from Data Sources')
+		).toBeNull();
+	});
+
+	it('clears the filters from the filtered empty state', async () => {
+		const onClearFilters = jest.fn();
+
+		// @ts-ignore
+		API.individuals.search.mockReturnValue(
+			Promise.resolve({items: [], total: 0})
+		);
+
+		const {getByText} = render(
+			<MemoryRouter>
+				<IndividualsList
+					campaignId="7"
+					onClearFilters={onClearFilters}
+				/>
+			</MemoryRouter>
+		);
+
+		await waitForLoadingToBeRemoved(document.body);
+
+		fireEvent.click(getByText(/^clear filters$/i));
+
+		expect(onClearFilters).toHaveBeenCalledTimes(1);
 	});
 
 	it('passes Last 30 Days as the default range key to the search API', async () => {
@@ -174,23 +255,21 @@ describe('Individuals List', () => {
 			Promise.resolve({items: [], total: 0})
 		);
 
-		const spy = jest
-			.spyOn(useStatefulPaginationModule, 'useStatefulPagination')
-			.mockReturnValue({
-				delta: 20,
-				filterBy: Map({
-					activeUsers: Set([RangeKeyTimeRanges.Last7Days]),
-				}) as any,
-				onDeltaChange: jest.fn(),
-				onFilterByChange: jest.fn(),
-				onOrderIOMapChange: jest.fn(),
-				onPageChange: jest.fn(),
-				onQueryChange: jest.fn(),
-				orderIOMap: createOrderIOMap(NAME),
-				page: 1,
-				query: '',
-				resetPage: jest.fn(),
-			});
+		mockedUseStatefulPagination.mockReturnValue({
+			delta: 20,
+			filterBy: Map({
+				activeUsers: Set([RangeKeyTimeRanges.Last7Days]),
+			}) as any,
+			onDeltaChange: jest.fn(),
+			onFilterByChange: jest.fn(),
+			onOrderIOMapChange: jest.fn(),
+			onPageChange: jest.fn(),
+			onQueryChange: jest.fn(),
+			orderIOMap: createOrderIOMap(NAME),
+			page: 1,
+			query: '',
+			resetPage: jest.fn(),
+		});
 
 		render(
 			<MemoryRouter>
@@ -205,8 +284,6 @@ describe('Individuals List', () => {
 				rangeKey: 7,
 			})
 		);
-
-		spy.mockRestore();
 	});
 
 	it('passes null rangeKey when activeUsers filter is cleared', async () => {
@@ -214,23 +291,21 @@ describe('Individuals List', () => {
 			Promise.resolve({items: [], total: 0})
 		);
 
-		const spy = jest
-			.spyOn(useStatefulPaginationModule, 'useStatefulPagination')
-			.mockReturnValue({
-				delta: 20,
-				filterBy: Map({
-					activeUsers: Set([]),
-				}) as any,
-				onDeltaChange: jest.fn(),
-				onFilterByChange: jest.fn(),
-				onOrderIOMapChange: jest.fn(),
-				onPageChange: jest.fn(),
-				onQueryChange: jest.fn(),
-				orderIOMap: createOrderIOMap(NAME),
-				page: 1,
-				query: '',
-				resetPage: jest.fn(),
-			});
+		mockedUseStatefulPagination.mockReturnValue({
+			delta: 20,
+			filterBy: Map({
+				activeUsers: Set([]),
+			}) as any,
+			onDeltaChange: jest.fn(),
+			onFilterByChange: jest.fn(),
+			onOrderIOMapChange: jest.fn(),
+			onPageChange: jest.fn(),
+			onQueryChange: jest.fn(),
+			orderIOMap: createOrderIOMap(NAME),
+			page: 1,
+			query: '',
+			resetPage: jest.fn(),
+		});
 
 		render(
 			<MemoryRouter>
@@ -245,8 +320,6 @@ describe('Individuals List', () => {
 				rangeKey: null,
 			})
 		);
-
-		spy.mockRestore();
 	});
 
 	it('passes the selected account types to the search API', async () => {
@@ -254,23 +327,21 @@ describe('Individuals List', () => {
 			Promise.resolve({items: [], total: 0})
 		);
 
-		const spy = jest
-			.spyOn(useStatefulPaginationModule, 'useStatefulPagination')
-			.mockReturnValue({
-				delta: 20,
-				filterBy: Map({
-					accountTypes: Set([AccountTypes.UNKNOWN]),
-				}) as any,
-				onDeltaChange: jest.fn(),
-				onFilterByChange: jest.fn(),
-				onOrderIOMapChange: jest.fn(),
-				onPageChange: jest.fn(),
-				onQueryChange: jest.fn(),
-				orderIOMap: createOrderIOMap(NAME),
-				page: 1,
-				query: '',
-				resetPage: jest.fn(),
-			});
+		mockedUseStatefulPagination.mockReturnValue({
+			delta: 20,
+			filterBy: Map({
+				accountTypes: Set([AccountTypes.UNKNOWN]),
+			}) as any,
+			onDeltaChange: jest.fn(),
+			onFilterByChange: jest.fn(),
+			onOrderIOMapChange: jest.fn(),
+			onPageChange: jest.fn(),
+			onQueryChange: jest.fn(),
+			orderIOMap: createOrderIOMap(NAME),
+			page: 1,
+			query: '',
+			resetPage: jest.fn(),
+		});
 
 		render(
 			<MemoryRouter>
@@ -285,8 +356,6 @@ describe('Individuals List', () => {
 				accountTypes: [AccountTypes.UNKNOWN],
 			})
 		);
-
-		spy.mockRestore();
 	});
 
 	it('does not pass accountTypes to the search API when no account type is selected', async () => {
