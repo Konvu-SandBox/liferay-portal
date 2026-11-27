@@ -57,10 +57,10 @@ public class GroupUtil {
 		long companyId, AssetLibrary[] assetLibraries, Site[] sites) {
 
 		if (ArrayUtil.isNotEmpty(assetLibraries) &&
-			!FeatureFlagManagerUtil.isEnabled(companyId, "LPD-41307")) {
+			!FeatureFlagManagerUtil.isEnabled(companyId, "LPD-57655")) {
 
 			throw new BadRequestException(
-				"Asset libraries require the feature flag \"LPD-41307\"");
+				"Asset libraries require the feature flag \"LPD-57655\"");
 		}
 
 		if (ArrayUtil.isNotEmpty(sites) &&
@@ -130,7 +130,9 @@ public class GroupUtil {
 		StagingGroupHelper stagingGroupHelper =
 			StagingGroupHelperUtil.getStagingGroupHelper();
 
-		if (stagingGroupHelper.isLocalStagingGroup(group)) {
+		if (stagingGroupHelper.isLocalStagingGroup(group) ||
+			stagingGroupHelper.isRemoteStagingGroup(group)) {
+
 			return group;
 		}
 
@@ -138,7 +140,7 @@ public class GroupUtil {
 
 		if (stagingGroup == null) {
 			throw new BadRequestException(
-				"Local staging is not enabled for site \"" +
+				"Staging is not enabled for \"" +
 					group.getExternalReferenceCode() + "\"");
 		}
 

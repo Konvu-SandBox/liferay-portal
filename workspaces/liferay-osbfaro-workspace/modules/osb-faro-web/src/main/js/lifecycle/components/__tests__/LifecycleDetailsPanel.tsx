@@ -15,8 +15,6 @@ import {Provider} from 'react-redux';
 import {useCurrentUser} from 'shared/hooks/useCurrentUser';
 import {useRequest} from 'shared/hooks/useRequest';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/hooks/useRequest', () => ({
 	useRequest: jest.fn(),
 }));
@@ -199,12 +197,12 @@ describe('LifecycleDetailsPanel', () => {
 		openStagesTab();
 
 		expect(screen.getAllByText(/^stage info$/i)).toHaveLength(2);
-		expect(screen.getByText('Aware')).toBeInTheDocument();
-		expect(screen.getByText('Engaged')).toBeInTheDocument();
+		expect(screen.getByText(/^aware$/i)).toBeInTheDocument();
+		expect(screen.getByText(/^engaged$/i)).toBeInTheDocument();
 		expect(
 			screen
-				.getByText('Aware')
-				.compareDocumentPosition(screen.getByText('Engaged')) &
+				.getByText(/^aware$/i)
+				.compareDocumentPosition(screen.getByText(/^engaged$/i)) &
 				Node.DOCUMENT_POSITION_FOLLOWING
 		).toBeTruthy();
 	});
@@ -223,7 +221,7 @@ describe('LifecycleDetailsPanel', () => {
 
 		openStagesTab();
 
-		const awareCard = screen.getByText('Aware').closest('.card')!;
+		const awareCard = screen.getByText(/^aware$/i).closest('.card')!;
 
 		expect(
 			within(awareCard as HTMLElement).getByText(/^stage trigger$/i)
@@ -246,7 +244,7 @@ describe('LifecycleDetailsPanel', () => {
 
 		openStagesTab();
 
-		const engagedCard = screen.getByText('Engaged').closest('.card')!;
+		const engagedCard = screen.getByText(/^engaged$/i).closest('.card')!;
 
 		expect(
 			within(engagedCard as HTMLElement).queryByText(/^stage trigger$/i)

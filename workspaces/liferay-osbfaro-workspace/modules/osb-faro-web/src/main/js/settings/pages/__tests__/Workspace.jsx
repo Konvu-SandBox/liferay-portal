@@ -9,8 +9,6 @@ import {Provider} from 'react-redux';
 import {useCurrentUser} from 'shared/hooks/useCurrentUser';
 import {Workspace} from '../Workspace';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useBlocker: () => ({state: 'unblocked'}),
@@ -71,8 +69,8 @@ describe('Workspace Settting', () => {
 			/>
 		);
 
-		expect(getByLabelText('Workspace Name')).toBeDisabled();
-		expect(getByDisplayValue('Oregon, USA')).toBeDisabled();
+		expect(getByLabelText(/^workspace name$/i)).toBeDisabled();
+		expect(getByDisplayValue(/^oregon, usa$/i)).toBeDisabled();
 		expect(
 			container.querySelector('.input-list-root input')
 		).toBeDisabled();

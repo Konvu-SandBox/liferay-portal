@@ -1,11 +1,6 @@
 import InfoPopover from '../InfoPopover';
 import React from 'react';
-import ReactDOM from 'react-dom';
 import {cleanup, render} from '@testing-library/react';
-
-jest.unmock('react-dom');
-
-ReactDOM.createPortal = jest.fn();
 
 describe('InfoPopover', () => {
 	afterEach(cleanup);
@@ -32,7 +27,7 @@ describe('InfoPopover', () => {
 		const {getByRole} = render(<InfoPopover content='foo content' />);
 
 		expect(
-			getByRole('button', {name: 'More Information'})
+			getByRole('button', {name: /^more information$/i})
 		).toBeInTheDocument();
 	});
 });
