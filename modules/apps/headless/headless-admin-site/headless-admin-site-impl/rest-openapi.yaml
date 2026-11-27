@@ -3585,6 +3585,10 @@ components:
                     format: int64
                     readOnly: true
                     type: integer
+                inheritContent:
+                    description:
+                        Whether the site shows content from its parent site.
+                    type: boolean
                 inheritLocales:
                     description:
                         Whether to use the default language set by defaultLanguageId.
@@ -3603,6 +3607,10 @@ components:
                         The site's logo URL.
                     readOnly: true
                     type: string
+                maintenanceMode:
+                    description:
+                        Whether users without administrator access see a maintenance page while the site is inactive.
+                    type: boolean
                 manualMembership:
                     type: boolean
                 mapProviderKey:
@@ -5091,7 +5099,7 @@ components:
             type: object
 info:
     description:
-        "A Java client JAR is available for use with the group ID 'com.liferay', artifact ID 'com.liferay.headless.admin.site.client', and version '1.0.38'."
+        "A Java client JAR is available for use with the group ID 'com.liferay', artifact ID 'com.liferay.headless.admin.site.client', and version '1.0.39'."
     license:
         name: Apache 2.0
         url: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -5412,6 +5420,100 @@ paths:
                                 $ref: "#/components/schemas/DisplayPageTemplate"
             tags: ["DisplayPageTemplate"]
             x-feature-flag: LPD-57283
+        patch:
+            # @review
+            description:
+                Updates only the fields received in the request body, leaving any other fields untouched.
+            operationId: patchDesignLibraryDisplayPageTemplate
+            parameters:
+                -   in: path
+                    name: designLibraryExternalReferenceCode
+                    required: true
+                    schema:
+                        type: string
+                -   in: path
+                    name: displayPageTemplateExternalReferenceCode
+                    required: true
+                    schema:
+                        type: string
+                -   in: query
+                    name: fields
+                    schema:
+                        type: string
+                -   in: query
+                    name: nestedFields
+                    schema:
+                        type: string
+                -   in: query
+                    name: restrictFields
+                    schema:
+                        type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/DisplayPageTemplate"
+                    application/xml:
+                        schema:
+                            $ref: "#/components/schemas/DisplayPageTemplate"
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/DisplayPageTemplate"
+                        application/xml:
+                            schema:
+                                $ref: "#/components/schemas/DisplayPageTemplate"
+            tags: ["DisplayPageTemplate"]
+            x-feature-flag: LPD-57283
+        put:
+            # @review
+            description:
+                Updates the display page template of a design library with the given external reference code, or creates it if it does not exist.
+            operationId: putDesignLibraryDisplayPageTemplate
+            parameters:
+                -   in: path
+                    name: designLibraryExternalReferenceCode
+                    required: true
+                    schema:
+                        type: string
+                -   in: path
+                    name: displayPageTemplateExternalReferenceCode
+                    required: true
+                    schema:
+                        type: string
+                -   in: query
+                    name: fields
+                    schema:
+                        type: string
+                -   in: query
+                    name: nestedFields
+                    schema:
+                        type: string
+                -   in: query
+                    name: restrictFields
+                    schema:
+                        type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/DisplayPageTemplate"
+                    application/xml:
+                        schema:
+                            $ref: "#/components/schemas/DisplayPageTemplate"
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/DisplayPageTemplate"
+                        application/xml:
+                            schema:
+                                $ref: "#/components/schemas/DisplayPageTemplate"
+            tags: ["DisplayPageTemplate"]
+            x-feature-flag: LPD-57283
     "/design-libraries/{designLibraryExternalReferenceCode}/display-page-templates/{displayPageTemplateExternalReferenceCode}/copy":
         post:
             # @review
@@ -5709,6 +5811,100 @@ paths:
                                 $ref: "#/components/schemas/MasterPage"
             tags: ["MasterPage"]
             x-feature-flag: LPD-57283
+        patch:
+            # @review
+            description:
+                Updates only the fields received in the request body, leaving any other fields untouched.
+            operationId: patchDesignLibraryMasterPage
+            parameters:
+                -   in: path
+                    name: designLibraryExternalReferenceCode
+                    required: true
+                    schema:
+                        type: string
+                -   in: path
+                    name: masterPageExternalReferenceCode
+                    required: true
+                    schema:
+                        type: string
+                -   in: query
+                    name: fields
+                    schema:
+                        type: string
+                -   in: query
+                    name: nestedFields
+                    schema:
+                        type: string
+                -   in: query
+                    name: restrictFields
+                    schema:
+                        type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/MasterPage"
+                    application/xml:
+                        schema:
+                            $ref: "#/components/schemas/MasterPage"
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/MasterPage"
+                        application/xml:
+                            schema:
+                                $ref: "#/components/schemas/MasterPage"
+            tags: ["MasterPage"]
+            x-feature-flag: LPD-57283
+        put:
+            # @review
+            description:
+                Updates the master page of a design library with the given external reference code, or creates it if it does not exist.
+            operationId: putDesignLibraryMasterPage
+            parameters:
+                -   in: path
+                    name: designLibraryExternalReferenceCode
+                    required: true
+                    schema:
+                        type: string
+                -   in: path
+                    name: masterPageExternalReferenceCode
+                    required: true
+                    schema:
+                        type: string
+                -   in: query
+                    name: fields
+                    schema:
+                        type: string
+                -   in: query
+                    name: nestedFields
+                    schema:
+                        type: string
+                -   in: query
+                    name: restrictFields
+                    schema:
+                        type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/MasterPage"
+                    application/xml:
+                        schema:
+                            $ref: "#/components/schemas/MasterPage"
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/MasterPage"
+                        application/xml:
+                            schema:
+                                $ref: "#/components/schemas/MasterPage"
+            tags: ["MasterPage"]
+            x-feature-flag: LPD-57283
     "/design-libraries/{designLibraryExternalReferenceCode}/master-pages/{masterPageExternalReferenceCode}/copy":
         post:
             # @review
@@ -5824,6 +6020,9 @@ paths:
                     content:
                         application/json: {}
                         application/xml: {}
+                400:
+                    description:
+                        "The request is invalid. For example, the external reference code does not point to a master page."
             tags: ["MasterPage"]
             x-feature-flag: LPD-57283
         put:
@@ -5848,6 +6047,9 @@ paths:
                     content:
                         application/json: {}
                         application/xml: {}
+                400:
+                    description:
+                        "The request is invalid. For example, the external reference code does not point to a master page."
             tags: ["MasterPage"]
             x-feature-flag: LPD-57283
     "/design-libraries/{designLibraryExternalReferenceCode}/master-pages/{masterPageExternalReferenceCode}/unmark-as-default":
@@ -6379,6 +6581,9 @@ paths:
                                 items:
                                     $ref: "#/components/schemas/DisplayPageTemplateFolder"
                                 type: array
+                404:
+                    description:
+                        "The requested site could not be found."
             tags: ["DisplayPageTemplateFolder"]
         post:
             # @review
@@ -6408,6 +6613,15 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/DisplayPageTemplateFolder"
+                400:
+                    description:
+                        "The request is invalid. For example, the name is missing or too long, the key contains an invalid character or is too long, the parent display page template folder does not exist or is not a display page template folder, or the external reference code is already in use."
+                404:
+                    description:
+                        "The requested site could not be found."
+                409:
+                    description:
+                        "A display page template folder with the same name or key already exists."
             # @review
             tags: ["DisplayPageTemplateFolder"]
     "/sites/{siteExternalReferenceCode}/display-page-template-folders/{displayPageTemplateFolderExternalReferenceCode}":
@@ -6432,6 +6646,9 @@ paths:
                     content:
                         application/json: {}
                         application/xml: {}
+                404:
+                    description:
+                        "The requested site or display page template folder could not be found."
             tags: ["DisplayPageTemplateFolder"]
         get:
             # @review
@@ -6470,6 +6687,9 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/DisplayPageTemplateFolder"
+                404:
+                    description:
+                        "The requested site or display page template folder could not be found."
             tags: ["DisplayPageTemplateFolder"]
         patch:
             # @review
@@ -6516,6 +6736,15 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/DisplayPageTemplateFolder"
+                400:
+                    description:
+                        "The request is invalid. For example, the name is missing or too long, or the parent display page template folder does not exist or is not a display page template folder."
+                404:
+                    description:
+                        "The requested site or display page template folder could not be found."
+                409:
+                    description:
+                        "A display page template folder with the same name already exists."
             tags: ["DisplayPageTemplateFolder"]
         put:
             # @review
@@ -6562,6 +6791,15 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/DisplayPageTemplateFolder"
+                400:
+                    description:
+                        "The request is invalid. For example, the name is missing or too long, the key contains an invalid character or is too long, or the parent display page template folder does not exist or is not a display page template folder."
+                404:
+                    description:
+                        "The requested site could not be found."
+                409:
+                    description:
+                        "A display page template folder with the same name or key already exists."
             tags: ["DisplayPageTemplateFolder"]
     "/sites/{siteExternalReferenceCode}/display-page-template-folders/{displayPageTemplateFolderExternalReferenceCode}/display-page-templates":
         get:
@@ -7039,6 +7277,9 @@ paths:
                                 items:
                                     $ref: "#/components/schemas/PageSpecification"
                                 type: array
+                404:
+                    description:
+                        "The requested display page template could not be found."
             # @review
             tags: ["PageSpecification"]
         post:
@@ -7086,6 +7327,9 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/ContentPageSpecification"
+                404:
+                    description:
+                        "The requested display page template could not be found."
             # @review
             tags: ["DisplayPageTemplate"]
     "/sites/{siteExternalReferenceCode}/display-page-templates/{displayPageTemplateExternalReferenceCode}/permissions":
@@ -7389,6 +7633,12 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/MasterPage"
+                400:
+                    description:
+                        "The request is invalid. For example, the external reference code does not point to a master page."
+                409:
+                    description:
+                        "The default master page must be published first."
             tags: ["MasterPage"]
     "/sites/{siteExternalReferenceCode}/master-pages/{masterPageExternalReferenceCode}/page-specifications":
         get:
@@ -7431,6 +7681,9 @@ paths:
                                 items:
                                     $ref: "#/components/schemas/PageSpecification"
                                 type: array
+                404:
+                    description:
+                        "The requested master page could not be found."
             # @review
             tags: ["PageSpecification"]
         post:
@@ -7478,6 +7731,12 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/ContentPageSpecification"
+                404:
+                    description:
+                        "The requested master page could not be found."
+                409:
+                    description:
+                        "A page experience key is duplicated."
             # @review
             tags: ["MasterPage"]
     "/sites/{siteExternalReferenceCode}/master-pages/{masterPageExternalReferenceCode}/permissions":
@@ -7511,6 +7770,9 @@ paths:
                     content:
                         application/json: {}
                         application/xml: {}
+                400:
+                    description:
+                        "The request is invalid. For example, the external reference code does not point to a master page."
             tags: ["MasterPage"]
         put:
             operationId: putSiteMasterPagePermissionsPage
@@ -7534,6 +7796,9 @@ paths:
                     content:
                         application/json: {}
                         application/xml: {}
+                400:
+                    description:
+                        "The request is invalid. For example, the external reference code does not point to a master page."
             tags: ["MasterPage"]
     "/sites/{siteExternalReferenceCode}/navigation-menus":
         get:
@@ -7991,6 +8256,15 @@ paths:
                     content:
                         application/json: {}
                         application/xml: {}
+                400:
+                    description:
+                        "The request is invalid. For example, the page is not a content, widget, or asset display page, or the page specification does not have unpublished changes."
+                404:
+                    description:
+                        "The requested page specification could not be found."
+                409:
+                    description:
+                        "The page is locked."
             tags: ["PageSpecification"]
             x-feature-flag: LPD-74328
         get:
@@ -8030,6 +8304,9 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/PageSpecification"
+                404:
+                    description:
+                        "The requested page specification could not be found."
             tags: ["PageSpecification"]
         patch:
             # @review
@@ -8076,6 +8353,15 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/PageSpecification"
+                400:
+                    description:
+                        "The request is invalid. For example, the page is not a content, widget, or asset display page, or a theme setting key does not start with the lfr-theme: prefix."
+                404:
+                    description:
+                        "The requested page specification could not be found."
+                409:
+                    description:
+                        "A page experience key is duplicated, a page experience is used by an A/B test, or the page is locked by another user."
             tags: ["PageSpecification"]
             x-feature-flag: LPD-74328
         put:
@@ -8123,6 +8409,15 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/PageSpecification"
+                400:
+                    description:
+                        "The request is invalid. For example, the page is not a content, widget, or asset display page, or a theme setting key does not start with the lfr-theme: prefix."
+                404:
+                    description:
+                        "The requested page specification could not be found."
+                409:
+                    description:
+                        "A page experience key is duplicated, a page experience is used by an A/B test, or the page is locked by another user."
             tags: ["PageSpecification"]
             x-feature-flag: LPD-74328
     "/sites/{siteExternalReferenceCode}/page-specifications/{pageSpecificationExternalReferenceCode}/page-experiences":
@@ -8786,6 +9081,9 @@ paths:
                                 items:
                                     $ref: "#/components/schemas/PageTemplateSet"
                                 type: array
+                404:
+                    description:
+                        "The requested site could not be found."
             tags: ["PageTemplateSet"]
         post:
             # @review
@@ -8815,6 +9113,15 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/PageTemplateSet"
+                400:
+                    description:
+                        "The request is invalid. For example, the name is missing or too long, the key contains an invalid character or is too long, or the external reference code is already in use."
+                404:
+                    description:
+                        "The requested site could not be found."
+                409:
+                    description:
+                        "A page template set with the same name or key already exists."
             # @review
             tags: ["PageTemplateSet"]
     "/sites/{siteExternalReferenceCode}/page-template-sets/{pageTemplateSetExternalReferenceCode}":
@@ -8839,6 +9146,9 @@ paths:
                     content:
                         application/json: {}
                         application/xml: {}
+                404:
+                    description:
+                        "The requested site or page template set could not be found."
             tags: ["PageTemplateSet"]
         get:
             # @review
@@ -8877,6 +9187,9 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/PageTemplateSet"
+                404:
+                    description:
+                        "The requested site or page template set could not be found."
             tags: ["PageTemplateSet"]
         patch:
             # @review
@@ -8923,6 +9236,15 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/PageTemplateSet"
+                400:
+                    description:
+                        "The request is invalid. For example, the name is missing or too long."
+                404:
+                    description:
+                        "The requested site or page template set could not be found."
+                409:
+                    description:
+                        "A page template set with the same name already exists."
             tags: ["PageTemplateSet"]
         put:
             # @review
@@ -8969,6 +9291,15 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/PageTemplateSet"
+                400:
+                    description:
+                        "The request is invalid. For example, the name is missing or too long, or the key contains an invalid character or is too long."
+                404:
+                    description:
+                        "The requested site could not be found."
+                409:
+                    description:
+                        "A page template set with the same name or key already exists."
             tags: ["PageTemplateSet"]
     "/sites/{siteExternalReferenceCode}/page-template-sets/{pageTemplateSetExternalReferenceCode}/page-templates":
         get:
@@ -9408,6 +9739,9 @@ paths:
                                 items:
                                     $ref: "#/components/schemas/PageSpecification"
                                 type: array
+                404:
+                    description:
+                        "The requested page template could not be found."
             # @review
             tags: ["PageSpecification"]
         post:
@@ -9663,6 +9997,12 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/SitePage"
+                400:
+                    description:
+                        "The request is invalid. For example, the site page type is missing or unsupported, the page specifications do not match the site page type, the external reference code or a UUID is already in use, or the friendly URL is malformed."
+                409:
+                    description:
+                        "The friendly URL is already in use or matches a reserved keyword, or the site page type is not allowed for this site page."
             # @review
             tags: ["SitePage"]
     "/sites/{siteExternalReferenceCode}/site-pages/{sitePageExternalReferenceCode}":
@@ -9687,6 +10027,15 @@ paths:
                     content:
                         application/json: {}
                         application/xml: {}
+                400:
+                    description:
+                        "This page type cannot be modified through this endpoint."
+                404:
+                    description:
+                        "The requested site page could not be found."
+                409:
+                    description:
+                        "The site page cannot be deleted because the site page that would become the first one is not allowed in that position."
             tags: ["SitePage"]
         get:
             # @review
@@ -9725,6 +10074,12 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/SitePage"
+                400:
+                    description:
+                        "This page type cannot be modified through this endpoint."
+                404:
+                    description:
+                        "The requested site page could not be found."
             tags: ["SitePage"]
         patch:
             # @review
@@ -9776,6 +10131,15 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/SitePage"
+                400:
+                    description:
+                        "The request is invalid. For example, the site page type is missing or unsupported, the page specifications do not match the site page type, the external reference code or a UUID is already in use, or the friendly URL is malformed."
+                404:
+                    description:
+                        "The requested site page could not be found."
+                409:
+                    description:
+                        "The friendly URL is already in use or matches a reserved keyword, or the site page type is not allowed for this site page."
             tags: ["SitePage"]
         put:
             # @review
@@ -9827,6 +10191,12 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/SitePage"
+                400:
+                    description:
+                        "The request is invalid. For example, the site page type is missing or unsupported, the page specifications do not match the site page type, the external reference code or a UUID is already in use, or the friendly URL is malformed."
+                409:
+                    description:
+                        "The friendly URL is already in use or matches a reserved keyword, or the site page type is not allowed for this site page."
             tags: ["SitePage"]
     "/sites/{siteExternalReferenceCode}/site-pages/{sitePageExternalReferenceCode}/friendly-url-history":
         get:
@@ -10145,6 +10515,9 @@ paths:
                                 items:
                                     $ref: "#/components/schemas/PageSpecification"
                                 type: array
+                404:
+                    description:
+                        "The requested site page could not be found."
             # @review
             tags: ["PageSpecification"]
         post:
@@ -10191,6 +10564,12 @@ paths:
                         application/xml:
                             schema:
                                 $ref: "#/components/schemas/ContentPageSpecification"
+                404:
+                    description:
+                        "The requested site page could not be found."
+                409:
+                    description:
+                        "A page experience key is duplicated, or the page is locked by another user."
             # @review
             tags: ["SitePage"]
     "/sites/{siteExternalReferenceCode}/site-pages/{sitePageExternalReferenceCode}/permissions":

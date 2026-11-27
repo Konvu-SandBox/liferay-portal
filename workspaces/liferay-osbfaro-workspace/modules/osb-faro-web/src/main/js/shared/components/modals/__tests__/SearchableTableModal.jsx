@@ -10,8 +10,6 @@ import {useModal} from '@clayui/modal';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 import {waitForModal} from 'test/render-modal';
 
-jest.unmock('react-dom');
-
 const COLUMNS = [
 	{
 		accessor: 'name',
@@ -75,7 +73,7 @@ describe('SearchableTableModal', () => {
 		jest.runAllTimers();
 
 		expect(document.querySelector('.modal-title')).toHaveTextContent(
-			'Custom Title'
+			/custom title/i
 		);
 	});
 

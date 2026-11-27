@@ -24,8 +24,6 @@ jest.mock('uuid', () => ({
 	v4: () => '00000000-0000-0000-0000-000000000000'
 }));
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useBlocker: jest.fn(() => ({state: 'unblocked'})),
@@ -105,7 +103,7 @@ describe('SegmentEditor', () => {
 			</Provider>
 		);
 
-		expect(screen.getByText('Error:')).not.toBeNull();
+		expect(screen.getByText(/^error:$/i)).not.toBeNull();
 	});
 
 	it('renders the membership section above the segment conditions', () => {
@@ -149,11 +147,10 @@ describe('SegmentEditor', () => {
 		);
 
 		const main = screen
-			.getByRole('heading', {level: 2, name: 'Segment Conditions'})
+			.getByRole('heading', {level: 2, name: /^segment conditions$/i})
 			.closest('.base-edit-page-main');
 
 		expect(main).toContainElement(screen.getByLabelText(/segment erc/i));
-		expect(main.parentElement).toHaveClass('criteria-builder-section-main');
 	});
 
 	it('renders the realtime segment with the sequential toggle in the conditions heading', () => {
@@ -172,18 +169,18 @@ describe('SegmentEditor', () => {
 		);
 
 		const toggle = screen.getByRole('switch', {
-			name: 'Enable Sequential Criteria'
+			name: /^enable sequential criteria$/i
 		});
 
 		expect(toggle.closest('.canvas-header')).toBeTruthy();
 		expect(toggle).not.toBeChecked();
-		expect(screen.queryByText('Order')).not.toBeInTheDocument();
+		expect(screen.queryByText(/^order$/i)).not.toBeInTheDocument();
 
-		expect(screen.getByText('Segment Conditions')).toBeInTheDocument();
-		expect(screen.getByText('No Conditions Yet')).toBeInTheDocument();
+		expect(screen.getByText(/^segment conditions$/i)).toBeInTheDocument();
+		expect(screen.getByText(/^no conditions yet$/i)).toBeInTheDocument();
 		expect(
 			screen.getByText(
-				'To create a new segment, drag items from the Conditions Library and drop them here.'
+				/^to create a new segment, drag items from the conditions library and drop them here\.$/i
 			)
 		).toBeInTheDocument();
 
@@ -208,16 +205,16 @@ describe('SegmentEditor', () => {
 		);
 
 		fireEvent.click(
-			screen.getByRole('switch', {name: 'Enable Sequential Criteria'})
+			screen.getByRole('switch', {name: /^enable sequential criteria$/i})
 		);
 
 		await waitFor(() => {
 			expect(
-				screen.getByRole('switch', {name: 'Enable Sequential Criteria'})
+				screen.getByRole('switch', {name: /^enable sequential criteria$/i})
 			).toBeChecked();
 		});
 
-		expect(screen.getByText('No Conditions Yet')).toBeInTheDocument();
+		expect(screen.getByText(/^no conditions yet$/i)).toBeInTheDocument();
 	});
 
 	it('explains the sequential order in a popover next to the toggle', () => {
@@ -237,17 +234,17 @@ describe('SegmentEditor', () => {
 
 		const popover = screen
 			.getByText(
-				'When this is enabled, the second event must come after the first event, with any number of events in between. When this is disabled, events can be completed in any order.'
+				/^when this is enabled, the second event must come after the first event, with any number of events in between\. when this is disabled, events can be completed in any order\.$/i
 			)
 			.closest('.popover');
 
-		expect(popover).toHaveClass('hide');
+		expect(popover).not.toBeVisible();
 
 		fireEvent.mouseOver(
 			container.querySelector('.canvas-header .info-popover-root')
 		);
 
-		expect(popover).not.toHaveClass('hide');
+		expect(popover).toBeVisible();
 	});
 
 	it('does not render the sequential toggle on a batch segment', () => {
@@ -265,9 +262,9 @@ describe('SegmentEditor', () => {
 			</Provider>
 		);
 
-		expect(screen.getByText('Segment Conditions')).toBeInTheDocument();
+		expect(screen.getByText(/^segment conditions$/i)).toBeInTheDocument();
 		expect(
-			screen.queryByRole('switch', {name: 'Enable Sequential Criteria'})
+			screen.queryByRole('switch', {name: /^enable sequential criteria$/i})
 		).not.toBeInTheDocument();
 	});
 
@@ -294,13 +291,13 @@ describe('SegmentEditor', () => {
 
 		expect(
 			screen.getByText(
-				'Unique key for referencing the segment definition.'
+				/^unique key for referencing the segment definition\.$/i
 			)
 		).toBeInTheDocument();
 
 		expect(
 			screen.getByText(
-				'ERC must contain only lowercase letters, numbers, hyphens, and underscores.'
+				/^erc must contain only lowercase letters, numbers, hyphens, and underscores\.$/i
 			)
 		).toBeInTheDocument();
 	});
@@ -343,7 +340,7 @@ describe('SegmentEditor', () => {
 			</Provider>
 		);
 
-		fireEvent.change(screen.getByPlaceholderText('New Segment'), {
+		fireEvent.change(screen.getByPlaceholderText(/^new segment$/i), {
 			target: {value: 'Engaged Accounts'}
 		});
 

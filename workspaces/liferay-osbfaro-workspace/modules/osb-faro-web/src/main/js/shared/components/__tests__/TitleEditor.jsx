@@ -3,8 +3,6 @@ import {cleanup, fireEvent, render} from '@testing-library/react';
 import {noop} from 'lodash';
 import {TitleEditor} from '../TitleEditor';
 
-jest.unmock('react-dom');
-
 describe('TitleEditor', () => {
 	afterEach(cleanup);
 
@@ -50,11 +48,11 @@ describe('TitleEditor', () => {
 
 		const input = getByPlaceholderText(placeholder);
 
-		expect(input).toHaveClass('hide');
+		expect(input).not.toBeVisible();
 
 		fireEvent.click(container.querySelector('.btn'));
 
-		expect(input).not.toHaveClass('hide');
+		expect(input).toBeVisible();
 	});
 
 	it('should not be editable if editable prop is false', () => {
