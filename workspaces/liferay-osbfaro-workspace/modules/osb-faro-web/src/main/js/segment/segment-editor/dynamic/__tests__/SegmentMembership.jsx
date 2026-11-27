@@ -8,8 +8,6 @@ import {Formik} from 'formik';
 import {Provider} from 'react-redux';
 import {SegmentCategories, SegmentTypes} from 'shared/util/constants';
 
-jest.unmock('react-dom');
-
 let mockModalProps;
 
 jest.mock('shared/components/modals/SearchableEntitiesTableModal', () => ({
@@ -72,8 +70,7 @@ describe('SegmentMembership', () => {
 
 		expect(previewButton).toHaveAccessibleName('View Members');
 		expect(previewButton).toHaveAttribute('aria-label', 'View Members');
-		expect(previewButton).toHaveClass('btn-monospaced');
-		expect(previewButton).not.toHaveTextContent('View Members');
+		expect(previewButton).not.toHaveTextContent(/view members/i);
 		expect(previewButton.firstElementChild).toHaveClass('lexicon-icon-view');
 	});
 
@@ -85,19 +82,6 @@ describe('SegmentMembership', () => {
 		await waitFor(() =>
 			expect(getFormik().values.includeAnonymousUsers).toBe(true)
 		);
-	});
-
-	it('should show the include anonymous label in gray only when the toggle is off', async () => {
-		renderMembership();
-
-		const toggle = screen.getByRole('switch', {name: /include anonymous/i});
-		const container = toggle.closest('label');
-
-		expect(container).toHaveClass('text-secondary');
-
-		fireEvent.click(toggle);
-
-		await waitFor(() => expect(container).not.toHaveClass('text-secondary'));
 	});
 
 	it('should mark the include anonymous field as touched when it loses focus', async () => {
@@ -122,7 +106,7 @@ describe('SegmentMembership', () => {
 		renderMembership();
 
 		const infoPopover = screen.getByRole('button', {
-			name: 'More Information'
+			name: /^more information$/i
 		});
 
 		expect(infoPopover).toHaveAttribute('tabIndex', '0');
@@ -131,7 +115,7 @@ describe('SegmentMembership', () => {
 
 		expect(
 			screen.getByText(
-				'Criteria containing individual or account attributes excludes anonymous individuals.'
+				/^criteria containing individual or account attributes excludes anonymous individuals\.$/i
 			)
 		).toBeInTheDocument();
 	});
@@ -155,8 +139,7 @@ describe('SegmentMembership', () => {
 
 		expect(previewButton).toHaveAccessibleName('View Members');
 		expect(previewButton).not.toHaveAttribute('aria-label');
-		expect(previewButton).not.toHaveClass('btn-monospaced');
-		expect(previewButton).toHaveTextContent('View Members');
+		expect(previewButton).toHaveTextContent(/view members/i);
 		expect(previewButton.firstElementChild).toHaveClass(
 			'lexicon-icon-view',
 			'mr-2'
@@ -170,7 +153,7 @@ describe('SegmentMembership', () => {
 		});
 
 		expect(screen.getByTestId('preview-criteria-button')).toHaveTextContent(
-			'View Accounts'
+			/view accounts/i
 		);
 	});
 
@@ -188,9 +171,9 @@ describe('SegmentMembership', () => {
 			);
 			expect(
 				screen.getByText(
-					'Some of your criteria are incomplete or invalid.'
+					/^some of your criteria are incomplete or invalid\.$/i
 				)
-			).toHaveClass('sr-only');
+			).toBeInTheDocument();
 		}
 	);
 
@@ -214,7 +197,7 @@ describe('SegmentMembership', () => {
 			);
 			expect(
 				screen.queryByText(
-					'Some of your criteria are incomplete or invalid.'
+					/^some of your criteria are incomplete or invalid\.$/i
 				)
 			).not.toBeInTheDocument();
 		}

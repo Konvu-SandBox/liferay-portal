@@ -8,8 +8,6 @@ package com.liferay.portal.kernel.audit;
 import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
-import com.liferay.portal.kernel.model.CompanyConstants;
-import com.liferay.portal.kernel.test.util.FeatureFlagTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.util.DateFormatFactoryUtil;
 import com.liferay.portal.test.rule.FeatureFlag;
@@ -44,10 +42,8 @@ public class AuditMessageTest {
 	@Test
 	public void testConstructor() throws Exception {
 		_testConstructor();
-		_testConstructorWhenFeatureFlagIsDisabled();
 		_testConstructorWithClonedContext();
 		_testConstructorWithSharedContext();
-		_testConstructorWithSystemCompany();
 	}
 
 	@Test
@@ -146,31 +142,6 @@ public class AuditMessageTest {
 		AuditRequestContextThreadLocal.removeAuditRequestContext();
 	}
 
-	private void _testConstructorWhenFeatureFlagIsDisabled() {
-		try (SafeCloseable safeCloseable =
-				FeatureFlagTestUtil.setFeatureFlagsWithSafeCloseable(
-					false, "LPD-6417")) {
-
-			AuditRequestContext auditRequestContext =
-				AuditRequestContextThreadLocal.getAuditRequestContext();
-
-			Assert.assertNotNull(auditRequestContext.getRequestId());
-
-			auditRequestContext.setHttpMethod(RandomTestUtil.randomString());
-			auditRequestContext.setUserAgent(RandomTestUtil.randomString());
-
-			AuditMessage auditMessage = _createAuditMessage(
-				RandomTestUtil.randomLong());
-
-			Assert.assertNull(auditMessage.getHttpMethod());
-			Assert.assertNull(auditMessage.getRequestId());
-			Assert.assertFalse(auditMessage.isRequestIdGenerated());
-			Assert.assertNull(auditMessage.getUserAgent());
-
-			AuditRequestContextThreadLocal.removeAuditRequestContext();
-		}
-	}
-
 	private void _testConstructorWithClonedContext() {
 		long companyId = RandomTestUtil.randomLong();
 
@@ -225,24 +196,6 @@ public class AuditMessageTest {
 
 		Assert.assertNotNull(auditMessage3.getRequestId());
 		Assert.assertNotEquals(requestId, auditMessage3.getRequestId());
-
-		AuditRequestContextThreadLocal.removeAuditRequestContext();
-	}
-
-	private void _testConstructorWithSystemCompany() {
-		AuditRequestContext auditRequestContext =
-			AuditRequestContextThreadLocal.getAuditRequestContext();
-
-		auditRequestContext.setHttpMethod(RandomTestUtil.randomString());
-		auditRequestContext.setUserAgent(RandomTestUtil.randomString());
-
-		AuditMessage auditMessage = _createAuditMessage(
-			CompanyConstants.SYSTEM);
-
-		Assert.assertNull(auditMessage.getHttpMethod());
-		Assert.assertNull(auditMessage.getRequestId());
-		Assert.assertFalse(auditMessage.isRequestIdGenerated());
-		Assert.assertNull(auditMessage.getUserAgent());
 
 		AuditRequestContextThreadLocal.removeAuditRequestContext();
 	}

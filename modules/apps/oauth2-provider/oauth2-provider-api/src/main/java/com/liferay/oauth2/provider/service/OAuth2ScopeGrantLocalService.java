@@ -95,11 +95,6 @@ public interface OAuth2ScopeGrantLocalService
 
 	public OAuth2ScopeGrant createOAuth2ScopeGrant(
 			long companyId, long oAuth2ApplicationScopeAliasesId,
-			String applicationName, String bundleSymbolicName, String scope)
-		throws DuplicateOAuth2ScopeGrantException;
-
-	public OAuth2ScopeGrant createOAuth2ScopeGrant(
-			long companyId, long oAuth2ApplicationScopeAliasesId,
 			String applicationName, String bundleSymbolicName, String scope,
 			List<String> scopeAliases)
 		throws DuplicateOAuth2ScopeGrantException;
@@ -237,11 +232,6 @@ public interface OAuth2ScopeGrantLocalService
 	public ActionableDynamicQuery getActionableDynamicQuery();
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public Collection<LiferayOAuth2Scope> getFilteredLiferayOAuth2Scopes(
-		long oAuth2ApplicationScopeAliasesId,
-		Collection<LiferayOAuth2Scope> liferayOAuth2Scopes);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public IndexableActionableDynamicQuery getIndexableActionableDynamicQuery();
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
@@ -359,4 +349,4 @@ public interface OAuth2ScopeGrantLocalService
 		OAuth2ScopeGrant oAuth2ScopeGrant);
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:359284083
+// LIFERAY-SERVICE-BUILDER-HASH:-537497951
