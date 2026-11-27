@@ -14,8 +14,6 @@ import {Route, Routes as RouterRoutes} from 'react-router-dom';
 import {Routes} from 'shared/util/router';
 import {waitForLoading} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const RenderWithRouter = ({children, recentValue}) => (
 	<MemoryRouter
 		initialEntries={[
@@ -83,7 +81,7 @@ describe('AttributeView', () => {
 			jest.runOnlyPendingTimers();
 		});
 
-		expect(getByText('Sample Raw Data')).toBeTruthy();
+		expect(getByText(/^sample raw data$/i)).toBeTruthy();
 	});
 
 	it('should render table with empty data if there is no column accessor value', async () => {

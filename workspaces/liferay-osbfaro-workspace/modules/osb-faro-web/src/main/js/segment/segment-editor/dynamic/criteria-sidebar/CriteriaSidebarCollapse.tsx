@@ -1,9 +1,7 @@
-import ClayIcon from 'shared/components/Icon';
-import ClayLink from '@clayui/link';
+import CriteriaSidebarDataSourceEmptyState from './CriteriaSidebarDataSourceEmptyState';
 import CriteriaSidebarItem from './CriteriaSidebarItem';
 import EmptyState from '@clayui/empty-state';
 import React from 'react';
-import URLConstants from 'shared/util/url-constants';
 import {
 	EVENT_KEY,
 	FunctionalOperators,
@@ -17,9 +15,6 @@ import {jsDatetoYYYYMMDD} from '../utils/utils';
 import {List} from 'immutable';
 import {Property, PropertyGroup, PropertySubgroup} from 'shared/util/records';
 import {DEFAULT_UTM_PARAMETER_OPTIONS} from '../utils/properties/session-properties';
-import {Routes, toRoute} from 'shared/util/router';
-import {useCurrentUser} from 'shared/hooks/useCurrentUser';
-import {useParams} from 'react-router-dom';
 
 /**
  * Returns a default value for a property provided.
@@ -180,6 +175,19 @@ export const getDefaultValue = (property: Property): any => {
 				{key: 'operator', value: RelationalOperators.GE},
 				{key: 'value', value: 1},
 			]);
+		case PropertyTypes.Campaign:
+			return createCustomValueMap([
+				{
+					key: 'criterionGroup',
+					value: [
+						{
+							operatorName: RelationalOperators.In,
+							propertyName: name,
+							value: property.id ? [property.id] : [],
+						},
+					],
+				},
+			]);
 		case PropertyTypes.Tag:
 		case PropertyTypes.Vocabulary:
 			return createCustomValueMap([
@@ -268,10 +276,6 @@ const CriteriaSidebarCollapse: React.FC<ICriteriaSidebarCollapseProps> = ({
 	propertyKey,
 	searchValue,
 }) => {
-	const {groupId} = useParams();
-	const currentUser = useCurrentUser();
-	const authorized = currentUser.isAdmin();
-
 	const filterProperties = (): List<PropertySubgroup> => {
 		const propertyGroup = propertyGroupsIList.find(
 			(propertyGroup: PropertyGroup | undefined) =>
@@ -322,7 +326,7 @@ const CriteriaSidebarCollapse: React.FC<ICriteriaSidebarCollapseProps> = ({
 					description={Liferay.Language.get(
 						'review-your-search-and-try-again'
 					)}
-					title={Liferay.Language.get('no-results-found')}
+					title={Liferay.Language.get('no-results-were-found')}
 				/>
 			</div>
 		);
@@ -330,40 +334,12 @@ const CriteriaSidebarCollapse: React.FC<ICriteriaSidebarCollapseProps> = ({
 
 	if (propertyKey === FieldOwnerTypes.Account && !searchValue && noResults) {
 		return (
-			<div className="align-items-center d-flex empty-message h-100 justify-content-center">
-				<EmptyState
-					className="text-center"
-					description={Liferay.Language.get(
-						'connect-a-data-source-containing-account-data'
-					)}
-					title={Liferay.Language.get('no-account-data-synced')}
-				>
-					<ClayLink
-						decoration="underline"
-						href={URLConstants.HelpConnectDxp}
-						key="helpConnectDxpText"
-						target="_blank"
-					>
-						{Liferay.Language.get('learn-more-about-data-sources')}
-
-						<span className="inline-item inline-item-after">
-							<ClayIcon fontSize={10} symbol="shortcut" />
-						</span>
-					</ClayLink>
-					{authorized && (
-						<ClayLink
-							button
-							className="button-root mt-3"
-							displayType="secondary"
-							href={toRoute(Routes.SETTINGS_DATA_SOURCE_LIST, {
-								groupId,
-							})}
-						>
-							{Liferay.Language.get('connect-data-source')}
-						</ClayLink>
-					)}
-				</EmptyState>
-			</div>
+			<CriteriaSidebarDataSourceEmptyState
+				description={Liferay.Language.get(
+					'connect-a-data-source-containing-account-data'
+				)}
+				title={Liferay.Language.get('no-account-data-has-been-synced')}
+			/>
 		);
 	}
 

@@ -107,13 +107,6 @@ public class RedirectNotFoundEntryLocalServiceImpl
 	}
 
 	@Override
-	public RedirectNotFoundEntry fetchRedirectNotFoundEntry(
-		long groupId, String url) {
-
-		return redirectNotFoundEntryPersistence.fetchByG_U(groupId, url);
-	}
-
-	@Override
 	public List<RedirectNotFoundEntry> getRedirectNotFoundEntries(
 		long groupId, Boolean ignored, Date minModifiedDate, int start, int end,
 		OrderByComparator<RedirectNotFoundEntry> orderByComparator) {
@@ -136,20 +129,6 @@ public class RedirectNotFoundEntryLocalServiceImpl
 	}
 
 	@Override
-	public List<RedirectNotFoundEntry> getRedirectNotFoundEntries(
-		long groupId, int start, int end,
-		OrderByComparator<RedirectNotFoundEntry> orderByComparator) {
-
-		return redirectNotFoundEntryPersistence.findByGroupId(
-			groupId, start, end, orderByComparator);
-	}
-
-	@Override
-	public int getRedirectNotFoundEntriesCount(long groupId) {
-		return redirectNotFoundEntryPersistence.countByGroupId(groupId);
-	}
-
-	@Override
 	public int getRedirectNotFoundEntriesCount(
 		long groupId, Boolean ignored, Date minModifiedDate) {
 
@@ -157,16 +136,6 @@ public class RedirectNotFoundEntryLocalServiceImpl
 			redirectNotFoundEntryPersistence.countWithDynamicQuery(
 				_getRedirectNotFoundEntriesDynamicQuery(
 					groupId, ignored, minModifiedDate)));
-	}
-
-	@Override
-	public int getRedirectNotFoundEntriesCount(
-		long groupId, Date minModifiedDate) {
-
-		return GetterUtil.getInteger(
-			redirectNotFoundEntryPersistence.countWithDynamicQuery(
-				_getRedirectNotFoundEntriesDynamicQuery(
-					groupId, null, minModifiedDate)));
 	}
 
 	@Indexable(type = IndexableType.REINDEX)

@@ -13,7 +13,6 @@ import com.liferay.object.constants.ObjectFieldConstants;
 import com.liferay.object.constants.ObjectFieldSettingConstants;
 import com.liferay.object.constants.ObjectRelationshipConstants;
 import com.liferay.object.constants.ObjectValidationRuleSettingConstants;
-import com.liferay.object.definition.security.permission.resource.util.ObjectDefinitionResourcePermissionUtil;
 import com.liferay.object.definition.util.ObjectDefinitionThreadLocal;
 import com.liferay.object.definition.util.ObjectDefinitionUtil;
 import com.liferay.object.definition.util.ObjectDefinitionValidationThreadLocal;
@@ -36,6 +35,7 @@ import com.liferay.object.field.business.type.ObjectFieldBusinessType;
 import com.liferay.object.field.business.type.ObjectFieldBusinessTypeRegistry;
 import com.liferay.object.field.setting.util.ObjectFieldSettingUtil;
 import com.liferay.object.field.util.ObjectFieldUtil;
+import com.liferay.object.internal.definition.security.permission.resource.util.ObjectDefinitionResourcePermissionUtil;
 import com.liferay.object.internal.field.setting.contributor.DefaultObjectFieldSettingContributor;
 import com.liferay.object.internal.field.setting.contributor.FiltersObjectFieldSettingsContributor;
 import com.liferay.object.internal.field.setting.contributor.ObjectFieldSettingContributor;
@@ -77,7 +77,6 @@ import com.liferay.portal.kernel.dao.db.DB;
 import com.liferay.portal.kernel.dao.jdbc.CurrentConnection;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
-import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.lazy.referencing.LazyReferencingThreadLocal;
 import com.liferay.portal.kernel.log.Log;
@@ -1801,13 +1800,6 @@ public class ObjectFieldLocalServiceImpl
 	private void _validateBusinessType(
 			ObjectDefinition objectDefinition, String businessType)
 		throws PortalException {
-
-		if (!FeatureFlagManagerUtil.isEnabled(
-				objectDefinition.getCompanyId(), "LPD-11388") &&
-			businessType.equals(ObjectFieldConstants.BUSINESS_TYPE_LOCATION)) {
-
-			throw new UnsupportedOperationException();
-		}
 
 		if (Objects.equals(
 				objectDefinition.getStorageType(),
