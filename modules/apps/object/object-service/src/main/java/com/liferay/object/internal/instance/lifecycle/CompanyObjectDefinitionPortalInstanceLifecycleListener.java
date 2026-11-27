@@ -9,8 +9,8 @@ import com.liferay.asset.list.model.AssetListEntryTable;
 import com.liferay.fragment.model.FragmentCompositionTable;
 import com.liferay.fragment.model.FragmentEntryLinkTable;
 import com.liferay.layout.page.template.model.LayoutPageTemplateStructureRelTable;
-import com.liferay.object.definition.security.permission.resource.util.ObjectDefinitionResourcePermissionUtil;
 import com.liferay.object.definition.util.ObjectDefinitionUtil;
+import com.liferay.object.internal.definition.security.permission.resource.util.ObjectDefinitionResourcePermissionUtil;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.service.ObjectActionLocalService;
 import com.liferay.object.service.ObjectDefinitionLocalService;
@@ -65,7 +65,7 @@ public class CompanyObjectDefinitionPortalInstanceLifecycleListener
 	@Override
 	public void portalInstancePreregistered(Company company) throws Exception {
 		if (!PropsValues.DATABASE_PARTITION_ENABLED ||
-			!PortalInstances.isCompanyInCopyProcess()) {
+			!PortalInstances.isCompanyInCopyProcess(company.getCompanyId())) {
 
 			return;
 		}
@@ -150,7 +150,7 @@ public class CompanyObjectDefinitionPortalInstanceLifecycleListener
 	@Override
 	public void portalInstanceRegistered(Company company) throws Exception {
 		if (!PropsValues.DATABASE_PARTITION_ENABLED ||
-			!PortalInstances.isCompanyInCopyProcess()) {
+			!PortalInstances.isCompanyInCopyProcess(company.getCompanyId())) {
 
 			return;
 		}

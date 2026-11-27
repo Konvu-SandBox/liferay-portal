@@ -11,6 +11,7 @@ import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.service.DepotEntryLocalService;
 import com.liferay.document.library.kernel.model.DLFolderConstants;
 import com.liferay.document.library.kernel.service.DLAppLocalService;
+import com.liferay.document.library.test.util.DLTestUtil;
 import com.liferay.exportimport.kernel.configuration.ExportImportConfigurationSettingsMapFactoryUtil;
 import com.liferay.exportimport.kernel.configuration.constants.ExportImportConfigurationConstants;
 import com.liferay.exportimport.kernel.lar.ExportImportGroup;
@@ -55,7 +56,8 @@ import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.zip.ZipReader;
-import com.liferay.portal.kernel.zip.ZipReaderFactory;
+import com.liferay.portal.test.log.LogCapture;
+import com.liferay.portal.test.log.LoggerTestUtil;
 import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.FeatureFlags;
 import com.liferay.portal.test.rule.Inject;
@@ -93,10 +95,7 @@ import org.osgi.framework.ServiceRegistration;
  * @author Petteri Karttunen
  */
 @FeatureFlags(
-	featureFlags = {
-		@FeatureFlag(value = "LPD-41307"), @FeatureFlag("LPD-57655"),
-		@FeatureFlag("LPD-85946")
-	}
+	featureFlags = {@FeatureFlag("LPD-57655"), @FeatureFlag("LPD-85946")}
 )
 @RunWith(Arquillian.class)
 public class GroupExportImportTest {
@@ -209,7 +208,7 @@ public class GroupExportImportTest {
 	public void testExportGroupsWithGroupManifest() throws Exception {
 		File file = _exportLayouts(_group);
 
-		try (ZipReader zipReader = _zipReaderFactory.getZipReader(file)) {
+		try (ZipReader zipReader = new ZipReader(file)) {
 			String manifest = _getManifest(
 				zipReader, _getGroupManifestPath(_group));
 
@@ -245,7 +244,7 @@ public class GroupExportImportTest {
 	public void testExportGroupsWithSelectedGroup() throws Exception {
 		File file = _exportLayouts(_group);
 
-		try (ZipReader zipReader = _zipReaderFactory.getZipReader(file)) {
+		try (ZipReader zipReader = new ZipReader(file)) {
 			String manifest = _getManifest(zipReader);
 
 			Assert.assertTrue(manifest.contains("<groups>"));
@@ -265,7 +264,7 @@ public class GroupExportImportTest {
 
 		File file = _exportLayouts(_group);
 
-		try (ZipReader zipReader = _zipReaderFactory.getZipReader(file)) {
+		try (ZipReader zipReader = new ZipReader(file)) {
 			String manifest = _getManifest(zipReader);
 
 			Assert.assertFalse(
@@ -282,7 +281,7 @@ public class GroupExportImportTest {
 	public void testExportGroupsWithoutSelectedGroups() throws Exception {
 		File file = _exportLayouts();
 
-		try (ZipReader zipReader = _zipReaderFactory.getZipReader(file)) {
+		try (ZipReader zipReader = new ZipReader(file)) {
 			String manifest = _getManifest(zipReader);
 
 			Assert.assertFalse(manifest.contains("<groups>"));
@@ -497,8 +496,8 @@ public class GroupExportImportTest {
 		return _dlAppLocalService.addFileEntry(
 			null, TestPropsValues.getUserId(), group.getGroupId(),
 			DLFolderConstants.DEFAULT_PARENT_FOLDER_ID,
-			RandomTestUtil.randomString() + ".jpg", ContentTypes.IMAGE_JPEG,
-			RandomTestUtil.randomBytes(), null, null, null,
+			RandomTestUtil.randomString() + ".png", ContentTypes.IMAGE_PNG,
+			DLTestUtil.getImageBytes("png"), null, null, null,
 			ServiceContextTestUtil.getServiceContext(group.getGroupId()));
 	}
 
@@ -586,7 +585,7 @@ public class GroupExportImportTest {
 	private void _assertExportGroupsIsSkipped(Group group) throws Exception {
 		File file = _exportLayouts(group.getGroupId(), _group);
 
-		try (ZipReader zipReader = _zipReaderFactory.getZipReader(file)) {
+		try (ZipReader zipReader = new ZipReader(file)) {
 			String manifest = _getManifest(zipReader);
 
 			Assert.assertFalse(manifest.contains("<groups>"));
@@ -861,7 +860,10 @@ public class GroupExportImportTest {
 
 		ExportImportConfiguration exportImportConfiguration = null;
 
-		try {
+		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
+				"com.liferay.headless.admin.site.internal.util.LogUtil",
+				LoggerTestUtil.ERROR)) {
+
 			exportImportConfiguration = unsafeSupplier.get();
 		}
 		finally {
@@ -999,8 +1001,5 @@ public class GroupExportImportTest {
 
 	@Inject
 	private StyleBookEntryLocalService _styleBookEntryLocalService;
-
-	@Inject
-	private ZipReaderFactory _zipReaderFactory;
 
 }
