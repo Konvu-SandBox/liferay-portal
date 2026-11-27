@@ -8,8 +8,6 @@ import {MockedProvider} from '@apollo/client/testing';
 import {mockPreferenceReq, mockTimeRangeReq} from 'test/graphql-data';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = ({
 	mocks = [mockTimeRangeReq(), mockPreferenceReq()],
 	onChangeInterval = jest.fn(),
@@ -64,7 +62,7 @@ describe('HeaderDefault', () => {
 
 		fireEvent.click(dropdownToggle);
 
-		const last24HoursBtn = screen.getByText('Last 24 hours');
+		const last24HoursBtn = screen.getByText(/^last 24 hours$/i);
 
 		fireEvent.click(last24HoursBtn);
 

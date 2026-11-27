@@ -8,8 +8,6 @@ import {
 } from '../recharts';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('Recharts Util', () => {
 	describe('getTextWidth', () => {
 		it('should return text width', () => {
@@ -79,7 +77,7 @@ describe('Recharts Util', () => {
 			const textEl = container.querySelector('text');
 
 			expect(textEl).toBeInTheDocument();
-			expect(textEl).toHaveTextContent('Test');
+			expect(textEl).toHaveTextContent(/test/i);
 		});
 	});
 

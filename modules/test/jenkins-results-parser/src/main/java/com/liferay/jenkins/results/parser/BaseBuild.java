@@ -1113,8 +1113,8 @@ public abstract class BaseBuild implements Build {
 
 		String status = getStatus();
 
-		if (!Objects.equals(status, "reported") &&
-			!Objects.equals(status, "completed")) {
+		if (!Objects.equals(status, "completed") &&
+			!Objects.equals(status, "reporting")) {
 
 			return null;
 		}
@@ -2139,6 +2139,15 @@ public abstract class BaseBuild implements Build {
 			_jenkinsMaster = cachedDownstreamBuildReport.getJenkinsMaster();
 
 			_jenkinsCohort = _jenkinsMaster.getJenkinsCohort();
+
+			JSONObject buildReportJSONObject =
+				cachedDownstreamBuildReport.getBuildReportJSONObject();
+
+			if ((buildReportJSONObject != null) &&
+				buildReportJSONObject.has("startTime")) {
+
+				startTime = buildReportJSONObject.getLong("startTime");
+			}
 		}
 		else {
 			if (buildURL.contains("buildWithParameters")) {

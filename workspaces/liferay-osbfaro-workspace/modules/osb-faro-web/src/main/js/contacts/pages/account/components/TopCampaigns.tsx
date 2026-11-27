@@ -3,8 +3,9 @@ import ClayLink from '@clayui/link';
 import React from 'react';
 import {columns, FrontendDataSet} from 'shared/components/FrontendDataSet';
 import {DropdownRangeKey} from 'shared/components/dropdown-range-key/DropdownRangeKey';
+import {setUriQueryValues} from 'shared/util/url';
+import {Routes, toRoute} from 'shared/util/router';
 import {pickBy} from 'lodash';
-import {Routes, setUriQueryValues, toRoute} from 'shared/util/router';
 import {Text} from '@clayui/core';
 import {useParams} from 'react-router-dom';
 import {useRangeQueryValues} from 'shared/hooks/useRangeQueryValues';
@@ -81,7 +82,9 @@ const TopCampaigns: React.FC<ITopCampaignsProps> = ({accountName}) => {
 							description: Liferay.Language.get(
 								'this-account-has-not-been-touched-by-any-campaign-yet'
 							),
-							title: Liferay.Language.get('no-campaigns-found'),
+							title: Liferay.Language.get(
+								'no-campaigns-were-found'
+							),
 						}}
 						id="top-campaigns-dataset"
 						showManagementBar={false}

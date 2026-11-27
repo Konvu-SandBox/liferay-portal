@@ -11,12 +11,17 @@ export const OBJECT_ENTRY_FOLDER_CLASS_NAME =
 
 export const AI_ASSISTANT_TOOLBAR_TRIGGER_ID = 'ai-assistant-toolbar-trigger';
 
+export const CMP_MARKETPLACE_URL =
+	'https://marketplace.liferay.com/p/content-marketing-platform?utm_medium=referral&utm_source=ft-cms&utm_content=cmp&utm_cid=701VO00001AIWBFYA5';
+
 export const ENTERPRISE_URL =
 	'https://www.liferay.com/web/lr/cms-upgrade?utm_medium=referral&utm_source=cms-ft&utm_content=cms-ft-upgrade&utm_cid=701VO00000wwP6IYAU';
 
 export const ERC_MAX_LENGTH = 75;
 
 export const EXPIRING_SOON_THRESHOLD_DAYS = 7;
+
+export const FDS_EVENT_ACTION_PERFORMED = 'fds-action-performed';
 
 export const FDS_EVENT_DISPLAY_UPDATED = 'fds-display-updated';
 
@@ -99,6 +104,7 @@ export type ItemSelectorItemType =
 
 export const CMSSiteInitializerFDSNames = {
 	ALL_SECTION: '-allSection',
+	TASKS_SECTION: '-tasksSection',
 } as const;
 
 export const WORKFLOW_STATUS = {

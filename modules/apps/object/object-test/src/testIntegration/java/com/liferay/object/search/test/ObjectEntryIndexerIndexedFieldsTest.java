@@ -37,7 +37,6 @@ import com.liferay.portal.search.searcher.SearchRequestBuilderFactory;
 import com.liferay.portal.search.searcher.SearchResponse;
 import com.liferay.portal.search.searcher.Searcher;
 import com.liferay.portal.search.test.rule.SearchTestRule;
-import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
@@ -153,7 +152,6 @@ public class ObjectEntryIndexerIndexedFieldsTest {
 		Assert.assertEquals(1, searchResponse.getTotalHits());
 	}
 
-	@FeatureFlag("LPD-11388")
 	@Test
 	public void testIndexedLocationObjectField() throws Exception {
 		_objectDefinition = ObjectDefinitionTestUtil.publishObjectDefinition(
@@ -175,7 +173,7 @@ public class ObjectEntryIndexerIndexedFieldsTest {
 			0, TestPropsValues.getUserId(),
 			_objectDefinition.getObjectDefinitionId(),
 			ObjectEntryFolderConstants.PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
-			"en_US",
+			null,
 			HashMapBuilder.<String, Serializable>put(
 				"location",
 				HashMapBuilder.<String, Serializable>put(
@@ -207,6 +205,17 @@ public class ObjectEntryIndexerIndexedFieldsTest {
 
 		Assert.assertEquals(latitude, geoLocationPoint.getLatitude(), 0.0001);
 		Assert.assertEquals(longitude, geoLocationPoint.getLongitude(), 0.0001);
+
+		objectEntry = _objectEntryLocalService.addObjectEntry(
+			0, TestPropsValues.getUserId(),
+			_objectDefinition.getObjectDefinitionId(),
+			ObjectEntryFolderConstants.PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+			null, Collections.emptyMap(),
+			ServiceContextTestUtil.getServiceContext());
+
+		document = _getDocument(objectEntry.getObjectEntryId());
+
+		Assert.assertNull(document.getGeoLocationPoint("location_geolocation"));
 	}
 
 	@Rule
