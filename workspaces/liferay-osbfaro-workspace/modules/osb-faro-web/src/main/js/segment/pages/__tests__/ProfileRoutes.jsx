@@ -13,8 +13,6 @@ import {Routes} from 'shared/util/router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 import SegmentProfileRoutes from '../ProfileRoutes';
 
-jest.unmock('react-dom');
-
 jest.mock('../Overview', () => () => <div>{'SegmentOverview'}</div>);
 jest.mock('../OverviewRealTime', () => () => (
 	<div>{'SegmentOverviewRealTime'}</div>
@@ -83,7 +81,7 @@ describe('SegmentProfileRoutes', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(screen.getByText('Account Batch Segment')).toBeTruthy();
+		expect(screen.getByText(/^account batch segment$/i)).toBeTruthy();
 		expect(screen.getByText('SEGMENT MEMBERSHIP')).toBeTruthy();
 	});
 
@@ -100,9 +98,9 @@ describe('SegmentProfileRoutes', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(screen.getByText('Edit Segment')).toBeTruthy();
-		expect(screen.queryByText('Download Reports')).toBeNull();
-		expect(screen.queryByText('Refresh Data')).toBeNull();
+		expect(screen.getByText(/^edit segment$/i)).toBeTruthy();
+		expect(screen.queryByText(/^download reports$/i)).toBeNull();
+		expect(screen.queryByText(/^refresh data$/i)).toBeNull();
 	});
 
 	it('should render the external reference code with its label', async () => {
@@ -122,14 +120,14 @@ describe('SegmentProfileRoutes', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		fireEvent.click(screen.getByRole('button', {name: 'Menu'}));
+		fireEvent.click(screen.getByRole('button', {name: /^menu$/i}));
 
 		fireEvent.click(
-			screen.getByRole('menuitem', {name: 'Manage Notifications'})
+			screen.getByRole('menuitem', {name: /^manage notifications$/i})
 		);
 
 		expect(
-			await screen.findByText('Manage Segment Notifications')
+			await screen.findByText(/^manage segment notifications$/i)
 		).toBeInTheDocument();
 	});
 });

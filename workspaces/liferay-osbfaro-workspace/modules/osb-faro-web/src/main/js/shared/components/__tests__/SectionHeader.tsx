@@ -2,8 +2,6 @@ import React from 'react';
 import {cleanup, render} from '@testing-library/react';
 import {SectionHeader} from '../SectionHeader';
 
-jest.unmock('react-dom');
-
 describe('SectionHeader', () => {
 	afterEach(cleanup);
 
@@ -24,7 +22,7 @@ describe('SectionHeader', () => {
 			/>
 		);
 
-		expect(getByText('All Time')).toBeTruthy();
+		expect(getByText(/^all time$/i)).toBeTruthy();
 	});
 
 	it('should render a component passed as right content', () => {

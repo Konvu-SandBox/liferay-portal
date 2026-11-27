@@ -15,18 +15,15 @@ import co.elastic.clients.elasticsearch.indices.IndexSettings;
 import co.elastic.clients.json.JsonpMapper;
 import co.elastic.clients.transport.endpoints.BooleanResponse;
 
+import com.liferay.petra.io.unsync.UnsyncStringReader;
 import com.liferay.portal.search.elasticsearch8.internal.connection.helper.IndexCreationHelper;
 import com.liferay.portal.search.elasticsearch8.internal.connection.helper.LiferayIndexCreationHelper;
-import com.liferay.portal.search.elasticsearch8.internal.settings.SettingsHelperImpl;
+import com.liferay.portal.search.elasticsearch8.internal.settings.SettingsHelper;
 import com.liferay.portal.search.engine.SearchEngineInformation;
 
 import jakarta.json.spi.JsonProvider;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-
-import java.nio.charset.StandardCharsets;
 
 import org.mockito.Mockito;
 
@@ -51,31 +48,25 @@ public class IndexCreator {
 
 		indexCreationHelper.contribute(builder);
 
-		SettingsHelperImpl settingsHelperImpl = new SettingsHelperImpl();
+		SettingsHelper settingsHelper = new SettingsHelper();
 
-		settingsHelperImpl.put("index.number_of_replicas", "0");
-		settingsHelperImpl.put("index.number_of_shards", "1");
+		settingsHelper.put("index.number_of_replicas", "0");
+		settingsHelper.put("index.number_of_shards", "1");
 
-		indexCreationHelper.contributeIndexSettings(settingsHelperImpl);
+		indexCreationHelper.contributeIndexSettings(settingsHelper);
 
 		JsonpMapper jsonpMapper = _elasticsearchClientResolver.getJsonpMapper(
 			null);
 
 		JsonProvider jsonProvider = jsonpMapper.jsonProvider();
 
-		String settings = String.valueOf(
-			settingsHelperImpl.getSettingsJSONObject());
-
-		try (InputStream inputStream = new ByteArrayInputStream(
-				settings.getBytes(StandardCharsets.UTF_8))) {
-
-			builder.settings(
-				IndexSettings._DESERIALIZER.deserialize(
-					jsonProvider.createParser(inputStream), jsonpMapper));
-		}
-		catch (IOException ioException) {
-			throw new RuntimeException(ioException);
-		}
+		builder.settings(
+			IndexSettings._DESERIALIZER.deserialize(
+				jsonProvider.createParser(
+					new UnsyncStringReader(
+						String.valueOf(
+							settingsHelper.getSettingsJSONObject()))),
+				jsonpMapper));
 
 		try {
 			elasticsearchIndicesClient.create(builder.build());
@@ -178,14 +169,11 @@ public class IndexCreator {
 			}
 
 			@Override
-			public void contributeIndexSettings(
-				SettingsHelperImpl settingsHelperImpl) {
-
-				_indexCreationHelper.contributeIndexSettings(
-					settingsHelperImpl);
+			public void contributeIndexSettings(SettingsHelper settingsHelper) {
+				_indexCreationHelper.contributeIndexSettings(settingsHelper);
 
 				liferayIndexCreationHelper.contributeIndexSettings(
-					settingsHelperImpl);
+					settingsHelper);
 			}
 
 			@Override
