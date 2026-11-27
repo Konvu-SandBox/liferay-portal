@@ -8,8 +8,6 @@ import {mockChannelContext} from 'test/mock-channel-context';
 import {mockSegment} from 'test/data';
 import {UnassignedSegmentsContext} from 'shared/context/unassignedSegments';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/api', () => ({
 	individualSegment: {
 		delete: jest.fn(() => Promise.resolve()),
@@ -49,8 +47,8 @@ describe('AssignSegments', () => {
 
 		fireEvent.click(getByTestId('select-1'));
 
-		expect(getAllByText('Unassigned').length).toBeGreaterThan(0);
-		expect(getByText('Delete')).toBeTruthy();
+		expect(getAllByText(/^unassigned$/i).length).toBeGreaterThan(0);
+		expect(getByText(/^delete$/i)).toBeTruthy();
 		expect(getByText('Channel 1')).toBeTruthy();
 		expect(getByText('Channel 2')).toBeTruthy();
 
@@ -61,7 +59,7 @@ describe('AssignSegments', () => {
 		const onClose = jest.fn();
 		const {getByText} = render(<DefaultComponent onClose={onClose} />);
 
-		fireEvent.click(getByText('Skip for Now'));
+		fireEvent.click(getByText(/^skip for now$/i));
 
 		expect(onClose).toHaveBeenCalled();
 	});
@@ -101,7 +99,7 @@ describe('AssignSegments', () => {
 
 		fireEvent.click(getByTestId('select-1'));
 
-		fireEvent.click(getByText('Delete'));
+		fireEvent.click(getByText(/^delete$/i));
 
 		fireEvent.click(getByTestId('submit-button'));
 

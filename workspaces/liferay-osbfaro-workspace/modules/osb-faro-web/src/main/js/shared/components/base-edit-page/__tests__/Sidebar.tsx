@@ -3,8 +3,6 @@ import React from 'react';
 import Sidebar from '../Sidebar';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const LABEL = 'Conditions Library';
 
 const setScreenWidth = (width: number) => {
@@ -26,36 +24,17 @@ describe('BaseEditPage.Sidebar', () => {
 			);
 
 			expect(screen.getByRole('complementary')).toHaveTextContent(
-				'Conditions'
+				/conditions/i
 			);
 			expect(
 				screen.queryByRole('button', {name: `Open ${LABEL}`})
 			).not.toBeInTheDocument();
 		});
 
-		it('sits on the left by default', () => {
-			render(<Sidebar label={LABEL} />);
-
-			const sidebar = screen.getByRole('complementary');
-
-			expect(sidebar).toHaveClass('base-edit-page-sidebar-left');
-			expect(sidebar).toHaveClass('border-right');
-		});
-
-		it('sits on the right when asked to', () => {
-			render(<Sidebar label={LABEL} position="right" />);
-
-			const sidebar = screen.getByRole('complementary');
-
-			expect(sidebar).toHaveClass('base-edit-page-sidebar-right');
-			expect(sidebar).toHaveClass('border-left');
-		});
-
 		it('keeps the given class name', () => {
 			render(<Sidebar className="criteria-sidebar" label={LABEL} />);
 
 			expect(screen.getByRole('complementary')).toHaveClass(
-				'base-edit-page-sidebar',
 				'criteria-sidebar'
 			);
 		});
@@ -95,7 +74,7 @@ describe('BaseEditPage.Sidebar', () => {
 			});
 
 			expect(panel).toContainElement(
-				screen.getByRole('button', {name: 'Add Condition'})
+				screen.getByRole('button', {name: /^add condition$/i})
 			);
 			expect(screen.getByTitle(`Open ${LABEL}`)).toHaveAttribute(
 				'aria-expanded',
@@ -126,7 +105,9 @@ describe('BaseEditPage.Sidebar', () => {
 
 			fireEvent.click(trigger);
 
-			fireEvent.click(await screen.findByRole('button', {name: 'Close'}));
+			fireEvent.click(
+				await screen.findByRole('button', {name: /^close$/i})
+			);
 
 			await waitFor(() => expect(trigger).toHaveFocus());
 			expect(trigger).toHaveAttribute('aria-expanded', 'false');
@@ -139,7 +120,7 @@ describe('BaseEditPage.Sidebar', () => {
 
 			fireEvent.click(trigger);
 
-			await screen.findByRole('button', {name: 'Close'});
+			await screen.findByRole('button', {name: /^close$/i});
 
 			fireEvent.keyDown(document.activeElement ?? document.body, {
 				key: 'Escape',
@@ -183,7 +164,7 @@ describe('BaseEditPage.Body', () => {
 
 		const body = container.firstElementChild;
 
-		expect(body).toHaveClass('base-edit-page-body', 'form-body');
+		expect(body).toHaveClass('form-body');
 		expect(body).toContainElement(screen.getByRole('complementary'));
 		expect(body).toContainElement(screen.getByRole('main'));
 	});

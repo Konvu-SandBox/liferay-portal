@@ -42,6 +42,8 @@ import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
+import com.liferay.ratings.kernel.model.RatingsEntry;
+import com.liferay.ratings.kernel.service.RatingsEntryLocalService;
 
 import java.io.InputStream;
 
@@ -413,7 +415,7 @@ public class BlogsEntryStagedModelDataHandlerTest
 			Map<String, List<StagedModel>> dependentStagedModelsMap)
 		throws Exception {
 
-		return BlogsEntryLocalServiceUtil.addEntry(
+		return BlogsTestUtil.addEntry(
 			TestPropsValues.getUserId(), RandomTestUtil.randomString(),
 			RandomTestUtil.randomString(),
 			ServiceContextTestUtil.getServiceContext(
@@ -446,7 +448,7 @@ public class BlogsEntryStagedModelDataHandlerTest
 			ServiceContextTestUtil.getServiceContext(
 				group, TestPropsValues.getUserId());
 
-		BlogsEntry approvedEntry = BlogsEntryLocalServiceUtil.addEntry(
+		BlogsEntry approvedEntry = BlogsTestUtil.addEntry(
 			TestPropsValues.getUserId(), RandomTestUtil.randomString(),
 			RandomTestUtil.randomString(), serviceContext);
 
@@ -477,6 +479,34 @@ public class BlogsEntryStagedModelDataHandlerTest
 	@Override
 	protected boolean isCommentableStagedModel() {
 		return true;
+	}
+
+	@Override
+	protected void validateImport(
+			StagedModel stagedModel, StagedModelAssets stagedModelAssets,
+			Map<String, List<StagedModel>> dependentStagedModelsMap,
+			Group group)
+		throws Exception {
+
+		super.validateImport(
+			stagedModel, stagedModelAssets, dependentStagedModelsMap, group);
+
+		BlogsEntry blogsEntry = (BlogsEntry)stagedModel;
+
+		BlogsEntry importedBlogsEntry = (BlogsEntry)getStagedModel(
+			blogsEntry.getUuid(), group);
+
+		RatingsEntry importedRatingsEntry =
+			_ratingsEntryLocalService.fetchEntry(
+				TestPropsValues.getUserId(), BlogsEntry.class.getName(),
+				importedBlogsEntry.getEntryId());
+
+		RatingsEntry ratingsEntry = _ratingsEntryLocalService.getEntry(
+			TestPropsValues.getUserId(), BlogsEntry.class.getName(),
+			blogsEntry.getEntryId());
+
+		Assert.assertEquals(
+			ratingsEntry.getScore(), importedRatingsEntry.getScore(), 0);
 	}
 
 	@Override
@@ -608,5 +638,8 @@ public class BlogsEntryStagedModelDataHandlerTest
 
 	@Inject
 	private Portal _portal;
+
+	@Inject
+	private RatingsEntryLocalService _ratingsEntryLocalService;
 
 }

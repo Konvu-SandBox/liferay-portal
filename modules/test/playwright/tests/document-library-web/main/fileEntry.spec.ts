@@ -23,10 +23,12 @@ import {clickAndExpectToBeHidden} from '../../../utils/clickAndExpectToBeHidden'
 import {clickAndExpectToBeVisible} from '../../../utils/clickAndExpectToBeVisible';
 import {expandSection} from '../../../utils/expandSection';
 import getGlobalSiteId from '../../../utils/getGlobalSiteId';
+import {getRandomInt} from '../../../utils/getRandomInt';
 import getRandomString from '../../../utils/getRandomString';
 import {performLogout} from '../../../utils/performLogin';
 import getBasicWebContentStructureId from '../../../utils/structured-content/getBasicWebContentStructureId';
 import {waitForAlert} from '../../../utils/waitForAlert';
+import getDataStructureDefinition from '../../journal-web/main/utils/getDataStructureDefinition';
 import getFragmentDefinition from '../../layout-content-page-editor-web/main/utils/getFragmentDefinition';
 import getPageDefinition from '../../layout-content-page-editor-web/main/utils/getPageDefinition';
 import getWidgetDefinition from '../../layout-content-page-editor-web/main/utils/getWidgetDefinition';
@@ -1659,5 +1661,186 @@ test(
 		expect(await locationLink.getAttribute('href')).not.toContain(
 			'redirect'
 		);
+	}
+);
+
+test(
+	'Bulk actions that do not apply to the whole selection are disabled',
+	{tag: '@LPD-113588'},
+	async ({
+		apiHelpers,
+		documentLibraryEditFolderPage,
+		documentLibraryPage,
+		page,
+		site,
+	}) => {
+		const documentTitle = getRandomString();
+
+		await apiHelpers.headlessDelivery.postDocument(
+			site.id,
+			createReadStream(path.join(__dirname, '/dependencies/image1.jpeg')),
+			{fileName: documentTitle + '.jpeg', title: documentTitle}
+		);
+
+		const folder = await apiHelpers.headlessDelivery.postDocumentFolder(
+			site.id
+		);
+
+		const shortcutTargetTitle = getRandomString();
+
+		await addDocumentShortcut(
+			apiHelpers,
+			site.id,
+			shortcutTargetTitle,
+			folder.id,
+			0
+		);
+
+		const assertPermissionsDisabled = async () => {
+			await page
+				.locator('.management-bar')
+				.getByRole('button', {name: 'Actions'})
+				.click();
+
+			await expect(
+				page.getByRole('menuitem', {name: 'Permissions'})
+			).toBeDisabled();
+
+			await page.keyboard.press('Escape');
+		};
+
+		await test.step('Permissions is disabled for a document and a folder', async () => {
+			await documentLibraryPage.goto(site.friendlyUrlPath);
+
+			await documentLibraryPage.selectFileEntry(documentTitle);
+			await documentLibraryPage.selectFolder(folder.name);
+
+			await assertPermissionsDisabled();
+		});
+
+		await test.step('Permissions is disabled for a document and a shortcut', async () => {
+			await documentLibraryPage.goto(site.friendlyUrlPath);
+
+			await documentLibraryPage.selectFileEntries([
+				documentTitle,
+				shortcutTargetTitle,
+			]);
+
+			await assertPermissionsDisabled();
+		});
+
+		await test.step('Edit Tags is disabled for documents in a folder with a workflow', async () => {
+			const workflowFolder =
+				await apiHelpers.headlessDelivery.postDocumentFolder(site.id);
+
+			await documentLibraryPage.goto(site.friendlyUrlPath);
+			await documentLibraryPage.goToEditFolder(workflowFolder.name);
+			await page.waitForURL(/edit_folder/);
+			await documentLibraryEditFolderPage.setWorkflow('Single Approver');
+
+			const workflowDocumentTitles = [
+				getRandomString(),
+				getRandomString(),
+			];
+
+			for (const workflowDocumentTitle of workflowDocumentTitles) {
+				await apiHelpers.headlessDelivery.postDocumentFolderDocument(
+					workflowFolder.id,
+					createReadStream(
+						path.join(__dirname, '/dependencies/image1.jpeg')
+					),
+					{
+						fileName: workflowDocumentTitle + '.jpeg',
+						title: workflowDocumentTitle,
+					}
+				);
+			}
+
+			await documentLibraryPage.goto(site.friendlyUrlPath);
+			await page.getByRole('link', {name: workflowFolder.name}).click();
+			await page.waitForURL(/view_folder/);
+
+			await documentLibraryPage.selectFileEntries(workflowDocumentTitles);
+
+			await expect(
+				page.getByRole('button', {name: 'Edit Tags'})
+			).toBeDisabled();
+		});
+	}
+);
+
+test(
+	'Required fields of a document type with a metadata set are validated before publishing',
+	{
+		tag: '@LPD-115154',
+	},
+	async ({apiHelpers, documentLibraryEditFilePage, page, site}) => {
+		const documentTypeName = getRandomString();
+		const metadataFieldName = `Metadata${getRandomInt()}`;
+		const requiredFieldName = `Required${getRandomInt()}`;
+
+		const metadataSet = await test.step('Add a metadata set', async () => {
+			return apiHelpers.dataEngine.createDocumentMetadataSet(
+				site.id,
+				getDataStructureDefinition({
+					defaultLanguageId: 'en_US',
+					fields: [{fieldType: 'text', name: metadataFieldName}],
+					name: getRandomString(),
+				})
+			);
+		});
+
+		await test.step('Add a document type with a required field and the metadata set', async () => {
+			const {dataDefinitionFields, defaultDataLayout} =
+				getDataStructureDefinition({
+					defaultLanguageId: 'en_US',
+					fields: [{name: requiredFieldName, required: true}],
+					name: documentTypeName,
+				});
+
+			await apiHelpers.post(
+				`${apiHelpers.baseUrl}headless-delivery/v1.0/sites/${site.id}/document-data-definition-types`,
+				{
+					data: {
+						availableLanguages: ['en-US'],
+						dataDefinitionFields,
+						dataLayout: defaultDataLayout,
+						documentMetadataSetIds: [metadataSet.id],
+						name: documentTypeName,
+					},
+				}
+			);
+		});
+
+		await test.step('Publish with the required field empty', async () => {
+			await documentLibraryEditFilePage.goToNewFileDifferentType(
+				documentTypeName,
+				site.friendlyUrlPath
+			);
+
+			await page.getByLabel('Title Required').fill(getRandomString());
+			await page.getByLabel(metadataFieldName).fill(getRandomString());
+
+			await documentLibraryEditFilePage.publishButton.click();
+
+			await expect(
+				page.getByText('This field is required.')
+			).toBeVisible();
+
+			await expect(
+				documentLibraryEditFilePage.publishButton
+			).toBeVisible();
+		});
+
+		await test.step('Publish with every required field filled', async () => {
+			await page.getByLabel(requiredFieldName).fill(getRandomString());
+
+			await documentLibraryEditFilePage.publishButton.click();
+
+			await waitForAlert(
+				page,
+				'Success:Your request completed successfully.'
+			);
+		});
 	}
 );

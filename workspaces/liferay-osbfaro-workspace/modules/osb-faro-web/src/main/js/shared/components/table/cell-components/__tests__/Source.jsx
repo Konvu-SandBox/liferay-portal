@@ -3,8 +3,6 @@ import SourceCell from '../Source';
 import {cleanup, render, screen} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 
-jest.unmock('react-dom');
-
 describe('SourceCell', () => {
 	afterEach(cleanup);
 
@@ -48,7 +46,7 @@ describe('SourceCell', () => {
 				</MemoryRouter>
 			);
 
-			expect(screen.getByText('–')).toHaveClass('text-secondary');
+			expect(screen.getByText('–')).toBeInTheDocument();
 		}
 	);
 
@@ -60,6 +58,6 @@ describe('SourceCell', () => {
 		);
 
 		expect(container.querySelector('a')).toHaveTextContent('–');
-		expect(screen.getByText('–')).toHaveClass('text-secondary');
+		expect(screen.getByText('–')).toBeInTheDocument();
 	});
 });

@@ -20,6 +20,8 @@ import com.liferay.asset.list.service.AssetListEntryLocalService;
 import com.liferay.asset.publisher.constants.AssetPublisherPortletKeys;
 import com.liferay.asset.publisher.constants.AssetPublisherWebKeys;
 import com.liferay.asset.publisher.util.AssetEntryResult;
+import com.liferay.audiences.model.AudiencesEntry;
+import com.liferay.audiences.service.AudiencesEntryLocalService;
 import com.liferay.blogs.constants.BlogsPortletKeys;
 import com.liferay.blogs.model.BlogsEntry;
 import com.liferay.blogs.service.BlogsEntryLocalService;
@@ -33,6 +35,7 @@ import com.liferay.journal.constants.JournalPortletKeys;
 import com.liferay.journal.model.JournalArticle;
 import com.liferay.journal.test.util.JournalTestUtil;
 import com.liferay.layout.test.util.LayoutTestUtil;
+import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.configuration.test.util.ConfigurationTestUtil;
 import com.liferay.portal.kernel.json.JSONArray;
@@ -57,6 +60,7 @@ import com.liferay.portal.kernel.settings.LocalizedValuesMap;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
 import com.liferay.portal.kernel.test.portlet.MockLiferayPortletRenderRequest;
 import com.liferay.portal.kernel.test.portlet.MockLiferayPortletRenderResponse;
+import com.liferay.portal.kernel.test.portlet.MockLiferayPortletURL;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
 import com.liferay.portal.kernel.test.rule.SynchronousDestinationTestRule;
@@ -76,6 +80,7 @@ import com.liferay.portal.kernel.util.URLCodec;
 import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.test.rule.FeatureFlag;
+import com.liferay.portal.test.rule.FeatureFlags;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
@@ -255,7 +260,9 @@ public class AssetPublisherDisplayContextTest {
 
 		AssetEntry assetEntry = _addAssetEntry();
 
-		String audienceEntryERC = RandomTestUtil.randomString();
+		AudiencesEntry audiencesEntry = _addAudiencesEntry();
+
+		String audienceEntryERC = audiencesEntry.getExternalReferenceCode();
 
 		PortletPreferences portletPreferences = _getPortletPreferences(
 			assetEntry, _addAssetEntry(), audienceEntryERC);
@@ -266,7 +273,12 @@ public class AssetPublisherDisplayContextTest {
 		Assert.assertEquals(assetEntry, assetEntries.get(0));
 	}
 
-	@FeatureFlag("LPD-109242")
+	@FeatureFlags(
+		featureFlags = {
+			@FeatureFlag("LPD-109242"),
+			@FeatureFlag(enable = false, value = "LPD-78863")
+		}
+	)
 	@Test
 	public void testGetAssetEntryResultsWithAudienceEntryWhenFeatureFlagIsEnabled()
 		throws Exception {
@@ -274,7 +286,9 @@ public class AssetPublisherDisplayContextTest {
 		AssetEntry assetEntry1 = _addAssetEntry();
 		AssetEntry assetEntry2 = _addAssetEntry();
 
-		String audienceEntryERC = RandomTestUtil.randomString();
+		AudiencesEntry audiencesEntry = _addAudiencesEntry();
+
+		String audienceEntryERC = audiencesEntry.getExternalReferenceCode();
 
 		PortletPreferences portletPreferences = _getPortletPreferences(
 			assetEntry1, assetEntry2, audienceEntryERC);
@@ -407,6 +421,8 @@ public class AssetPublisherDisplayContextTest {
 		String portletURLString = _getPortletURLString();
 
 		Assert.assertTrue(portletURLString.contains("redirect"));
+
+		_testGetPortletURLWithNestedRedirect();
 	}
 
 	@Test
@@ -484,6 +500,13 @@ public class AssetPublisherDisplayContextTest {
 		return _assetEntryLocalService.updateAssetEntry(assetEntry);
 	}
 
+	private AudiencesEntry _addAudiencesEntry() throws Exception {
+		return _audiencesEntryLocalService.addAudiencesEntry(
+			RandomTestUtil.randomString(), TestPropsValues.getUserId(),
+			"{\"conjunction\": \"AND\", \"rules\": []}",
+			RandomTestUtil.randomString(), null);
+	}
+
 	private JournalArticle _addJournalArticle(
 			long[] assetCategoryIds, String[] assetTagNames)
 		throws Exception {
@@ -530,33 +553,32 @@ public class AssetPublisherDisplayContextTest {
 			String audienceEntryERC, PortletPreferences portletPreferences)
 		throws Exception {
 
-		Object assetPublisherDisplayContext = _getAssetPublisherDisplayContext(
-			LayoutTestUtil.addTypePortletLayout(_group), portletPreferences);
-
-		MockHttpServletRequest mockHttpServletRequest =
-			(MockHttpServletRequest)_portal.getHttpServletRequest(
-				_mockLiferayPortletRenderRequest);
-
-		mockHttpServletRequest.setCookies(
-			new Cookie(
-				"com.liferay.frontend.js.audiences",
-				URLCodec.encodeURL(
-					JSONUtil.putAll(
-						audienceEntryERC
-					).toString())));
-
 		return ReflectionTestUtil.invoke(
-			assetPublisherDisplayContext, "getAssetEntryResults",
-			new Class<?>[0]);
+			_getAssetPublisherDisplayContext(
+				LayoutTestUtil.addTypePortletLayout(_group), portletPreferences,
+				new Cookie(
+					"com.liferay.frontend.js.audiences",
+					URLCodec.encodeURL(
+						JSONUtil.putAll(
+							audienceEntryERC
+						).toString()))),
+			"getAssetEntryResults", new Class<?>[0]);
 	}
 
 	private Object _getAssetPublisherDisplayContext(
-			Layout layout, PortletPreferences portletPreferences)
+			Layout layout, PortletPreferences portletPreferences,
+			Cookie... cookies)
 		throws Exception {
 
 		_mockLiferayPortletRenderRequest =
 			new TestMockLiferayPortletRenderRequest(
 				new MockHttpServletRequest());
+
+		MockHttpServletRequest mockHttpServletRequest =
+			(MockHttpServletRequest)_portal.getHttpServletRequest(
+				_mockLiferayPortletRenderRequest);
+
+		mockHttpServletRequest.setCookies(cookies);
 
 		com.liferay.portal.kernel.model.Portlet portlet =
 			_portletLocalService.getPortletById(
@@ -758,6 +780,35 @@ public class AssetPublisherDisplayContextTest {
 		}
 	}
 
+	private void _testGetPortletURLWithNestedRedirect() throws Exception {
+		PortletPreferences portletPreferences = new PortletPreferencesImpl();
+
+		portletPreferences.setValue("paginationType", "regular");
+
+		Object assetPublisherDisplayContext = _getAssetPublisherDisplayContext(
+			LayoutTestUtil.addTypePortletLayout(_group), portletPreferences);
+
+		String currentURL =
+			"/web/" + RandomTestUtil.randomString() + "?param=value";
+		String previousRedirect = URLCodec.encodeURL(
+			StringBundler.concat(
+				"/web/", RandomTestUtil.randomString(), "?redirect=",
+				URLCodec.encodeURL("/web/" + RandomTestUtil.randomString())));
+
+		_mockLiferayPortletRenderRequest.setAttribute(
+			WebKeys.CURRENT_URL,
+			StringBundler.concat(
+				currentURL, "&redirect=", previousRedirect, "&_",
+				AssetPublisherPortletKeys.ASSET_PUBLISHER, "_INSTANCE_",
+				RandomTestUtil.randomString(), "_redirect=", previousRedirect));
+
+		MockLiferayPortletURL mockLiferayPortletURL = ReflectionTestUtil.invoke(
+			assetPublisherDisplayContext, "getPortletURL", new Class<?>[0]);
+
+		Assert.assertEquals(
+			currentURL, mockLiferayPortletURL.getParameter("redirect"));
+	}
+
 	private static Configuration _assetPublisherWebConfiguration;
 
 	@Inject
@@ -775,6 +826,9 @@ public class AssetPublisherDisplayContextTest {
 
 	@Inject
 	private AssetVocabularyLocalService _assetVocabularyLocalService;
+
+	@Inject
+	private AudiencesEntryLocalService _audiencesEntryLocalService;
 
 	@Inject
 	private BlogsEntryLocalService _blogsEntryLocalService;

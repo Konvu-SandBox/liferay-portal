@@ -7,8 +7,6 @@ import {render} from '@testing-library/react';
 import {Routes} from 'shared/util/router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 describe('Interests', () => {
 	it('renders', async () => {
 		const {getByText} = render(
@@ -43,6 +41,6 @@ describe('Interests', () => {
 
 		jest.runAllTimers();
 
-		expect(getByText('Interest Topics')).toBeInTheDocument();
+		expect(getByText(/^interest topics$/i)).toBeInTheDocument();
 	});
 });

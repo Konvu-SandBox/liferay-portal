@@ -9,6 +9,7 @@ import com.liferay.change.tracking.model.CTRemote;
 import com.liferay.change.tracking.service.base.CTRemoteLocalServiceBaseImpl;
 import com.liferay.portal.aop.AopService;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.model.ResourceConstants;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.search.Indexable;
 import com.liferay.portal.kernel.search.IndexableType;
@@ -62,6 +63,24 @@ public class CTRemoteLocalServiceImpl extends CTRemoteLocalServiceBaseImpl {
 		return ctRemote;
 	}
 
+	@Indexable(type = IndexableType.DELETE)
+	@Override
+	public CTRemote deleteCTRemote(CTRemote ctRemote) throws PortalException {
+		ctRemotePersistence.remove(ctRemote);
+
+		_resourceLocalService.deleteResource(
+			ctRemote.getCompanyId(), CTRemote.class.getName(),
+			ResourceConstants.SCOPE_INDIVIDUAL, ctRemote.getCtRemoteId());
+
+		return ctRemote;
+	}
+
+	@Indexable(type = IndexableType.DELETE)
+	@Override
+	public CTRemote deleteCTRemote(long ctRemoteId) throws PortalException {
+		return deleteCTRemote(ctRemotePersistence.findByPrimaryKey(ctRemoteId));
+	}
+
 	@Override
 	public CTRemote fetchCTRemote(long ctRemoteId) {
 		return ctRemotePersistence.fetchByPrimaryKey(ctRemoteId);
@@ -70,11 +89,6 @@ public class CTRemoteLocalServiceImpl extends CTRemoteLocalServiceBaseImpl {
 	@Override
 	public List<CTRemote> getCTRemotes(long companyId) {
 		return ctRemotePersistence.findByCompanyId(companyId);
-	}
-
-	@Override
-	public List<CTRemote> getCTRemotes(long companyId, int start, int end) {
-		return ctRemotePersistence.findByCompanyId(companyId, start, end);
 	}
 
 	@Indexable(type = IndexableType.REINDEX)

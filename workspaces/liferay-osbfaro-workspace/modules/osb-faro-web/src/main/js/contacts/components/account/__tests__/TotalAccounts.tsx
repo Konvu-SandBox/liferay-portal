@@ -4,8 +4,6 @@ import {AccountMetricType} from 'contacts/pages/account/utils/types';
 import {render} from '@testing-library/react';
 import {TrendClassification} from 'segment/types';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router', () => ({
 	...jest.requireActual('react-router'),
 	useParams: () => ({channelId: '456'}),
@@ -73,5 +71,19 @@ describe('TotalAccounts', () => {
 		const {container} = render(<TotalAccounts groupId="123" />);
 
 		expect(container).toMatchSnapshot();
+	});
+
+	it('should ask for the metrics of the campaign selected', () => {
+		mockMetrics();
+
+		render(<TotalAccounts campaignId="7" groupId="123" />);
+
+		const useRequest = require('shared/hooks/useRequest');
+
+		expect(useRequest.useRequest).toHaveBeenCalledWith(
+			expect.objectContaining({
+				variables: expect.objectContaining({campaignId: '7'}),
+			})
+		);
 	});
 });

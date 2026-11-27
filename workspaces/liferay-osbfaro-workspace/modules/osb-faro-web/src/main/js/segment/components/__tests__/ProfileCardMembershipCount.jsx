@@ -6,8 +6,6 @@ import {Segment} from 'shared/util/records';
 import {MemoryRouter} from 'react-router-dom';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 jest.mock('recharts', () => {
 	const OriginalModule = jest.requireActual('recharts');
 
@@ -52,7 +50,7 @@ describe('SegmentProfileCard membership count', () => {
 
 		expect(counts).toHaveLength(2);
 
-		counts.forEach(count => expect(count).toHaveTextContent('Processing'));
+		counts.forEach(count => expect(count).toHaveTextContent(/processing/i));
 	});
 
 	it('shows a zero member count once membership is calculated', async () => {

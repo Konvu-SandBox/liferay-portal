@@ -30,6 +30,11 @@ import org.junit.runner.RunWith;
 public class WorkspaceResourceTest extends BaseWorkspaceResourceTestCase {
 
 	@Override
+	protected String[] getAdditionalAssertFieldNames() {
+		return new String[] {"groupId", "name"};
+	}
+
+	@Override
 	protected Workspace testGetWorkspacesPage_addWorkspace(Workspace workspace)
 		throws Exception {
 
@@ -50,7 +55,7 @@ public class WorkspaceResourceTest extends BaseWorkspaceResourceTestCase {
 
 		return new Workspace() {
 			{
-				setGroupId(faroProject.getGroupId());
+				setGroupId(String.valueOf(faroProject.getGroupId()));
 				setName(faroProject.getName());
 			}
 		};

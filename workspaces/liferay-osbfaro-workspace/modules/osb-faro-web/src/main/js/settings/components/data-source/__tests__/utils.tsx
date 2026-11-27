@@ -3,8 +3,6 @@ import {disconnect} from 'shared/api/data-source';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {useDisconnectDataSource} from '../utils';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/api/data-source', () => ({
 	disconnect: jest.fn(() => Promise.resolve({})),
 }));
@@ -44,7 +42,7 @@ const runDisconnectFlow = async ({
 
 	fireEvent.click(screen.getByText('trigger'));
 
-	fireEvent.click(await screen.findByText('Disconnect'));
+	fireEvent.click(await screen.findByText(/^disconnect$/i));
 
 	await waitFor(() => expect(addAlert).toHaveBeenCalled());
 

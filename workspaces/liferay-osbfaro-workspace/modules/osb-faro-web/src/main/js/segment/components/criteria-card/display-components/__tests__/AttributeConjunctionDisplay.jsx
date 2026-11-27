@@ -12,8 +12,6 @@ import {ReferencedObjectsProvider} from 'segment/segment-editor/dynamic/context/
 import {render} from '@testing-library/react';
 import {Segment} from 'shared/util/records';
 
-jest.unmock('react-dom');
-
 const mockSegment = data.getImmutableMock(Segment, data.mockSegment, 0, {
 	referencedObjects: {
 		attributes: {
@@ -78,7 +76,7 @@ describe('AttributeConjunctionDisplay', () => {
 			/>
 		);
 
-		expect(getByText('Undefined Attribute')).toBeTruthy();
+		expect(getByText(/^undefined attribute$/i)).toBeTruthy();
 	});
 
 	it('should decode the attribute name from the hex id when it is not in referencedEntities', () => {
