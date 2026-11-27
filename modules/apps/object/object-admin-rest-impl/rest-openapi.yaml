@@ -275,7 +275,6 @@ components:
                     type: string
                 relationshipType:
                     enum: [oneToMany, oneToOne]
-                    readOnly: true
                     type: string
                 required:
                     type: boolean
@@ -728,12 +727,14 @@ components:
             properties:
                 groupExternalReferenceCode:
                     type: string
+                workflowDefinitionExternalReferenceCode:
+                    type: string
                 workflowDefinitionName:
                     type: string
             type: object
 info:
     description:
-        "A Java client JAR is available for use with the group ID 'com.liferay', artifact ID 'com.liferay.object.admin.rest.client', and version '1.0.93'."
+        "A Java client JAR is available for use with the group ID 'com.liferay', artifact ID 'com.liferay.object.admin.rest.client', and version '1.0.94'."
     license:
         name: Apache 2.0
         url: http://www.apache.org/licenses/LICENSE-2.0.html

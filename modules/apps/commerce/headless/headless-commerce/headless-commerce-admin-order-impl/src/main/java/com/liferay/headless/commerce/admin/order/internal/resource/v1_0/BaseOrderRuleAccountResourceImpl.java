@@ -210,7 +210,7 @@ public abstract class BaseOrderRuleAccountResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-order/v1.0/order-rules/{id}/order-rule-accounts'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Nested field (OrderRule.orderRuleAccounts): paginated list of accounts linked to order rule by ID. Supports search filter."
+		description = "Nested field (OrderRule.orderRuleAccount): paginated list of accounts linked to order rule by ID. Supports search filter."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
@@ -409,11 +409,13 @@ public abstract class BaseOrderRuleAccountResourceImpl
 			"createStrategy", "INSERT");
 
 		if (StringUtil.equalsIgnoreCase(createStrategy, "INSERT")) {
-			if (parameters.containsKey("externalReferenceCode")) {
+			Serializable externalReferenceCode = parameters.get(
+				"externalReferenceCode");
+
+			if (externalReferenceCode != null) {
 				orderRuleAccountUnsafeFunction = orderRuleAccount ->
 					postOrderRuleByExternalReferenceCodeOrderRuleAccount(
-						(String)parameters.get("externalReferenceCode"),
-						orderRuleAccount);
+						(String)externalReferenceCode, orderRuleAccount);
 			}
 			else {
 				throw new NotSupportedException(
@@ -1111,4 +1113,4 @@ public abstract class BaseOrderRuleAccountResourceImpl
 		LogFactoryUtil.getLog(BaseOrderRuleAccountResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:1250394772
+// LIFERAY-REST-BUILDER-HASH:-1513084433

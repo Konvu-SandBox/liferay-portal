@@ -1,0 +1,26 @@
+{
+	"friendlyURL": "/individual-details",
+	"hidden": true,
+	"name": "Individual Details",
+	"name_i18n": {
+		"en_US": "Individual Details"
+	},
+	"permissions": [
+		{
+			"actionIds": [
+			],
+			"roleName": "Guest",
+			"scope": 4
+		},
+		{
+			"actionIds": [
+				"VIEW"
+			],
+			"roleName": "Site Member",
+			"scope": 4
+		}
+	],
+	"private": false,
+	"system": false,
+	"type": "Content"
+}

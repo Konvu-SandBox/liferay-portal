@@ -209,7 +209,7 @@ public abstract class BaseTermOrderTypeResourceImpl
 	 * curl -X 'GET' 'http://localhost:8080/o/headless-commerce-admin-order/v1.0/terms/{id}/term-order-types'  -u 'test@liferay.com:test'
 	 */
 	@io.swagger.v3.oas.annotations.Operation(
-		description = "Nested field (Term.termOrderTypes): paginated list of order types linked to term by ID."
+		description = "Nested field (Term.termOrderType): paginated list of order types linked to term by ID."
 	)
 	@io.swagger.v3.oas.annotations.Parameters(
 		value = {
@@ -401,12 +401,14 @@ public abstract class BaseTermOrderTypeResourceImpl
 			"createStrategy", "INSERT");
 
 		if (StringUtil.equalsIgnoreCase(createStrategy, "INSERT")) {
-			if (parameters.containsKey("externalReferenceCode")) {
+			Serializable externalReferenceCode = parameters.get(
+				"externalReferenceCode");
+
+			if (externalReferenceCode != null) {
 				termOrderTypeUnsafeFunction =
 					termOrderType ->
 						postTermByExternalReferenceCodeTermOrderType(
-							(String)parameters.get("externalReferenceCode"),
-							termOrderType);
+							(String)externalReferenceCode, termOrderType);
 			}
 			else {
 				throw new NotSupportedException(
@@ -1102,4 +1104,4 @@ public abstract class BaseTermOrderTypeResourceImpl
 		LogFactoryUtil.getLog(BaseTermOrderTypeResourceImpl.class);
 
 }
-// LIFERAY-REST-BUILDER-HASH:707256197
+// LIFERAY-REST-BUILDER-HASH:-490988072

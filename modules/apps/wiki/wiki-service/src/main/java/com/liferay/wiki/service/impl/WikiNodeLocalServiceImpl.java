@@ -11,7 +11,7 @@ import com.liferay.exportimport.kernel.lar.ExportImportThreadLocal;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.aop.AopService;
-import com.liferay.portal.configuration.metatype.bnd.util.ConfigurableUtil;
+import com.liferay.portal.configuration.module.configuration.ConfigurationProvider;
 import com.liferay.portal.kernel.cache.MultiVMPool;
 import com.liferay.portal.kernel.cache.PortalCache;
 import com.liferay.portal.kernel.exception.PortalException;
@@ -33,6 +33,7 @@ import com.liferay.portal.kernel.service.ResourceLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.service.permission.ModelPermissions;
+import com.liferay.portal.kernel.settings.GroupServiceSettingsLocator;
 import com.liferay.portal.kernel.systemevent.SystemEvent;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.NotificationThreadLocal;
@@ -40,7 +41,6 @@ import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.UnicodePropertiesBuilder;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
-import com.liferay.portal.kernel.zip.ZipReaderFactory;
 import com.liferay.subscription.service.SubscriptionLocalService;
 import com.liferay.trash.TrashHelper;
 import com.liferay.trash.exception.RestoreEntryException;
@@ -80,7 +80,6 @@ import org.osgi.service.component.annotations.Reference;
  * @author Raymond Augé
  */
 @Component(
-	configurationPid = "com.liferay.wiki.configuration.WikiGroupServiceConfiguration",
 	property = "model.class.name=com.liferay.wiki.model.WikiNode",
 	service = AopService.class
 )
@@ -90,8 +89,15 @@ public class WikiNodeLocalServiceImpl extends WikiNodeLocalServiceBaseImpl {
 	public WikiNode addDefaultNode(long userId, ServiceContext serviceContext)
 		throws PortalException {
 
+		WikiGroupServiceConfiguration wikiGroupServiceConfiguration =
+			_configurationProvider.getConfiguration(
+				WikiGroupServiceConfiguration.class,
+				new GroupServiceSettingsLocator(
+					serviceContext.getScopeGroupId(),
+					WikiConstants.SERVICE_NAME));
+
 		return addNode(
-			userId, _wikiGroupServiceConfiguration.initialNodeName(),
+			userId, wikiGroupServiceConfiguration.initialNodeName(),
 			StringPool.BLANK, serviceContext);
 	}
 
@@ -296,11 +302,6 @@ public class WikiNodeLocalServiceImpl extends WikiNodeLocalServiceBaseImpl {
 	}
 
 	@Override
-	public WikiNode fetchNodeByUuidAndGroupId(String uuid, long groupId) {
-		return wikiNodePersistence.fetchByUUID_G(uuid, groupId);
-	}
-
-	@Override
 	public WikiNode getNode(long nodeId) throws PortalException {
 		return wikiNodePersistence.findByPrimaryKey(nodeId);
 	}
@@ -331,35 +332,9 @@ public class WikiNodeLocalServiceImpl extends WikiNodeLocalServiceBaseImpl {
 	}
 
 	@Override
-	public List<WikiNode> getNodes(long groupId, int start, int end)
-		throws PortalException {
-
-		return getNodes(groupId, WorkflowConstants.STATUS_APPROVED, start, end);
-	}
-
-	@Override
-	public List<WikiNode> getNodes(long groupId, int status, int start, int end)
-		throws PortalException {
-
-		List<WikiNode> nodes = wikiNodePersistence.findByG_S(
-			groupId, status, start, end);
-
-		if (nodes.isEmpty()) {
-			nodes = _addDefaultNode(groupId);
-		}
-
-		return nodes;
-	}
-
-	@Override
 	public int getNodesCount(long groupId) {
 		return wikiNodePersistence.countByG_S(
 			groupId, WorkflowConstants.STATUS_APPROVED);
-	}
-
-	@Override
-	public int getNodesCount(long groupId, int status) {
-		return wikiNodePersistence.countByG_S(groupId, status);
 	}
 
 	@Override
@@ -524,14 +499,11 @@ public class WikiNodeLocalServiceImpl extends WikiNodeLocalServiceBaseImpl {
 	}
 
 	@Activate
-	protected void activate(Map<String, Object> properties) {
-		_wikiGroupServiceConfiguration = ConfigurableUtil.createConfigurable(
-			WikiGroupServiceConfiguration.class, properties);
-
+	protected void activate() {
 		_mediaWikiImporter = new MediaWikiImporter(
-			_assetTagLocalService, _companyLocalService, _portletFileRepository,
-			_userLocalService, _wikiGroupServiceConfiguration,
-			_wikiPageLocalService, _wikiPageTitleValidator, _zipReaderFactory);
+			_assetTagLocalService, _companyLocalService, _configurationProvider,
+			_portletFileRepository, _userLocalService, _wikiPageLocalService,
+			_wikiPageTitleValidator);
 
 		_portalCache = _multiVMPool.getPortalCache(
 			WikiPageDisplay.class.getName());
@@ -644,6 +616,9 @@ public class WikiNodeLocalServiceImpl extends WikiNodeLocalServiceBaseImpl {
 	private CompanyLocalService _companyLocalService;
 
 	@Reference
+	private ConfigurationProvider _configurationProvider;
+
+	@Reference
 	private GroupLocalService _groupLocalService;
 
 	@Reference
@@ -674,8 +649,6 @@ public class WikiNodeLocalServiceImpl extends WikiNodeLocalServiceBaseImpl {
 	@Reference
 	private UserLocalService _userLocalService;
 
-	private WikiGroupServiceConfiguration _wikiGroupServiceConfiguration;
-
 	@Reference
 	private WikiPageLocalService _wikiPageLocalService;
 
@@ -684,8 +657,5 @@ public class WikiNodeLocalServiceImpl extends WikiNodeLocalServiceBaseImpl {
 
 	@Reference
 	private WikiPageTitleValidator _wikiPageTitleValidator;
-
-	@Reference
-	private ZipReaderFactory _zipReaderFactory;
 
 }

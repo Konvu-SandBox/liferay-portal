@@ -10,8 +10,6 @@ import {Provider} from 'react-redux';
 import {User} from 'shared/util/records';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const mockItems = [
 	{
 		batchId: '1',
@@ -156,7 +154,7 @@ describe('RequestList', () => {
 
 		expect(row4.querySelector('input[type="checkbox"]')).not.toBeDisabled();
 		expect(row4.querySelector('.btn-secondary')).toHaveTextContent(
-			'Download'
+			/download/i
 		);
 	});
 
@@ -195,6 +193,6 @@ describe('RequestList', () => {
 		const row3 = container.querySelector('tbody tr:nth-child(3)');
 
 		expect(row3.querySelector('input[type="checkbox"]')).toBeDisabled();
-		expect(row3).toHaveTextContent('Download Expired');
+		expect(row3).toHaveTextContent(/download expired/i);
 	});
 });

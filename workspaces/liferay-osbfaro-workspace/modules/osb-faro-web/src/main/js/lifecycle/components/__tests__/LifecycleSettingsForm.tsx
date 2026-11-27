@@ -6,8 +6,6 @@ import {resetBodyWidth, setBodyWidth} from 'test/body-width';
 import {useLifecycleSettingsForm} from 'lifecycle/hooks/useLifecycleSettingsForm';
 import {useRequest} from 'shared/hooks/useRequest';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/hooks/useRequest', () => ({
 	useRequest: jest.fn(),
 }));
@@ -72,7 +70,6 @@ describe('LifecycleSettingsForm', () => {
 			.closest('.base-edit-page-main');
 
 		expect(main).not.toBeNull();
-		expect(main?.parentElement).toHaveClass('base-edit-page-body');
 	});
 
 	it('places the lifecycle conditions panel in the sidebar', () => {

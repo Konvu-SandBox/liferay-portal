@@ -11,15 +11,23 @@ import React, {useEffect, useRef, useState} from 'react';
 import DataSelection from '../../components/DataSelection';
 import Footer from '../../components/Footer';
 import {PageTreeModalConfiguration} from '../../components/PageTreeModal';
+import SectionHeader from '../../components/SectionHeader';
 import Setup from '../../components/Setup';
 import {DateFilterValues, Range} from '../../components/date_filter';
 import {ContentSelection} from '../../components/forms/content_selector/ContentSelector';
+import {
+	FormikFieldCheckbox,
+	FormikFieldText,
+} from '../../components/forms/formik';
 import {usePreview} from '../../hooks/usePreview';
 import {deleteScheduledPublishProcess} from '../../services/deleteScheduledPublishProcess';
 import {getScheduledPublishProcess} from '../../services/getScheduledPublishProcess';
 import {postPublishProcess} from '../../services/postPublishProcess';
 import {postScheduledPublishProcess} from '../../services/postScheduledPublishProcess';
-import {PublishProcessRequest} from '../../types/exportImportProcess';
+import {
+	PublishProcessRequest,
+	RemoteConnection,
+} from '../../types/exportImportProcess';
 import {
 	getSelectedDeletionCount,
 	getSelectedItemsCount,
@@ -51,18 +59,32 @@ type PublishFormValues = {
 	deletions: boolean;
 	name: string;
 	permissions: boolean;
+	remoteConnection: RemoteConnection | undefined;
 	scheduleValues: ScheduleValues;
 };
+
+function getActionButtonLabel(remote: boolean, scheduled: boolean) {
+	if (remote) {
+		return scheduled
+			? Liferay.Language.get('schedule-publication-to-remote-live')
+			: Liferay.Language.get('publish-to-remote-live');
+	}
+
+	return scheduled
+		? Liferay.Language.get('schedule-publication-to-live')
+		: Liferay.Language.get('publish-to-live');
+}
 
 export function NewPublish({
 	backURL,
 	commentsAndRatingsEnabled = false,
 	defaultScheduled = false,
-	lastPublishDate,
 	pageTreeModalConfiguration,
 	processesBackURL,
 	publishPreviewAPIURL,
 	publishProcessAPIURL,
+	remote = false,
+	remoteConnection,
 	scheduledBackURL,
 	scheduledPublishProcessAPIURL,
 	scheduledPublishProcessId,
@@ -72,13 +94,14 @@ export function NewPublish({
 	backURL: string;
 	commentsAndRatingsEnabled?: boolean;
 	defaultScheduled?: boolean;
-	lastPublishDate?: string;
 	pageTreeModalConfiguration: PageTreeModalConfiguration;
 	processesBackURL: string;
 	publishPreviewAPIURL: string;
 	publishProcessAPIURL: string;
+	remote?: boolean;
+	remoteConnection?: RemoteConnection;
 	scheduledBackURL: string;
-	scheduledPublishProcessAPIURL: string;
+	scheduledPublishProcessAPIURL?: string;
 	scheduledPublishProcessId?: number;
 	timeZoneId: string;
 	timeZones: TimeZoneOption[];
@@ -98,6 +121,7 @@ export function NewPublish({
 			deletions: false,
 			name: '',
 			permissions: false,
+			remoteConnection,
 			scheduleValues: getInitialScheduleValues(
 				timeZoneId,
 				defaultScheduled
@@ -163,6 +187,9 @@ export function NewPublish({
 				deletions: !!publishProcessRequest.deletions,
 				name: scheduledPublishProcess.name ?? '',
 				permissions: !!publishProcessRequest.permissions,
+				remoteConnection:
+					publishProcessRequest.remoteConnection ??
+					currentInitialFormValues.remoteConnection,
 				scheduleValues: {
 					...currentInitialFormValues.scheduleValues,
 					enabled: true,
@@ -233,32 +260,34 @@ export function NewPublish({
 						portletDataHandlerSections,
 						values.contentSelection
 					),
+					remoteConnection: values.remoteConnection,
 				};
 
-				const result = scheduled
-					? await postScheduledPublishProcess({
-							scheduledPublishProcessRequest: {
-								cronExpression:
-									toCronExpression(scheduleValues),
+				const result =
+					scheduled && scheduledPublishProcessAPIURL
+						? await postScheduledPublishProcess({
+								scheduledPublishProcessRequest: {
+									cronExpression:
+										toCronExpression(scheduleValues),
+									publishProcessRequest,
+									scheduleEndDate: hasEndDate(scheduleValues)
+										? toZonedDate(
+												scheduleValues.endDateTime,
+												scheduleValues.timeZoneId
+											).toISOString()
+										: undefined,
+									scheduleStartDate: toZonedDate(
+										scheduleValues.startDateTime,
+										scheduleValues.timeZoneId
+									).toISOString(),
+									timeZoneId: scheduleValues.timeZoneId,
+								},
+								url: scheduledPublishProcessAPIURL,
+							})
+						: await postPublishProcess({
 								publishProcessRequest,
-								scheduleEndDate: hasEndDate(scheduleValues)
-									? toZonedDate(
-											scheduleValues.endDateTime,
-											scheduleValues.timeZoneId
-										).toISOString()
-									: undefined,
-								scheduleStartDate: toZonedDate(
-									scheduleValues.startDateTime,
-									scheduleValues.timeZoneId
-								).toISOString(),
-								timeZoneId: scheduleValues.timeZoneId,
-							},
-							url: scheduledPublishProcessAPIURL,
-						})
-					: await postPublishProcess({
-							publishProcessRequest,
-							url: publishProcessAPIURL,
-						});
+								url: publishProcessAPIURL,
+							});
 
 				if (result.error) {
 					Liferay.Util.openToast({
@@ -331,10 +360,60 @@ export function NewPublish({
 							)}
 						/>
 
-						<FormikFieldPublishScheduler
-							name="scheduleValues"
-							timeZones={timeZones}
-						/>
+						{scheduledPublishProcessAPIURL && (
+							<FormikFieldPublishScheduler
+								name="scheduleValues"
+								timeZones={timeZones}
+							/>
+						)}
+
+						{remoteConnection && (
+							<>
+								<SectionHeader
+									title={Liferay.Language.get(
+										'where-to-publish'
+									)}
+								/>
+
+								<FormikFieldText
+									label={Liferay.Language.get(
+										'remote-host-ip'
+									)}
+									name="remoteConnection.address"
+									required
+								/>
+
+								<FormikFieldText
+									label={Liferay.Language.get('remote-port')}
+									name="remoteConnection.port"
+									required
+									type="number"
+								/>
+
+								<FormikFieldText
+									label={Liferay.Language.get(
+										'remote-path-context'
+									)}
+									name="remoteConnection.pathContext"
+								/>
+
+								<FormikFieldText
+									label={Liferay.Language.get(
+										'remote-site-id'
+									)}
+									name="remoteConnection.siteId"
+									required
+									type="number"
+								/>
+
+								<FormikFieldCheckbox
+									label={Liferay.Language.get(
+										'use-a-secure-network-connection'
+									)}
+									name="remoteConnection.secureConnection"
+								/>
+							</>
+						)}
 
 						<DataSelection
 							commentsAndRatingsEnabled={
@@ -356,7 +435,6 @@ export function NewPublish({
 								portletDataHandlerSections,
 								contentSelection
 							)}
-							lastPublishDate={lastPublishDate}
 							loading={loading}
 							onApplyFilter={handleApplyFilter}
 							pageTreeModalConfiguration={{
@@ -381,13 +459,10 @@ export function NewPublish({
 						/>
 
 						<Footer
-							actionButtonLabel={
+							actionButtonLabel={getActionButtonLabel(
+								remote,
 								formik.values.scheduleValues.enabled
-									? Liferay.Language.get(
-											'schedule-publication-to-live'
-										)
-									: Liferay.Language.get('publish-to-live')
-							}
+							)}
 							actionButtonSymbol="change"
 							backURL={backURL}
 						/>

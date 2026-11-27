@@ -146,8 +146,6 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.Serializable;
 
@@ -305,28 +303,6 @@ public class MBMessageLocalServiceImpl extends MBMessageLocalServiceBaseImpl {
 	@Override
 	public MBMessage addMessage(
 			long userId, String userName, long groupId, long categoryId,
-			String subject, String body, ServiceContext serviceContext)
-		throws PortalException {
-
-		List<ObjectValuePair<String, InputStream>> inputStreamOVPs =
-			Collections.emptyList();
-
-		return addMessage(
-			userId, userName, groupId, categoryId, 0, 0, subject, body,
-			MBMessageConstants.DEFAULT_FORMAT, inputStreamOVPs, false, 0.0,
-			false, serviceContext);
-	}
-
-	/**
-	 * @deprecated As of Cavanaugh (7.4.x), replaced by {@link
-	 *             #addMessage(String, long, String, long, long, long, long,
-	 *             String, String, String, List, boolean, double, boolean,
-	 *             ServiceContext)}
-	 */
-	@Deprecated
-	@Override
-	public MBMessage addMessage(
-			long userId, String userName, long groupId, long categoryId,
 			String subject, String body, String format,
 			List<ObjectValuePair<String, InputStream>> inputStreamOVPs,
 			boolean anonymous, double priority, boolean allowPingbacks,
@@ -340,37 +316,6 @@ public class MBMessageLocalServiceImpl extends MBMessageLocalServiceBaseImpl {
 			userId, userName, groupId, categoryId, threadId, parentMessageId,
 			subject, body, format, inputStreamOVPs, anonymous, priority,
 			allowPingbacks, serviceContext);
-	}
-
-	/**
-	 * @deprecated As of Cavanaugh (7.4.x), replaced by {@link
-	 *             #addMessage(String, long, String, long, long, long, long,
-	 *             String, String, String, List, boolean, double, boolean,
-	 *             ServiceContext)}
-	 */
-	@Deprecated
-	@Override
-	public MBMessage addMessage(
-			long userId, String userName, long groupId, long categoryId,
-			String subject, String body, String format, String fileName,
-			File file, boolean anonymous, double priority,
-			boolean allowPingbacks, ServiceContext serviceContext)
-		throws FileNotFoundException, PortalException {
-
-		List<ObjectValuePair<String, InputStream>> inputStreamOVPs =
-			new ArrayList<>(1);
-
-		InputStream inputStream = new FileInputStream(file);
-
-		ObjectValuePair<String, InputStream> inputStreamOVP =
-			new ObjectValuePair<>(fileName, inputStream);
-
-		inputStreamOVPs.add(inputStreamOVP);
-
-		return addMessage(
-			userId, userName, groupId, categoryId, 0, 0, subject, body, format,
-			inputStreamOVPs, anonymous, priority, allowPingbacks,
-			serviceContext);
 	}
 
 	@Override
@@ -1011,24 +956,6 @@ public class MBMessageLocalServiceImpl extends MBMessageLocalServiceBaseImpl {
 	}
 
 	@Override
-	public MBMessage fetchFirstMessage(long threadId, long parentMessageId)
-		throws PortalException {
-
-		return mbMessagePersistence.fetchByT_P_First(
-			threadId, parentMessageId, null);
-	}
-
-	@Override
-	public MBMessage fetchMBMessageByUrlSubject(
-		long groupId, String urlSubject) {
-
-		return mbMessagePersistence.fetchByG_US(
-			groupId,
-			_friendlyURLNormalizer.normalizeWithEncodingPeriodsAndSlashes(
-				urlSubject));
-	}
-
-	@Override
 	public List<MBMessage> getCategoryMessages(
 		long groupId, long categoryId, int status, int start, int end) {
 
@@ -1053,13 +980,6 @@ public class MBMessageLocalServiceImpl extends MBMessageLocalServiceBaseImpl {
 
 		return mbMessagePersistence.findByG_C_S(
 			groupId, categoryId, status, start, end, orderByComparator);
-	}
-
-	@Override
-	public List<MBMessage> getCategoryMessages(
-		long groupId, long categoryId, long threadId) {
-
-		return mbMessagePersistence.findByG_C_T(groupId, categoryId, threadId);
 	}
 
 	@Override
@@ -1106,17 +1026,6 @@ public class MBMessageLocalServiceImpl extends MBMessageLocalServiceBaseImpl {
 
 	@Override
 	public List<MBMessage> getCompanyMessages(
-		long companyId, int status, int start, int end) {
-
-		if (status == WorkflowConstants.STATUS_ANY) {
-			return mbMessagePersistence.findByCompanyId(companyId, start, end);
-		}
-
-		return mbMessagePersistence.findByC_S(companyId, status, start, end);
-	}
-
-	@Override
-	public List<MBMessage> getCompanyMessages(
 		long companyId, int status, int start, int end,
 		OrderByComparator<MBMessage> orderByComparator) {
 
@@ -1127,15 +1036,6 @@ public class MBMessageLocalServiceImpl extends MBMessageLocalServiceBaseImpl {
 
 		return mbMessagePersistence.findByC_S(
 			companyId, status, start, end, orderByComparator);
-	}
-
-	@Override
-	public int getCompanyMessagesCount(long companyId, int status) {
-		if (status == WorkflowConstants.STATUS_ANY) {
-			return mbMessagePersistence.countByCompanyId(companyId);
-		}
-
-		return mbMessagePersistence.countByC_S(companyId, status);
 	}
 
 	@Override
@@ -1264,35 +1164,11 @@ public class MBMessageLocalServiceImpl extends MBMessageLocalServiceBaseImpl {
 	}
 
 	@Override
-	public List<MBDiscussion> getDiscussions(String className) {
-		return _mbDiscussionLocalService.getDiscussions(className);
-	}
-
-	@Override
 	public MBMessage getFileEntryMessage(long fileEntryId)
 		throws PortalException {
 
 		return mbMessagePersistence.findByPrimaryKey(
 			_getFileEntryMessageId(fileEntryId));
-	}
-
-	@Override
-	public MBMessage getFirstMessage(long threadId, long parentMessageId)
-		throws PortalException {
-
-		return mbMessagePersistence.findByT_P_First(
-			threadId, parentMessageId, null);
-	}
-
-	@Override
-	public List<MBMessage> getGroupMessages(
-		long groupId, int status, int start, int end) {
-
-		if (status == WorkflowConstants.STATUS_ANY) {
-			return mbMessagePersistence.findByGroupId(groupId, start, end);
-		}
-
-		return mbMessagePersistence.findByG_S(groupId, status, start, end);
 	}
 
 	@Override
@@ -1333,15 +1209,6 @@ public class MBMessageLocalServiceImpl extends MBMessageLocalServiceBaseImpl {
 
 		return mbMessagePersistence.findByG_U_S(
 			groupId, userId, status, start, end, orderByComparator);
-	}
-
-	@Override
-	public int getGroupMessagesCount(long groupId, int status) {
-		if (status == WorkflowConstants.STATUS_ANY) {
-			return mbMessagePersistence.countByGroupId(groupId);
-		}
-
-		return mbMessagePersistence.countByG_S(groupId, status);
 	}
 
 	@Override
@@ -1605,15 +1472,6 @@ public class MBMessageLocalServiceImpl extends MBMessageLocalServiceBaseImpl {
 
 	@Override
 	public List<MBMessage> getRootDiscussionMessages(
-			String className, long classPK, int status)
-		throws PortalException {
-
-		return getRootDiscussionMessages(
-			className, classPK, status, QueryUtil.ALL_POS, QueryUtil.ALL_POS);
-	}
-
-	@Override
-	public List<MBMessage> getRootDiscussionMessages(
 			String className, long classPK, int status, int start, int end)
 		throws PortalException {
 
@@ -1701,15 +1559,6 @@ public class MBMessageLocalServiceImpl extends MBMessageLocalServiceBaseImpl {
 		return MBMessageUtil.getThreadMessages(
 			mbMessagePersistence, mbMessageFinder, userId, threadId, status,
 			start, end, comparator);
-	}
-
-	@Override
-	public int getThreadMessagesCount(long threadId, int status) {
-		if (status == WorkflowConstants.STATUS_ANY) {
-			return mbMessagePersistence.countByThreadId(threadId);
-		}
-
-		return mbMessagePersistence.countByT_S(threadId, status);
 	}
 
 	@Override

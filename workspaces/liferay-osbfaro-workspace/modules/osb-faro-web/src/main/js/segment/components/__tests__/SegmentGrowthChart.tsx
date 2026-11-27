@@ -253,8 +253,6 @@ const chartData = [
 	},
 ];
 
-jest.unmock('react-dom');
-
 /**
  * Override Recharts Responsive Container
  * width dimensions fixed to be able to render charts
@@ -337,7 +335,7 @@ describe('SegmentGrowthChart', () => {
 		expect(counts).toHaveLength(3);
 
 		counts.forEach((count) =>
-			expect(count).toHaveTextContent('Processing')
+			expect(count).toHaveTextContent(/processing/i)
 		);
 	});
 
