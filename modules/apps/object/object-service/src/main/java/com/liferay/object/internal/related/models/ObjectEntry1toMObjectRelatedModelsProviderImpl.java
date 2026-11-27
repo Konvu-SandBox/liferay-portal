@@ -12,6 +12,7 @@ import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectField;
 import com.liferay.object.model.ObjectRelationship;
 import com.liferay.object.related.models.ObjectRelatedModelsProvider;
+import com.liferay.object.service.ObjectEntryLocalServiceUtil;
 import com.liferay.object.service.ObjectEntryService;
 import com.liferay.object.service.ObjectFieldLocalService;
 import com.liferay.object.service.ObjectRelationshipLocalService;
@@ -71,8 +72,16 @@ public class ObjectEntry1toMObjectRelatedModelsProviderImpl
 				ObjectRelationshipConstants.DELETION_TYPE_CASCADE)) {
 
 			for (ObjectEntry objectEntry : relatedModels) {
+				ObjectEntry curObjectEntry =
+					ObjectEntryLocalServiceUtil.fetchObjectEntry(
+						objectEntry.getObjectEntryId());
+
+				if (curObjectEntry == null) {
+					continue;
+				}
+
 				_objectEntryService.deleteObjectEntry(
-					objectEntry.getObjectEntryId());
+					curObjectEntry.getObjectEntryId());
 			}
 		}
 		else if (Objects.equals(
@@ -133,7 +142,7 @@ public class ObjectEntry1toMObjectRelatedModelsProviderImpl
 			long groupId, long objectRelationshipId, long primaryKey)
 		throws PortalException {
 
-		return _objectEntryService.fetchManyToOneObjectEntry(
+		return _objectEntryService.fetchRelatedObjectEntry(
 			groupId, objectRelationshipId, primaryKey);
 	}
 
@@ -159,7 +168,7 @@ public class ObjectEntry1toMObjectRelatedModelsProviderImpl
 			int end, Sort[] sorts)
 		throws PortalException {
 
-		return _objectEntryService.getOneToManyObjectEntries(
+		return _objectEntryService.getRelatedObjectEntries(
 			groupId, objectRelationshipId, predicate, preferApproved,
 			primaryKey, true, search, start, end, sorts);
 	}
@@ -170,7 +179,7 @@ public class ObjectEntry1toMObjectRelatedModelsProviderImpl
 			long primaryKey, String search)
 		throws PortalException {
 
-		return _objectEntryService.getOneToManyObjectEntriesCount(
+		return _objectEntryService.getRelatedObjectEntriesCount(
 			groupId, objectRelationshipId, predicate, primaryKey, true, search);
 	}
 
@@ -181,7 +190,7 @@ public class ObjectEntry1toMObjectRelatedModelsProviderImpl
 			int start, int end)
 		throws PortalException {
 
-		return _objectEntryService.getOneToManyObjectEntries(
+		return _objectEntryService.getRelatedObjectEntries(
 			groupId, objectRelationshipId, null, false, objectEntryId, false,
 			search, start, end, null);
 	}
@@ -192,7 +201,7 @@ public class ObjectEntry1toMObjectRelatedModelsProviderImpl
 			long objectEntryId, long objectRelationshipId, String search)
 		throws PortalException {
 
-		return _objectEntryService.getOneToManyObjectEntriesCount(
+		return _objectEntryService.getRelatedObjectEntriesCount(
 			groupId, objectRelationshipId, null, objectEntryId, false, search);
 	}
 
@@ -219,8 +228,16 @@ public class ObjectEntry1toMObjectRelatedModelsProviderImpl
 				ObjectRelationshipConstants.DELETION_TYPE_CASCADE)) {
 
 			for (ObjectEntry objectEntry : relatedModels) {
+				ObjectEntry curObjectEntry =
+					ObjectEntryLocalServiceUtil.fetchObjectEntry(
+						objectEntry.getObjectEntryId());
+
+				if ((curObjectEntry == null) || curObjectEntry.isInTrash()) {
+					continue;
+				}
+
 				_objectEntryService.moveObjectEntryToTrash(
-					objectEntry, new ServiceContext());
+					curObjectEntry, new ServiceContext());
 			}
 		}
 		else if (Objects.equals(
@@ -249,12 +266,16 @@ public class ObjectEntry1toMObjectRelatedModelsProviderImpl
 					groupId, objectRelationshipId, null, false, primaryKey,
 					null, QueryUtil.ALL_POS, QueryUtil.ALL_POS, null)) {
 
-			if (!objectEntry.isInTrash()) {
+			ObjectEntry curObjectEntry =
+				ObjectEntryLocalServiceUtil.fetchObjectEntry(
+					objectEntry.getObjectEntryId());
+
+			if ((curObjectEntry == null) || !curObjectEntry.isInTrash()) {
 				continue;
 			}
 
 			_objectEntryService.restoreObjectEntryFromTrash(
-				objectEntry, new ServiceContext());
+				curObjectEntry, new ServiceContext());
 		}
 	}
 

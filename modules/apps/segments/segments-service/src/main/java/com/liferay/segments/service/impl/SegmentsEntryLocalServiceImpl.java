@@ -337,16 +337,6 @@ public class SegmentsEntryLocalServiceImpl
 
 	@Override
 	public List<SegmentsEntry> getSegmentsEntries(
-		long groupId, int start, int end,
-		OrderByComparator<SegmentsEntry> orderByComparator) {
-
-		return segmentsEntryPersistence.findByGroupId(
-			_portal.getCurrentAndAncestorSiteGroupIds(groupId), start, end,
-			orderByComparator);
-	}
-
-	@Override
-	public List<SegmentsEntry> getSegmentsEntries(
 		long groupId, String[] sources, int[] types, int start, int end,
 		OrderByComparator<SegmentsEntry> orderByComparator) {
 
@@ -632,6 +622,7 @@ public class SegmentsEntryLocalServiceImpl
 	private boolean _isActive(boolean active, String source) {
 		if (!active ||
 			SegmentsEntryConstants.SOURCE_ASAH_FARO_BACKEND.equals(source) ||
+			SegmentsEntryConstants.SOURCE_AUDIENCE.equals(source) ||
 			ExportImportThreadLocal.isImportInProcess() ||
 			FeatureFlagManagerUtil.isEnabled(
 				CompanyConstants.SYSTEM, "LPD-78863")) {

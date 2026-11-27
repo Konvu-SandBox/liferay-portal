@@ -10,6 +10,10 @@ import com.liferay.account.model.AccountEntry;
 import com.liferay.account.service.AccountEntryLocalService;
 import com.liferay.account.service.AccountEntryUserRelLocalService;
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
+import com.liferay.document.library.kernel.model.DLFileEntry;
+import com.liferay.document.library.kernel.model.DLFolderConstants;
+import com.liferay.document.library.kernel.service.DLAppLocalService;
+import com.liferay.document.library.test.util.DLTestUtil;
 import com.liferay.list.type.entry.util.ListTypeEntryUtil;
 import com.liferay.list.type.model.ListTypeDefinition;
 import com.liferay.list.type.service.ListTypeDefinitionLocalService;
@@ -22,6 +26,7 @@ import com.liferay.object.constants.ObjectFieldSettingConstants;
 import com.liferay.object.constants.ObjectRelationshipConstants;
 import com.liferay.object.exception.NoSuchObjectEntryException;
 import com.liferay.object.exception.ObjectEntryCountException;
+import com.liferay.object.field.builder.AttachmentObjectFieldBuilder;
 import com.liferay.object.field.builder.PicklistObjectFieldBuilder;
 import com.liferay.object.field.setting.builder.ObjectFieldSettingBuilder;
 import com.liferay.object.field.util.ObjectFieldUtil;
@@ -60,6 +65,7 @@ import com.liferay.portal.kernel.model.Role;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.model.UserNotificationEvent;
 import com.liferay.portal.kernel.model.role.RoleConstants;
+import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.search.BaseModelSearchResult;
 import com.liferay.portal.kernel.security.auth.PrincipalException;
 import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
@@ -85,17 +91,20 @@ import com.liferay.portal.kernel.test.util.RoleTestUtil;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
+import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.HashMapDictionaryBuilder;
 import com.liferay.portal.kernel.util.LinkedHashMapBuilder;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
+import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.test.log.LogCapture;
 import com.liferay.portal.test.log.LogEntry;
 import com.liferay.portal.test.log.LoggerTestUtil;
+import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.vulcan.util.LocalizedMapUtil;
@@ -108,9 +117,11 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.RandomStringUtils;
 
@@ -149,7 +160,7 @@ public class ObjectEntryServiceTest {
 				).name(
 					ObjectFieldSettingConstants.NAME_ACCEPTED_FILE_EXTENSIONS
 				).value(
-					"png"
+					"txt"
 				).build(),
 				new ObjectFieldSettingBuilder(
 				).name(
@@ -176,7 +187,36 @@ public class ObjectEntryServiceTest {
 				ObjectFieldUtil.createObjectField(
 					ObjectFieldConstants.BUSINESS_TYPE_TEXT,
 					ObjectFieldConstants.DB_TYPE_STRING, true, false, null,
-					"Last Name", "lastName", false)),
+					"Last Name", "lastName", false),
+				new AttachmentObjectFieldBuilder(
+				).labelMap(
+					RandomTestUtil.randomLocaleStringMap()
+				).localized(
+					true
+				).name(
+					"localizedFile"
+				).objectFieldSettings(
+					Arrays.asList(
+						new ObjectFieldSettingBuilder(
+						).name(
+							ObjectFieldSettingConstants.
+								NAME_ACCEPTED_FILE_EXTENSIONS
+						).value(
+							"txt"
+						).build(),
+						new ObjectFieldSettingBuilder(
+						).name(
+							ObjectFieldSettingConstants.NAME_FILE_SOURCE
+						).value(
+							ObjectFieldSettingConstants.VALUE_DOCS_AND_MEDIA
+						).build(),
+						new ObjectFieldSettingBuilder(
+						).name(
+							ObjectFieldSettingConstants.NAME_MAX_FILE_SIZE
+						).value(
+							"100"
+						).build())
+				).build()),
 			ObjectDefinitionConstants.SCOPE_SITE, TestPropsValues.getUserId());
 
 		_originalPermissionChecker =
@@ -440,6 +480,90 @@ public class ObjectEntryServiceTest {
 	}
 
 	@Test
+	@TestInfo("LPD-110139")
+	public void testAddObjectEntryWithAttachmentObjectField() throws Exception {
+		_setResourcePermissions(
+			_objectDefinition.getResourceName(),
+			ResourceConstants.SCOPE_COMPANY,
+			String.valueOf(TestPropsValues.getCompanyId()), RoleConstants.USER,
+			new String[] {ObjectActionKeys.ADD_OBJECT_ENTRY});
+
+		FileEntry fileEntry1 = _addFileEntry();
+
+		_setUser(_user);
+
+		AssertUtils.assertFailure(
+			PrincipalException.MustHavePermission.class,
+			StringBundler.concat(
+				"User ", _user.getUserId(), " must have ", ActionKeys.VIEW,
+				" permission for ", DLFileEntry.class.getName(),
+				StringPool.SPACE, fileEntry1.getFileEntryId()),
+			() -> _objectEntryService.addObjectEntry(
+				_group.getGroupId(), _objectDefinition.getObjectDefinitionId(),
+				ObjectEntryFolderConstants.
+					PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+				null,
+				HashMapBuilder.<String, Serializable>put(
+					"file", fileEntry1.getFileEntryId()
+				).build(),
+				ServiceContextTestUtil.getServiceContext(
+					_group.getGroupId(), _user.getUserId())));
+		AssertUtils.assertFailure(
+			PrincipalException.MustHavePermission.class,
+			StringBundler.concat(
+				"User ", _user.getUserId(), " must have ", ActionKeys.VIEW,
+				" permission for ", DLFileEntry.class.getName(),
+				StringPool.SPACE, fileEntry1.getFileEntryId()),
+			() -> _objectEntryService.addObjectEntry(
+				_group.getGroupId(), _objectDefinition.getObjectDefinitionId(),
+				ObjectEntryFolderConstants.
+					PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+				null,
+				HashMapBuilder.<String, Serializable>put(
+					"localizedFile_i18n",
+					(Serializable)HashMapBuilder.<String, Serializable>put(
+						LocaleUtil.toLanguageId(LocaleUtil.US),
+						fileEntry1.getFileEntryId()
+					).build()
+				).build(),
+				ServiceContextTestUtil.getServiceContext(
+					_group.getGroupId(), _user.getUserId())));
+
+		FileEntry fileEntry2 = _addFileEntry();
+
+		_setResourcePermissions(
+			DLFileEntry.class.getName(), ResourceConstants.SCOPE_INDIVIDUAL,
+			String.valueOf(fileEntry2.getFileEntryId()), RoleConstants.USER,
+			new String[] {ActionKeys.VIEW});
+
+		ObjectEntry objectEntry = _objectEntryService.addObjectEntry(
+			_group.getGroupId(), _objectDefinition.getObjectDefinitionId(),
+			ObjectEntryFolderConstants.PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+			null,
+			HashMapBuilder.<String, Serializable>put(
+				"file", fileEntry2.getFileEntryId()
+			).put(
+				"localizedFile_i18n",
+				(Serializable)HashMapBuilder.<String, Serializable>put(
+					LocaleUtil.toLanguageId(LocaleUtil.US),
+					fileEntry2.getFileEntryId()
+				).build()
+			).build(),
+			ServiceContextTestUtil.getServiceContext(
+				_group.getGroupId(), _user.getUserId()));
+
+		Map<String, Serializable> values = objectEntry.getValues();
+
+		Assert.assertEquals(
+			fileEntry2.getFileEntryId(), MapUtil.getLong(values, "file"));
+		Assert.assertEquals(
+			fileEntry2.getFileEntryId(),
+			MapUtil.getLong(
+				(Map<String, Serializable>)values.get("localizedFile_i18n"),
+				LocaleUtil.toLanguageId(LocaleUtil.US)));
+	}
+
+	@Test
 	public void testAddObjectEntryWithPicklistObjectField() throws Exception {
 		String key = RandomTestUtil.randomString();
 
@@ -491,6 +615,85 @@ public class ObjectEntryServiceTest {
 				).build(),
 				new ServiceContext());
 		}
+	}
+
+	@Test
+	@TestInfo("LPD-110139")
+	public void testAddOrUpdateObjectEntryWithAttachmentObjectField()
+		throws Exception {
+
+		_setResourcePermissions(
+			_objectDefinition.getResourceName(),
+			ResourceConstants.SCOPE_COMPANY,
+			String.valueOf(TestPropsValues.getCompanyId()), RoleConstants.USER,
+			new String[] {ObjectActionKeys.ADD_OBJECT_ENTRY});
+
+		FileEntry fileEntry = _addFileEntry();
+
+		_setUser(_user);
+
+		AssertUtils.assertFailure(
+			PrincipalException.MustHavePermission.class,
+			StringBundler.concat(
+				"User ", _user.getUserId(), " must have ", ActionKeys.VIEW,
+				" permission for ", DLFileEntry.class.getName(),
+				StringPool.SPACE, fileEntry.getFileEntryId()),
+			() -> _objectEntryService.addOrUpdateObjectEntry(
+				RandomTestUtil.randomString(), _group.getGroupId(),
+				_objectDefinition.getObjectDefinitionId(),
+				ObjectEntryFolderConstants.
+					PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+				HashMapBuilder.<String, Serializable>put(
+					"file", fileEntry.getFileEntryId()
+				).build(),
+				ServiceContextTestUtil.getServiceContext(
+					_group.getGroupId(), _user.getUserId())));
+
+		ObjectEntry objectEntry = _addObjectEntry(_user);
+
+		AssertUtils.assertFailure(
+			PrincipalException.MustHavePermission.class,
+			StringBundler.concat(
+				"User ", _user.getUserId(), " must have ", ActionKeys.VIEW,
+				" permission for ", DLFileEntry.class.getName(),
+				StringPool.SPACE, fileEntry.getFileEntryId()),
+			() -> _objectEntryService.addOrUpdateObjectEntry(
+				objectEntry.getExternalReferenceCode(), _group.getGroupId(),
+				_objectDefinition.getObjectDefinitionId(),
+				ObjectEntryFolderConstants.
+					PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+				HashMapBuilder.<String, Serializable>put(
+					"file", fileEntry.getFileEntryId()
+				).build(),
+				ServiceContextTestUtil.getServiceContext(
+					_group.getGroupId(), _user.getUserId())));
+	}
+
+	@Test
+	@TestInfo("LPD-110139")
+	public void testCopyObjectEntryWithAttachmentObjectField()
+		throws Exception {
+
+		FileEntry fileEntry = _addFileEntry();
+		ObjectEntry objectEntry = _addObjectEntry(_user);
+
+		_setUser(_user);
+
+		AssertUtils.assertFailure(
+			PrincipalException.MustHavePermission.class,
+			StringBundler.concat(
+				"User ", _user.getUserId(), " must have ", ActionKeys.VIEW,
+				" permission for ", DLFileEntry.class.getName(),
+				StringPool.SPACE, fileEntry.getFileEntryId()),
+			() -> _objectEntryService.copyObjectEntry(
+				objectEntry.getObjectEntryId(),
+				ObjectEntryFolderConstants.
+					PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+				HashMapBuilder.<String, Serializable>put(
+					"file", fileEntry.getFileEntryId()
+				).build(),
+				ServiceContextTestUtil.getServiceContext(
+					_group.getGroupId(), _user.getUserId())));
 	}
 
 	@Test
@@ -663,6 +866,15 @@ public class ObjectEntryServiceTest {
 			() -> _objectEntryService.deleteObjectEntry(rootObjectEntryId));
 	}
 
+	@FeatureFlag("LPD-108620")
+	@Test
+	public void testFetchRelatedObjectEntry() throws Exception {
+		_testFetchRelatedObjectEntry(
+			ObjectRelationshipConstants.TYPE_ONE_TO_MANY);
+		_testFetchRelatedObjectEntry(
+			ObjectRelationshipConstants.TYPE_ONE_TO_ONE);
+	}
+
 	@Test
 	public void testGetManyToManyObjectEntries() throws Exception {
 		UnsafeBiFunction<Long, Long, List<ObjectEntry>, PortalException>
@@ -683,6 +895,72 @@ public class ObjectEntryServiceTest {
 		_testGetObjectEntries(
 			true, true, ObjectRelationshipConstants.TYPE_MANY_TO_MANY,
 			unsafeBiFunction);
+	}
+
+	@Test
+	@TestInfo("LPD-112318")
+	public void testGetObjectEntriesCount() throws Exception {
+
+		// Can count object entries as company administrator
+
+		ObjectEntry objectEntry1 = _addObjectEntry(_adminUser);
+
+		_assertObjectEntriesCount(1, WorkflowConstants.STATUS_ANY);
+
+		// Can count object entries as site administrator
+
+		_setUser(UserTestUtil.addGroupAdminUser(_group));
+
+		_assertObjectEntriesCount(1, WorkflowConstants.STATUS_ANY);
+
+		// Can count object entries with individual model permission
+
+		_setUser(_user);
+
+		_setResourcePermissions(
+			_objectDefinition.getClassName(),
+			ResourceConstants.SCOPE_INDIVIDUAL,
+			String.valueOf(objectEntry1.getObjectEntryId()), RoleConstants.USER,
+			new String[] {ActionKeys.VIEW});
+
+		_assertObjectEntriesCount(0, WorkflowConstants.STATUS_DRAFT);
+		_assertObjectEntriesCount(1, WorkflowConstants.STATUS_ANY);
+		_assertObjectEntriesCount(1, WorkflowConstants.STATUS_APPROVED);
+
+		// Cannot count object entries in the trash
+
+		ObjectEntry objectEntry2 = _addObjectEntry(_adminUser);
+
+		_setResourcePermissions(
+			_objectDefinition.getClassName(),
+			ResourceConstants.SCOPE_INDIVIDUAL,
+			String.valueOf(objectEntry2.getObjectEntryId()), RoleConstants.USER,
+			new String[] {ActionKeys.VIEW});
+
+		_objectEntryLocalService.moveObjectEntryToTrash(
+			_adminUser.getUserId(), objectEntry2,
+			ServiceContextTestUtil.getServiceContext());
+
+		_assertObjectEntriesCount(1, WorkflowConstants.STATUS_ANY);
+
+		// Cannot count object entries of a deleted object definition
+
+		ObjectDefinition objectDefinition =
+			ObjectDefinitionTestUtil.addCustomObjectDefinition();
+
+		_objectDefinitionLocalService.deleteObjectDefinition(objectDefinition);
+
+		Assert.assertEquals(
+			0,
+			_objectEntryService.getObjectEntriesCount(
+				_group.getGroupId(), objectDefinition.getObjectDefinitionId(),
+				WorkflowConstants.STATUS_ANY));
+
+		// Cannot count object entries without model permission
+
+		_addObjectEntry(_adminUser);
+
+		_assertObjectEntriesCount(1, WorkflowConstants.STATUS_ANY);
 	}
 
 	@Test
@@ -995,29 +1273,6 @@ public class ObjectEntryServiceTest {
 	}
 
 	@Test
-	public void testGetOneToManyObjectEntries() throws Exception {
-		UnsafeBiFunction<Long, Long, List<ObjectEntry>, PortalException>
-			unsafeBiFunction = (objectRelationshipId, primaryKey) ->
-				_objectEntryService.getOneToManyObjectEntries(
-					_group.getGroupId(), objectRelationshipId, null, false,
-					primaryKey, true, null, QueryUtil.ALL_POS,
-					QueryUtil.ALL_POS, null);
-
-		_testGetObjectEntries(
-			false, false, ObjectRelationshipConstants.TYPE_ONE_TO_MANY,
-			unsafeBiFunction);
-		_testGetObjectEntries(
-			false, true, ObjectRelationshipConstants.TYPE_ONE_TO_MANY,
-			unsafeBiFunction);
-		_testGetObjectEntries(
-			true, false, ObjectRelationshipConstants.TYPE_ONE_TO_MANY,
-			unsafeBiFunction);
-		_testGetObjectEntries(
-			true, true, ObjectRelationshipConstants.TYPE_ONE_TO_MANY,
-			unsafeBiFunction);
-	}
-
-	@Test
 	public void testGetOrAddEmptyObjectEntry() throws Exception {
 
 		// Lazy referencing disabled
@@ -1182,6 +1437,51 @@ public class ObjectEntryServiceTest {
 			() -> _testGetObjectEntry(objectEntry2, _user));
 	}
 
+	@FeatureFlag("LPD-108620")
+	@Test
+	public void testGetRelatedObjectEntries() throws Exception {
+		UnsafeBiFunction<Long, Long, List<ObjectEntry>, PortalException>
+			unsafeBiFunction = (objectRelationshipId, primaryKey) ->
+				_objectEntryService.getRelatedObjectEntries(
+					_group.getGroupId(), objectRelationshipId, null, false,
+					primaryKey, true, null, QueryUtil.ALL_POS,
+					QueryUtil.ALL_POS, null);
+
+		_testGetObjectEntries(
+			false, false, ObjectRelationshipConstants.TYPE_ONE_TO_MANY,
+			unsafeBiFunction);
+		_testGetObjectEntries(
+			false, false, ObjectRelationshipConstants.TYPE_ONE_TO_ONE,
+			unsafeBiFunction);
+		_testGetObjectEntries(
+			false, true, ObjectRelationshipConstants.TYPE_ONE_TO_MANY,
+			unsafeBiFunction);
+		_testGetObjectEntries(
+			false, true, ObjectRelationshipConstants.TYPE_ONE_TO_ONE,
+			unsafeBiFunction);
+		_testGetObjectEntries(
+			true, false, ObjectRelationshipConstants.TYPE_ONE_TO_MANY,
+			unsafeBiFunction);
+		_testGetObjectEntries(
+			true, false, ObjectRelationshipConstants.TYPE_ONE_TO_ONE,
+			unsafeBiFunction);
+		_testGetObjectEntries(
+			true, true, ObjectRelationshipConstants.TYPE_ONE_TO_MANY,
+			unsafeBiFunction);
+		_testGetObjectEntries(
+			true, true, ObjectRelationshipConstants.TYPE_ONE_TO_ONE,
+			unsafeBiFunction);
+	}
+
+	@FeatureFlag("LPD-108620")
+	@Test
+	public void testGetRelatedObjectEntriesCount() throws Exception {
+		_testGetRelatedObjectEntriesCount(
+			1, ObjectRelationshipConstants.TYPE_ONE_TO_ONE);
+		_testGetRelatedObjectEntriesCount(
+			2, ObjectRelationshipConstants.TYPE_ONE_TO_MANY);
+	}
+
 	@Test
 	@TestInfo("LPD-83632")
 	public void testHasModelResourcePermission() throws Exception {
@@ -1220,6 +1520,60 @@ public class ObjectEntryServiceTest {
 
 			Assert.assertEquals(logEntries.toString(), 0, logEntries.size());
 		}
+	}
+
+	@Test
+	@TestInfo("LPD-110139")
+	public void testMoveObjectEntryWithAttachmentObjectField()
+		throws Exception {
+
+		FileEntry fileEntry = _addFileEntry();
+		ObjectEntry objectEntry = _addObjectEntry(_user);
+
+		_setUser(_user);
+
+		AssertUtils.assertFailure(
+			PrincipalException.MustHavePermission.class,
+			StringBundler.concat(
+				"User ", _user.getUserId(), " must have ", ActionKeys.VIEW,
+				" permission for ", DLFileEntry.class.getName(),
+				StringPool.SPACE, fileEntry.getFileEntryId()),
+			() -> _objectEntryService.moveObjectEntry(
+				objectEntry.getObjectEntryId(),
+				ObjectEntryFolderConstants.
+					PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+				HashMapBuilder.<String, Serializable>put(
+					"file", fileEntry.getFileEntryId()
+				).build(),
+				ServiceContextTestUtil.getServiceContext(
+					_group.getGroupId(), _user.getUserId())));
+	}
+
+	@Test
+	@TestInfo("LPD-110139")
+	public void testPartialUpdateObjectEntryWithAttachmentObjectField()
+		throws Exception {
+
+		FileEntry fileEntry = _addFileEntry();
+		ObjectEntry objectEntry = _addObjectEntry(_user);
+
+		_setUser(_user);
+
+		AssertUtils.assertFailure(
+			PrincipalException.MustHavePermission.class,
+			StringBundler.concat(
+				"User ", _user.getUserId(), " must have ", ActionKeys.VIEW,
+				" permission for ", DLFileEntry.class.getName(),
+				StringPool.SPACE, fileEntry.getFileEntryId()),
+			() -> _objectEntryService.partialUpdateObjectEntry(
+				objectEntry.getObjectEntryId(),
+				ObjectEntryFolderConstants.
+					PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+				HashMapBuilder.<String, Serializable>put(
+					"file", fileEntry.getFileEntryId()
+				).build(),
+				ServiceContextTestUtil.getServiceContext(
+					_group.getGroupId(), _user.getUserId())));
 	}
 
 	@Test
@@ -1327,6 +1681,59 @@ public class ObjectEntryServiceTest {
 				" permission for ", _objectDefinition.getClassName(),
 				StringPool.SPACE, objectEntry3.getObjectEntryId()),
 			() -> _testUpdateObjectEntry(objectEntry3, _user));
+	}
+
+	@Test
+	@TestInfo("LPD-110139")
+	public void testUpdateObjectEntryWithAttachmentObjectField()
+		throws Exception {
+
+		FileEntry fileEntry1 = _addFileEntry();
+		ObjectEntry objectEntry1 = _addObjectEntry(_user);
+
+		_setUser(_user);
+
+		AssertUtils.assertFailure(
+			PrincipalException.MustHavePermission.class,
+			StringBundler.concat(
+				"User ", _user.getUserId(), " must have ", ActionKeys.VIEW,
+				" permission for ", DLFileEntry.class.getName(),
+				StringPool.SPACE, fileEntry1.getFileEntryId()),
+			() -> _objectEntryService.updateObjectEntry(
+				objectEntry1.getObjectEntryId(),
+				ObjectEntryFolderConstants.
+					PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+				HashMapBuilder.<String, Serializable>put(
+					"file", fileEntry1.getFileEntryId()
+				).build(),
+				ServiceContextTestUtil.getServiceContext(
+					_group.getGroupId(), _user.getUserId())));
+
+		FileEntry fileEntry2 = _addFileEntry();
+
+		ObjectEntry objectEntry2 = _objectEntryLocalService.addObjectEntry(
+			_group.getGroupId(), _user.getUserId(),
+			_objectDefinition.getObjectDefinitionId(),
+			ObjectEntryFolderConstants.PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+			null,
+			HashMapBuilder.<String, Serializable>put(
+				"file", fileEntry2.getFileEntryId()
+			).build(),
+			ServiceContextTestUtil.getServiceContext(
+				_group.getGroupId(), _user.getUserId()));
+
+		objectEntry2 = _objectEntryService.updateObjectEntry(
+			objectEntry2.getObjectEntryId(),
+			ObjectEntryFolderConstants.PARENT_OBJECT_ENTRY_FOLDER_ID_DEFAULT,
+			HashMapBuilder.<String, Serializable>put(
+				"file", fileEntry2.getFileEntryId()
+			).build(),
+			ServiceContextTestUtil.getServiceContext(
+				_group.getGroupId(), _user.getUserId()));
+
+		Assert.assertEquals(
+			fileEntry2.getFileEntryId(),
+			MapUtil.getLong(objectEntry2.getValues(), "file"));
 	}
 
 	@Test
@@ -1519,6 +1926,21 @@ public class ObjectEntryServiceTest {
 		}
 	}
 
+	private FileEntry _addFileEntry() throws Exception {
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(
+				_group.getGroupId(), _adminUser.getUserId());
+
+		serviceContext.setAddGroupPermissions(false);
+		serviceContext.setAddGuestPermissions(false);
+
+		return _dlAppLocalService.addFileEntry(
+			null, _adminUser.getUserId(), _group.getGroupId(),
+			DLFolderConstants.DEFAULT_PARENT_FOLDER_ID,
+			RandomTestUtil.randomString() + ".txt", ContentTypes.TEXT_PLAIN,
+			DLTestUtil.randomTextFileBytes(), null, null, null, serviceContext);
+	}
+
 	private ObjectEntry _addObjectEntry(User user) throws Exception {
 		return _objectEntryLocalService.addObjectEntry(
 			_group.getGroupId(), user.getUserId(),
@@ -1543,6 +1965,14 @@ public class ObjectEntryServiceTest {
 			ResourceConstants.SCOPE_COMPANY,
 			String.valueOf(TestPropsValues.getCompanyId()),
 			guestRole.getRoleId(), ObjectActionKeys.ADD_OBJECT_ENTRY);
+	}
+
+	private void _assertObjectEntriesCount(int count, int status) {
+		Assert.assertEquals(
+			count,
+			_objectEntryService.getObjectEntriesCount(
+				_group.getGroupId(), _objectDefinition.getObjectDefinitionId(),
+				status));
 	}
 
 	private void _assertUserNotificationEventsCount() throws PortalException {
@@ -1647,6 +2077,40 @@ public class ObjectEntryServiceTest {
 		}
 	}
 
+	private void _testFetchRelatedObjectEntry(String type) throws Exception {
+		ObjectRelationship objectRelationship =
+			ObjectRelationshipTestUtil.addObjectRelationship(
+				_objectRelationshipLocalService, _objectDefinition,
+				_objectDefinition,
+				ObjectRelationshipConstants.DELETION_TYPE_PREVENT,
+				StringUtil.randomId(), type);
+
+		ObjectEntry objectEntry1 = _addObjectEntry(_adminUser);
+		ObjectEntry objectEntry2 = _addObjectEntry(_adminUser);
+
+		ObjectRelationshipTestUtil.relateObjectEntries(
+			objectEntry1.getObjectEntryId(), objectEntry2.getObjectEntryId(),
+			objectRelationship, TestPropsValues.getUserId());
+
+		try (ContextUserReplace contextUserReplace = new ContextUserReplace(
+				_adminUser)) {
+
+			ObjectEntry relatedObjectEntry =
+				_objectEntryService.fetchRelatedObjectEntry(
+					_group.getGroupId(),
+					objectRelationship.getObjectRelationshipId(),
+					objectEntry2.getObjectEntryId());
+
+			Assert.assertEquals(
+				objectEntry1.getObjectEntryId(),
+				relatedObjectEntry.getObjectEntryId());
+		}
+		finally {
+			_objectRelationshipLocalService.deleteObjectRelationship(
+				objectRelationship);
+		}
+	}
+
 	private void _testGetObjectEntries(
 			boolean hasPermission, boolean sqlCheckEnabled, String type,
 			UnsafeBiFunction<Long, Long, List<ObjectEntry>, PortalException>
@@ -1670,26 +2134,38 @@ public class ObjectEntryServiceTest {
 			objectEntry.getObjectEntryId(),
 			relatedObjectEntry1.getObjectEntryId(), objectRelationship,
 			TestPropsValues.getUserId());
-		ObjectRelationshipTestUtil.relateObjectEntries(
-			objectEntry.getObjectEntryId(),
-			relatedObjectEntry2.getObjectEntryId(), objectRelationship,
-			TestPropsValues.getUserId());
 
-		_setResourcePermissions(
-			_objectDefinition.getClassName(),
-			ResourceConstants.SCOPE_INDIVIDUAL,
-			String.valueOf(relatedObjectEntry1.getObjectEntryId()),
-			RoleConstants.USER, new String[] {ActionKeys.VIEW});
+		boolean oneToOne = StringUtil.equals(
+			type, ObjectRelationshipConstants.TYPE_ONE_TO_ONE);
 
-		if (hasPermission) {
+		if (!oneToOne) {
+			ObjectRelationshipTestUtil.relateObjectEntries(
+				objectEntry.getObjectEntryId(),
+				relatedObjectEntry2.getObjectEntryId(), objectRelationship,
+				TestPropsValues.getUserId());
+		}
+
+		Set<ObjectEntry> expectedObjectEntries = new HashSet<>();
+
+		if (hasPermission || !oneToOne) {
+			_setResourcePermissions(
+				_objectDefinition.getClassName(),
+				ResourceConstants.SCOPE_INDIVIDUAL,
+				String.valueOf(relatedObjectEntry1.getObjectEntryId()),
+				RoleConstants.USER, new String[] {ActionKeys.VIEW});
+
+			expectedObjectEntries.add(relatedObjectEntry1);
+		}
+
+		if (hasPermission && !oneToOne) {
 			_setResourcePermissions(
 				_objectDefinition.getClassName(),
 				ResourceConstants.SCOPE_INDIVIDUAL,
 				String.valueOf(relatedObjectEntry2.getObjectEntryId()),
 				RoleConstants.USER, new String[] {ActionKeys.VIEW});
-		}
 
-		_setUser(_user);
+			expectedObjectEntries.add(relatedObjectEntry2);
+		}
 
 		try (ConfigurationTemporarySwapper configurationTemporarySwapper =
 				new ConfigurationTemporarySwapper(
@@ -1697,28 +2173,18 @@ public class ObjectEntryServiceTest {
 						"configuration.InlinePermissionConfiguration",
 					HashMapDictionaryBuilder.<String, Object>put(
 						"sqlCheckEnabled", sqlCheckEnabled
-					).build())) {
+					).build());
+			ContextUserReplace contextUserReplace = new ContextUserReplace(
+				_user)) {
 
-			if (hasPermission) {
-				Assert.assertEquals(
-					SetUtil.fromArray(relatedObjectEntry1, relatedObjectEntry2),
-					SetUtil.fromList(
-						unsafeBiFunction.apply(
-							objectRelationship.getObjectRelationshipId(),
-							objectEntry.getObjectEntryId())));
-			}
-			else {
-				Assert.assertEquals(
-					SetUtil.fromArray(relatedObjectEntry1),
-					SetUtil.fromList(
-						unsafeBiFunction.apply(
-							objectRelationship.getObjectRelationshipId(),
-							objectEntry.getObjectEntryId())));
-			}
+			Assert.assertEquals(
+				expectedObjectEntries,
+				SetUtil.fromList(
+					unsafeBiFunction.apply(
+						objectRelationship.getObjectRelationshipId(),
+						objectEntry.getObjectEntryId())));
 		}
 		finally {
-			_setUser(_adminUser);
-
 			_objectRelationshipLocalService.deleteObjectRelationship(
 				objectRelationship);
 		}
@@ -1731,6 +2197,44 @@ public class ObjectEntryServiceTest {
 				user)) {
 
 			_objectEntryService.getObjectEntry(objectEntry.getObjectEntryId());
+		}
+	}
+
+	private void _testGetRelatedObjectEntriesCount(
+			int expectedRelatedObjectEntriesCount, String type)
+		throws Exception {
+
+		ObjectRelationship objectRelationship =
+			ObjectRelationshipTestUtil.addObjectRelationship(
+				_objectRelationshipLocalService, _objectDefinition,
+				_objectDefinition,
+				ObjectRelationshipConstants.DELETION_TYPE_PREVENT,
+				StringUtil.randomId(), type);
+
+		ObjectEntry objectEntry1 = _addObjectEntry(_adminUser);
+
+		for (int i = 0; i < expectedRelatedObjectEntriesCount; i++) {
+			ObjectEntry objectEntry2 = _addObjectEntry(_adminUser);
+
+			ObjectRelationshipTestUtil.relateObjectEntries(
+				objectEntry1.getObjectEntryId(),
+				objectEntry2.getObjectEntryId(), objectRelationship,
+				TestPropsValues.getUserId());
+		}
+
+		try (ContextUserReplace contextUserReplace = new ContextUserReplace(
+				_adminUser)) {
+
+			Assert.assertEquals(
+				expectedRelatedObjectEntriesCount,
+				_objectEntryService.getRelatedObjectEntriesCount(
+					_group.getGroupId(),
+					objectRelationship.getObjectRelationshipId(), null,
+					objectEntry1.getObjectEntryId(), true, null));
+		}
+		finally {
+			_objectRelationshipLocalService.deleteObjectRelationship(
+				objectRelationship);
 		}
 	}
 
@@ -1777,6 +2281,9 @@ public class ObjectEntryServiceTest {
 
 	@Inject
 	private ConfigurationProvider _configurationProvider;
+
+	@Inject
+	private DLAppLocalService _dlAppLocalService;
 
 	@DeleteAfterTestRun
 	private Group _group;
