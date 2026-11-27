@@ -82,6 +82,13 @@ public interface FragmentEntryLinkLocalService
 
 	public FragmentEntryLink addFragmentEntryLink(
 			String externalReferenceCode, long userId, long groupId,
+			String fragmentEntryERC, String fragmentEntryScopeERC,
+			long segmentsExperienceId, long plid, String editableValues,
+			String rendererKey, ServiceContext serviceContext)
+		throws PortalException;
+
+	public FragmentEntryLink addFragmentEntryLink(
+			String externalReferenceCode, long userId, long groupId,
 			String originalFragmentEntryLinkERC, String fragmentEntryERC,
 			String fragmentEntryScopeERC, long segmentsExperienceId, long plid,
 			String css, String html, String js, String configuration,
@@ -132,10 +139,6 @@ public interface FragmentEntryLinkLocalService
 	 */
 	@Indexable(type = IndexableType.DELETE)
 	public FragmentEntryLink deleteFragmentEntryLink(long fragmentEntryLinkId)
-		throws PortalException;
-
-	public FragmentEntryLink deleteFragmentEntryLink(
-			String externalReferenceCode, long groupId)
 		throws PortalException;
 
 	public void deleteFragmentEntryLinks(long groupId);
@@ -307,15 +310,6 @@ public interface FragmentEntryLinkLocalService
 			FragmentEntry fragmentEntry, int layoutPageTemplateType)
 		throws PortalException;
 
-	/**
-	 * @deprecated As of Athanasius (7.3.x), replaced by {@link
-	 #getFragmentEntryLinksCountByPlid(long, long)}
-	 */
-	@Deprecated
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public int getClassedModelFragmentEntryLinksCount(
-		long groupId, long classNameId, long classPK);
-
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public ExportActionableDynamicQuery getExportActionableDynamicQuery(
 		PortletDataContext portletDataContext);
@@ -329,11 +323,6 @@ public interface FragmentEntryLinkLocalService
 	 */
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public FragmentEntryLink getFragmentEntryLink(long fragmentEntryLinkId)
-		throws PortalException;
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public FragmentEntryLink getFragmentEntryLink(
-			long groupId, String originalFragmentEntryLinkERC, long plid)
 		throws PortalException;
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
@@ -454,11 +443,6 @@ public interface FragmentEntryLinkLocalService
 	public int getFragmentEntryLinksCount();
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public int getFragmentEntryLinksCountByFragmentEntry(
-			long groupId, FragmentEntry fragmentEntry, boolean deleted)
-		throws PortalException;
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public int getFragmentEntryLinksCountByPlid(long groupId, long plid);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
@@ -541,4 +525,4 @@ public interface FragmentEntryLinkLocalService
 		throws E;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-312509836
+// LIFERAY-SERVICE-BUILDER-HASH:1504279358
