@@ -56,6 +56,14 @@ describe('IndividualsTouchedDataSet', () => {
 		);
 	});
 
+	it('should send the selected account to the endpoint', () => {
+		renderDataSet('/?accountId=9&accountName=Acme');
+
+		expect(lastFDSProps.apiURL).toBe(
+			'/o/faro/contacts/23/campaigns/7/individuals?accountIds=9&channelId=123&rangeKey=30'
+		);
+	});
+
 	it('should ask the endpoint for a custom range by its bounds alone', () => {
 		renderDataSet(
 			'/?rangeEnd=2026-10-20&rangeKey=CUSTOM&rangeStart=2026-10-01'
@@ -90,10 +98,31 @@ describe('IndividualsTouchedDataSet', () => {
 		]);
 	});
 
-	it('should sort by last activity descending by default', () => {
+	it('should offer every sortable column in the Order menu, last activity descending by default', () => {
 		renderDataSet();
 
 		expect(lastFDSProps.sorts).toEqual([
+			{
+				active: false,
+				default: false,
+				direction: 'asc',
+				key: 'name',
+				label: 'Individual Name',
+			},
+			{
+				active: false,
+				default: false,
+				direction: 'asc',
+				key: 'accountName',
+				label: 'Account Name',
+			},
+			{
+				active: false,
+				default: false,
+				direction: 'asc',
+				key: 'sessionsCount',
+				label: 'Visitor Type',
+			},
 			{
 				active: true,
 				default: true,

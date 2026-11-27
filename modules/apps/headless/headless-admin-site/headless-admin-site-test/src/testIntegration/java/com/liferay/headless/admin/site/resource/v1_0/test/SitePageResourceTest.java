@@ -141,7 +141,6 @@ import com.liferay.portal.kernel.model.ResourceConstants;
 import com.liferay.portal.kernel.model.Role;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.model.role.RoleConstants;
-import com.liferay.portal.kernel.module.util.SystemBundleUtil;
 import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.service.CompanyLocalServiceUtil;
@@ -154,6 +153,7 @@ import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
 import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
+import com.liferay.portal.kernel.test.util.BundleContextTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
@@ -342,11 +342,13 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 
 	@Override
 	@Test
+	@TestInfo("LPD-103862")
 	public void testGetSiteSitePageSitePagesPage() throws Exception {
 		super.testGetSiteSitePageSitePagesPage();
 
 		_testGetSiteSitePageSitePagesPageWithContentPage();
 		_testGetSiteSitePageSitePagesPageWithFlatten();
+		_testGetSiteSitePageSitePagesPageWithPageSpecificationVersionsNestedField();
 		_testGetSiteSitePageSitePagesPageWithPermissions();
 		_testGetSiteSitePageSitePagesPageWithUnknownSitePageExternalReferenceCode();
 		_testGetSiteSitePageSitePagesPageWithUnsupportedType();
@@ -355,7 +357,7 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 
 	@Override
 	@Test
-	@TestInfo("LPD-103773")
+	@TestInfo({"LPD-103773", "LPD-103862"})
 	public void testGetSiteSitePagesPage() throws Exception {
 		super.testGetSiteSitePagesPage();
 
@@ -400,7 +402,7 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 	@FeatureFlag("LPD-38869")
 	@Override
 	@Test
-	@TestInfo({"LPD-83094", "LPD-101791"})
+	@TestInfo({"LPD-83094", "LPD-101791", "LPD-116313"})
 	public void testPostSiteSitePage() throws Exception {
 		super.testPostSiteSitePage();
 
@@ -428,6 +430,7 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 		_testPostSiteSitePageWithPageElements();
 		_testPostSiteSitePageWithPageSpecifications();
 		_testPostSiteSitePageWithContentPageSpecification();
+		_testPostSiteSitePageWithInvalidSitemapPagePriority();
 		_testPostSiteSitePageWithWidgetPageSettings();
 		_testPostSiteSitePageWithWidgetPageSettingsWithWidgetPageTemplate();
 		_testPostSiteSitePageWithWidgetPageTypeIsDeprecated();
@@ -482,7 +485,7 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 			"LPD-72013", "LPD-74331", "LPD-75450", "LPD-77124", "LPD-77505",
 			"LPD-77576", "LPD-77852", "LPD-78667", "LPD-79415", "LPD-80061",
 			"LPD-81793", "LPD-83094", "LPD-97454", "LPD-101044", "LPD-101791",
-			"LPD-103694", "LPD-110626", "LPD-113027"
+			"LPD-103694", "LPD-110626", "LPD-113027", "LPD-114784"
 		}
 	)
 	public void testPutSiteSitePage() throws Exception {
@@ -1159,10 +1162,6 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 
 			PageSpecification pageSpecification =
 				pageSpecificationVersion.getPageSpecification();
-
-			if (pageSpecification == null) {
-				continue;
-			}
 
 			Assert.assertEquals(
 				draftLayout.getExternalReferenceCode(),
@@ -2284,7 +2283,8 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 		ContentPageSpecification publishedContentPageSpecification,
 		Set<Integer> publishedLayoutStatuses) {
 
-		BundleContext bundleContext = SystemBundleUtil.getBundleContext();
+		BundleContext bundleContext = BundleContextTestUtil.getBundleContext(
+			SitePageResourceTest.class);
 
 		return bundleContext.registerService(
 			ModelListener.class,
@@ -2565,6 +2565,38 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 			Pagination.of(1, 10));
 
 		Assert.assertEquals(0, page.getTotalCount());
+	}
+
+	private void _testGetSiteSitePageSitePagesPageWithPageSpecificationVersionsNestedField()
+		throws Exception {
+
+		Layout parentLayout = LayoutTestUtil.addTypePortletLayout(testGroup);
+
+		Layout childLayout = LayoutTestUtil.addTypeContentLayout(
+			testGroup, parentLayout.getPlid());
+
+		ContentLayoutTestUtil.publishLayout(
+			childLayout.fetchDraftLayout(), childLayout);
+
+		SitePageResource sitePageResource = _getSitePageResource(
+			"pageSpecificationVersions.pageSpecification");
+
+		Page<SitePage> sitePagesPage =
+			sitePageResource.getSiteSitePageSitePagesPage(
+				testGroup.getExternalReferenceCode(),
+				parentLayout.getExternalReferenceCode(), null,
+				Pagination.of(1, 10));
+
+		List<SitePage> sitePages = new ArrayList<>(sitePagesPage.getItems());
+
+		Assert.assertEquals(sitePages.toString(), 1, sitePages.size());
+
+		SitePage sitePage = sitePages.get(0);
+
+		_assertPageSpecificationVersions(
+			_layoutLocalService.getLayoutByExternalReferenceCode(
+				sitePage.getExternalReferenceCode(), testGroup.getGroupId()),
+			sitePage.getPageSpecificationVersions());
 	}
 
 	private void _testGetSiteSitePageSitePagesPageWithPermissions()
@@ -2859,7 +2891,7 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 		LayoutTestUtil.addTypePortletLayout(testGroup);
 
 		SitePageResource sitePageResource = _getSitePageResource(
-			"pageSpecificationVersions");
+			"pageSpecificationVersions.pageSpecification");
 
 		Page<SitePage> sitePagesPage = sitePageResource.getSiteSitePagesPage(
 			testGroup.getExternalReferenceCode(), null, false, null, null, null,
@@ -3780,6 +3812,27 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 			true, draftContentPageSpecification,
 			draftContentPageSpecificationExternalReferenceCode, true,
 			sitePageExternalReferenceCode, status);
+	}
+
+	private void _testPostSiteSitePageWithInvalidSitemapPagePriority()
+		throws Exception {
+
+		SitePage sitePage = _getRandomSitePage(SitePage.Type.CONTENT_PAGE);
+
+		ContentPageSettings contentPageSettings =
+			(ContentPageSettings)sitePage.getPageSettings();
+
+		SEOSettings seoSettings = contentPageSettings.getSeoSettings();
+
+		SitemapSettings sitemapSettings = seoSettings.getSitemapSettings();
+
+		sitemapSettings.setPagePriority(RandomTestUtil.randomDouble() + 1);
+
+		_assertProblemException(
+			"pageSettings.seoSettings.sitemapSettings.pagePriority must be " +
+				"less than or equal to 1\n",
+			() -> sitePageResource.postSiteSitePage(
+				testGroup.getExternalReferenceCode(), false, sitePage));
 	}
 
 	private void _testPostSiteSitePageWithPageElements() throws Exception {
@@ -5487,6 +5540,7 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 
 		_testPutSiteSitePageWithStagingImportByAnotherUser(serviceContext);
 		_testPutSiteSitePageWithStagingImportWithLastImportUser(serviceContext);
+		_testPutSiteSitePageWithStagingImportWithLayoutUUID();
 	}
 
 	private void _testPutSiteSitePageWithStagingImport(
@@ -5645,6 +5699,51 @@ public class SitePageResourceTest extends BaseSitePageResourceTestCase {
 		Assert.assertEquals(
 			lastImportUser.getUuid(),
 			layout.getTypeSettingsProperty("last-import-user-uuid"));
+	}
+
+	private void _testPutSiteSitePageWithStagingImportWithLayoutUUID()
+		throws Exception {
+
+		Layout stagingLayout = LayoutTestUtil.addTypePortletLayout(
+			irrelevantGroup);
+
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(
+				testGroup.getGroupId(), TestPropsValues.getUserId());
+
+		serviceContext.setUuid(stagingLayout.getUuid());
+
+		Layout liveLayout = _layoutLocalService.addLayout(
+			RandomTestUtil.randomString(), TestPropsValues.getUserId(),
+			testGroup.getGroupId(), false,
+			LayoutConstants.DEFAULT_PARENT_LAYOUT_ID, 0, 0,
+			stagingLayout.getNameMap(), Collections.emptyMap(),
+			Collections.emptyMap(), Collections.emptyMap(),
+			Collections.emptyMap(), LayoutConstants.TYPE_PORTLET, null, false,
+			false, stagingLayout.getFriendlyURLMap(), null, serviceContext);
+
+		SitePage sitePage = sitePageResource.getSiteSitePage(
+			irrelevantGroup.getExternalReferenceCode(),
+			stagingLayout.getExternalReferenceCode());
+
+		try (SafeCloseable safeCloseable1 =
+				_setExportImportThreadLocalWithSafeCloseable(
+					"_layoutImportInProcess", true);
+			SafeCloseable safeCloseable2 =
+				_setExportImportThreadLocalWithSafeCloseable(
+					"_layoutStagingInProcess", true)) {
+
+			sitePageResource.putSiteSitePage(
+				testGroup.getExternalReferenceCode(),
+				sitePage.getExternalReferenceCode(), false, sitePage);
+		}
+
+		Layout importedLiveLayout =
+			_layoutLocalService.getLayoutByExternalReferenceCode(
+				stagingLayout.getExternalReferenceCode(),
+				testGroup.getGroupId());
+
+		Assert.assertEquals(liveLayout.getPlid(), importedLiveLayout.getPlid());
 	}
 
 	private void _testPutSiteSitePageWithWidgetPageSettings() throws Exception {
