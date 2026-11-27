@@ -28,10 +28,12 @@ import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.security.audit.AuditMessageProcessor;
 import com.liferay.portal.security.audit.configuration.AuditConfiguration;
 import com.liferay.portal.security.audit.constants.AuditEventConstants;
+import com.liferay.portal.security.audit.event.generators.constants.EventTypes;
 import com.liferay.portal.security.audit.router.internal.constants.AuditConstants;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -65,7 +67,10 @@ public class DefaultAuditRouter implements AuditRouter {
 
 	@Override
 	public void route(AuditMessage auditMessage) throws AuditException {
-		if (!_auditEnabled) {
+		if (!_auditEnabled &&
+			!Objects.equals(
+				auditMessage.getEventType(), EventTypes.AUDIT_CONFIG_CHANGE)) {
+
 			if (_log.isDebugEnabled()) {
 				_log.debug(
 					"Audit disabled, not processing message: " + auditMessage);
@@ -127,10 +132,15 @@ public class DefaultAuditRouter implements AuditRouter {
 	private void _populateAuditMessage(AuditMessage auditMessage)
 		throws AuditException {
 
+		if (Validator.isNull(auditMessage.getContextName())) {
+			auditMessage.setContextName(
+				AuditEventConstants.CONTEXT_NAME_INSTANCE);
+		}
+
 		long companyId = auditMessage.getCompanyId();
 
 		if ((companyId == CompanyConstants.SYSTEM) ||
-			!FeatureFlagManagerUtil.isEnabled(companyId, "LPD-6417")) {
+			!FeatureFlagManagerUtil.isEnabled(companyId, "LPD-96921")) {
 
 			auditMessage.setAction(null);
 			auditMessage.setResourceAction(null);
@@ -200,16 +210,10 @@ public class DefaultAuditRouter implements AuditRouter {
 				StringUtil.toLowerCase(eventType);
 		}
 
-		String contextName = auditMessage.getContextName();
-
-		if (Validator.isNull(contextName)) {
-			contextName = AuditEventConstants.CONTEXT_NAME_INSTANCE;
-		}
-
 		auditMessage.setResourceAction(
 			StringBundler.concat(
-				StringUtil.toLowerCase(contextName), StringPool.PERIOD,
-				resourceType, StringPool.PERIOD, action));
+				StringUtil.toLowerCase(auditMessage.getContextName()),
+				StringPool.PERIOD, resourceType, StringPool.PERIOD, action));
 	}
 
 	private void _validateResourceAction(String resourceAction)

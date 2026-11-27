@@ -23,8 +23,6 @@ import {mockPreferenceReq} from 'test/graphql-data';
 import {Property} from 'shared/util/records';
 import {RelationalOperators, TimeSpans} from '../../utils/constants';
 
-jest.unmock('react-dom');
-
 const mockValue = createCustomValueMap([
 	{
 		key: 'criterionGroup',
@@ -103,7 +101,7 @@ describe('GeolocationInput', () => {
 			</WrapperComponent>
 		);
 
-		fireEvent.focus(screen.getByPlaceholderText('Region'));
+		fireEvent.focus(screen.getByPlaceholderText(/^region$/i));
 
 		await waitForListOptions();
 
@@ -152,8 +150,8 @@ describe('GeolocationInput', () => {
 		expect(getAllByText('on')[1]).toBeInTheDocument();
 	});
 
-	it('should render with has-error', () => {
-		const {container} = render(
+	it('should mark the country input as invalid', () => {
+		const {getByPlaceholderText} = render(
 			<WrapperComponent>
 				<GeolocationInput
 					onChange={jest.fn()}
@@ -164,9 +162,7 @@ describe('GeolocationInput', () => {
 				/>
 			</WrapperComponent>
 		);
-		expect(container.querySelector('.select-input-root')).toHaveClass(
-			'has-error'
-		);
+		expect(getByPlaceholderText(/^country$/i)).toBeInvalid();
 	});
 
 	it('should render inputs for all location values if they all have non-zero length values', () => {
@@ -219,7 +215,7 @@ describe('GeolocationInput', () => {
 		);
 
 		expect(container.querySelectorAll('.button-root')[0]).toHaveTextContent(
-			'Add Region'
+			/add region/i
 		);
 	});
 
@@ -263,7 +259,7 @@ describe('GeolocationInput', () => {
 		);
 
 		expect(container.querySelector('.button-root')).toHaveTextContent(
-			'Add City'
+			/add city/i
 		);
 	});
 });

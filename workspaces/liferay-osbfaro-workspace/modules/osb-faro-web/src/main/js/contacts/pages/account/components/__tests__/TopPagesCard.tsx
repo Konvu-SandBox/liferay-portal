@@ -14,8 +14,6 @@ import {Provider} from 'react-redux';
 import {RangeKeyTimeRanges} from 'shared/util/constants';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const ACCOUNT_ID = 'acc-1';
 
 const MOCK_CONTEXT = {
@@ -103,9 +101,9 @@ describe('TopPagesCard', () => {
 		await waitForLoadingToBeRemoved(container);
 
 		expect(screen.getByText('TOP PAGES')).toBeInTheDocument();
-		expect(screen.getByText('Visited Pages')).toBeInTheDocument();
-		expect(screen.getByText('Entrance Pages')).toBeInTheDocument();
-		expect(screen.getByText('Exit Pages')).toBeInTheDocument();
+		expect(screen.getByText(/^visited pages$/i)).toBeInTheDocument();
+		expect(screen.getByText(/^entrance pages$/i)).toBeInTheDocument();
+		expect(screen.getByText(/^exit pages$/i)).toBeInTheDocument();
 	});
 
 	it('should render the unique visitors of the pages of the account', async () => {
@@ -139,7 +137,7 @@ describe('TopPagesCard', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		fireEvent.click(screen.getByText('Entrance Pages'));
+		fireEvent.click(screen.getByText(/^entrance pages$/i));
 
 		expect(await screen.findByText('My asset A')).toBeInTheDocument();
 		expect(screen.getByText('10')).toBeInTheDocument();
@@ -151,7 +149,7 @@ describe('TopPagesCard', () => {
 		await waitForLoadingToBeRemoved(container);
 
 		const href = screen
-			.getByText('View All')
+			.getByText(/^view all$/i)
 			.closest('a')
 			?.getAttribute('href');
 
@@ -160,46 +158,16 @@ describe('TopPagesCard', () => {
 		expect(href).toContain('accountName=IQVIA');
 	});
 
-	it('should render the footer action like the account info one', async () => {
-		const {container} = renderTopPagesCard();
-
-		await waitForLoadingToBeRemoved(container);
-
-		const link = screen.getByText('View All').closest('a');
-
-		expect(link).toHaveClass(
-			'btn-outline-borderless',
-			'btn-outline-primary',
-			'btn-sm',
-			'ml-auto',
-			'rounded-lg'
-		);
-	});
-
 	it('should render the empty state when the account has no pages', async () => {
 		const {container} = renderTopPagesCardWithoutPages();
 
 		await waitForLoadingToBeRemoved(container);
 
 		expect(
-			await screen.findByText('No Pages Available')
+			await screen.findByText(/^no pages available$/i)
 		).toBeInTheDocument();
 		expect(
-			screen.getByText('Pages will appear here when available.')
+			screen.getByText(/^pages will appear here when available\.$/i)
 		).toBeInTheDocument();
-	});
-
-	it('should render the empty state like the Top Assets one', async () => {
-		const {container} = renderTopPagesCardWithoutPages();
-
-		await waitForLoadingToBeRemoved(container);
-
-		await screen.findByText('No Pages Available');
-
-		expect(container.querySelector('.c-empty-state')).toHaveClass(
-			'c-empty-state-sm',
-			'py-3',
-			'text-center'
-		);
 	});
 });

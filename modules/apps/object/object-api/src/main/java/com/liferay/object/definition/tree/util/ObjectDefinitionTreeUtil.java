@@ -22,11 +22,16 @@ import com.liferay.object.service.persistence.ObjectActionPersistence;
 import com.liferay.object.service.persistence.ObjectDefinitionPersistence;
 import com.liferay.object.service.persistence.ObjectFieldPersistence;
 import com.liferay.object.service.persistence.ObjectRelationshipPersistence;
+import com.liferay.object.tree.Edge;
 import com.liferay.object.tree.Node;
 import com.liferay.object.tree.ObjectDefinitionTreeFactory;
 import com.liferay.object.tree.Tree;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
+import com.liferay.portal.kernel.cache.PortalCache;
+import com.liferay.portal.kernel.cache.PortalCacheHelperUtil;
+import com.liferay.portal.kernel.cache.PortalCacheManagerNames;
+import com.liferay.portal.kernel.cache.transactional.TransactionalPortalCacheUtil;
 import com.liferay.portal.kernel.dao.db.DB;
 import com.liferay.portal.kernel.dao.db.DBManagerUtil;
 import com.liferay.portal.kernel.dao.jdbc.CurrentConnectionUtil;
@@ -39,7 +44,6 @@ import com.liferay.portal.kernel.search.IndexerRegistryUtil;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.ListUtil;
-import com.liferay.portal.kernel.util.PortalRunMode;
 import com.liferay.portal.kernel.util.StringUtil;
 
 import java.sql.Connection;
@@ -50,7 +54,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.sql.DataSource;
 
@@ -83,8 +86,7 @@ public class ObjectDefinitionTreeUtil {
 
 		if (ArrayUtil.isEmpty(
 				getRootObjectDefinitionIds(
-					objectDefinition1.getObjectDefinitionId(),
-					objectDefinitionSettingLocalService))) {
+					objectDefinition1, objectDefinitionSettingLocalService))) {
 
 			_setRootObjectDefinitionIds(
 				new long[] {objectDefinition1.getObjectDefinitionId()},
@@ -132,8 +134,7 @@ public class ObjectDefinitionTreeUtil {
 
 				_setRootObjectDefinitionIds(
 					getRootObjectDefinitionIds(
-						objectDefinition1.getObjectDefinitionId(),
-						objectDefinitionSettingLocalService),
+						objectDefinition1, objectDefinitionSettingLocalService),
 					nodeObjectDefinition, objectDefinitionSettingLocalService,
 					new long[] {objectDefinition2.getObjectDefinitionId()});
 
@@ -153,7 +154,7 @@ public class ObjectDefinitionTreeUtil {
 
 			if (ArrayUtil.isNotEmpty(
 					getRootObjectDefinitionIds(
-						objectDefinition2.getObjectDefinitionId(),
+						objectDefinition2,
 						objectDefinitionSettingLocalService))) {
 
 				return;
@@ -172,8 +173,7 @@ public class ObjectDefinitionTreeUtil {
 
 		for (long rootObjectDefinitionId :
 				getRootObjectDefinitionIds(
-					objectDefinition1.getObjectDefinitionId(),
-					objectDefinitionSettingLocalService)) {
+					objectDefinition1, objectDefinitionSettingLocalService)) {
 
 			ObjectDefinition rootObjectDefinition =
 				objectDefinitionPersistence.findByPrimaryKey(
@@ -188,69 +188,53 @@ public class ObjectDefinitionTreeUtil {
 		}
 	}
 
+	public static List<String> getObjectRelationshipNames(
+			ObjectRelationshipLocalService objectRelationshipLocalService,
+			Tree tree)
+		throws PortalException {
+
+		List<String> objectRelationshipNames = new ArrayList<>();
+
+		Iterator<Node> iterator = tree.iterator();
+
+		while (iterator.hasNext()) {
+			Node node = iterator.next();
+
+			Edge edge = node.getEdge();
+
+			if (edge == null) {
+				continue;
+			}
+
+			ObjectRelationship objectRelationship =
+				objectRelationshipLocalService.getObjectRelationship(
+					edge.getObjectRelationshipId());
+
+			objectRelationshipNames.add(objectRelationship.getName());
+		}
+
+		return objectRelationshipNames;
+	}
+
 	public static long[] getRootObjectDefinitionIds(
-		long objectDefinitionId,
+		ObjectDefinition objectDefinition,
 		ObjectDefinitionSettingLocalService
 			objectDefinitionSettingLocalService) {
 
-		long[] rootObjectDefinitionIds =
-			_rootObjectDefinitionIds.computeIfAbsent(
-				objectDefinitionId,
-				key -> {
-					ObjectDefinitionSetting objectDefinitionSetting =
-						objectDefinitionSettingLocalService.
-							fetchObjectDefinitionSetting(
-								key,
-								ObjectDefinitionSettingConstants.
-									NAME_ROOT_OBJECT_DEFINITION_IDS);
+		Map<Long, long[]> rootObjectDefinitionIdsMap =
+			TransactionalPortalCacheUtil.get(
+				_portalCache, objectDefinition.getCompanyId(),
+				objectDefinitionSettingLocalService::
+					loadGetRootObjectDefinitionIdsMap);
 
-					if (objectDefinitionSetting == null) {
-						return null;
-					}
+		long[] rootObjectDefinitionIds = rootObjectDefinitionIdsMap.get(
+			objectDefinition.getObjectDefinitionId());
 
-					return ListUtil.toLongArray(
-						Arrays.asList(
-							StringUtil.split(
-								objectDefinitionSetting.getValue())),
-						GetterUtil::getLong);
-				});
-
-		if (ArrayUtil.isEmpty(rootObjectDefinitionIds)) {
+		if (rootObjectDefinitionIds == null) {
 			return new long[0];
 		}
 
 		return rootObjectDefinitionIds;
-	}
-
-	public static void invalidate() {
-		if (!PortalRunMode.isTestMode()) {
-			return;
-		}
-
-		_rootObjectDefinitionIds.clear();
-	}
-
-	public static void populateRootObjectDefinitionIds(
-		List<ObjectDefinition> objectDefinitions,
-		Map<Long, ObjectDefinitionSetting> objectDefinitionSettingsMap) {
-
-		for (Map.Entry<Long, ObjectDefinitionSetting> entry :
-				objectDefinitionSettingsMap.entrySet()) {
-
-			ObjectDefinitionSetting objectDefinitionSetting = entry.getValue();
-
-			_rootObjectDefinitionIds.put(
-				entry.getKey(),
-				ListUtil.toLongArray(
-					Arrays.asList(
-						StringUtil.split(objectDefinitionSetting.getValue())),
-					GetterUtil::getLong));
-		}
-
-		for (ObjectDefinition objectDefinition : objectDefinitions) {
-			_rootObjectDefinitionIds.putIfAbsent(
-				objectDefinition.getObjectDefinitionId(), new long[0]);
-		}
 	}
 
 	public static void unbindObjectDefinitions(
@@ -537,12 +521,11 @@ public class ObjectDefinitionTreeUtil {
 			long[] removeRootObjectDefinitionIds)
 		throws PortalException {
 
-		_rootObjectDefinitionIds.put(
-			objectDefinition.getObjectDefinitionId(),
-			_updateRootObjectDefinitionIds(
-				addRootObjectDefinitionIds, objectDefinition,
-				objectDefinitionSettingLocalService,
-				removeRootObjectDefinitionIds));
+		_updateRootObjectDefinitionIds(
+			addRootObjectDefinitionIds, objectDefinition,
+			objectDefinitionSettingLocalService, removeRootObjectDefinitionIds);
+
+		_portalCache.remove(objectDefinition.getCompanyId());
 	}
 
 	private static void _updateDescendantNodeObjectDefinitions(
@@ -759,7 +742,7 @@ public class ObjectDefinitionTreeUtil {
 			});
 	}
 
-	private static long[] _updateRootObjectDefinitionIds(
+	private static void _updateRootObjectDefinitionIds(
 			long[] addRootObjectDefinitionIds,
 			ObjectDefinition objectDefinition,
 			ObjectDefinitionSettingLocalService
@@ -781,7 +764,7 @@ public class ObjectDefinitionTreeUtil {
 					NAME_ROOT_OBJECT_DEFINITION_IDS,
 				StringUtil.merge(addRootObjectDefinitionIds));
 
-			return addRootObjectDefinitionIds;
+			return;
 		}
 
 		List<String> rootObjectDefinitionIds = ListUtil.fromArray(
@@ -804,12 +787,11 @@ public class ObjectDefinitionTreeUtil {
 
 		objectDefinitionSettingLocalService.updateObjectDefinitionSetting(
 			objectDefinitionSetting);
-
-		return ListUtil.toLongArray(
-			rootObjectDefinitionIds, GetterUtil::getLong);
 	}
 
-	private static final Map<Long, long[]> _rootObjectDefinitionIds =
-		new ConcurrentHashMap<>();
+	private static final PortalCache<Long, Map<Long, long[]>> _portalCache =
+		PortalCacheHelperUtil.getPortalCache(
+			PortalCacheManagerNames.MULTI_VM,
+			ObjectDefinitionTreeUtil.class.getName());
 
 }

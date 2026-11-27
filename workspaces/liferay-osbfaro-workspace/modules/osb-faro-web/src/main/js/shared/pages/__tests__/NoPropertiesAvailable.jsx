@@ -13,8 +13,6 @@ import {MemoryRouter} from 'react-router';
 import {User} from 'shared/util/records';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = props => (
 	<Provider store={mockStore()}>
 		<MemoryRouter>
@@ -65,7 +63,7 @@ describe('NoPropertiesAvailable', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		fireEvent.click(queryByText('Start'));
+		fireEvent.click(queryByText(/^start$/i));
 
 		expect(await screen.findByTestId('onboarding-modal')).toBeInTheDocument();
 	});
