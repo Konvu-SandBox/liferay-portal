@@ -16,6 +16,7 @@ export class ProductPage {
 	readonly descriptionField: Locator;
 	readonly dimensions: Locator;
 	readonly height: Locator;
+	readonly icon: Locator;
 	readonly newButton: Locator;
 	readonly page: Page;
 	readonly publishButton: Locator;
@@ -39,6 +40,7 @@ export class ProductPage {
 			.locator('.cms-object-layout-form .panel-title')
 			.filter({hasText: 'Dimensions'});
 		this.height = getObjectFieldInput('height', page);
+		this.icon = page.locator('.cms-object-layout-form .sticker').first();
 		this.newButton = page
 			.locator('[data-testid="fdsCreationActionButton"]')
 			.first();
@@ -68,6 +70,19 @@ export class ProductPage {
 
 	getField(objectFieldName: string) {
 		return getObjectFieldInput(objectFieldName, this.page);
+	}
+
+	getRepeatableGroup(label: string) {
+		return this.page
+			.locator('.component-accordion')
+			.filter({has: this.page.getByText(label, {exact: true})})
+			.last();
+	}
+
+	getRepeatableGroupEntries(label: string) {
+		return this.getRepeatableGroup(label).locator(
+			'[data-form-relationship-structure-item-content-id]'
+		);
 	}
 
 	getTab(name: string) {

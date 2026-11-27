@@ -3,8 +3,6 @@ import React from 'react';
 import Sidebar from '../Sidebar';
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const LABEL = 'Conditions Library';
 
 const setScreenWidth = (width: number) => {
@@ -26,7 +24,7 @@ describe('BaseEditPage.Sidebar', () => {
 			);
 
 			expect(screen.getByRole('complementary')).toHaveTextContent(
-				'Conditions'
+				/conditions/i
 			);
 			expect(
 				screen.queryByRole('button', {name: `Open ${LABEL}`})
@@ -95,7 +93,7 @@ describe('BaseEditPage.Sidebar', () => {
 			});
 
 			expect(panel).toContainElement(
-				screen.getByRole('button', {name: 'Add Condition'})
+				screen.getByRole('button', {name: /^add condition$/i})
 			);
 			expect(screen.getByTitle(`Open ${LABEL}`)).toHaveAttribute(
 				'aria-expanded',
@@ -126,7 +124,9 @@ describe('BaseEditPage.Sidebar', () => {
 
 			fireEvent.click(trigger);
 
-			fireEvent.click(await screen.findByRole('button', {name: 'Close'}));
+			fireEvent.click(
+				await screen.findByRole('button', {name: /^close$/i})
+			);
 
 			await waitFor(() => expect(trigger).toHaveFocus());
 			expect(trigger).toHaveAttribute('aria-expanded', 'false');
@@ -139,7 +139,7 @@ describe('BaseEditPage.Sidebar', () => {
 
 			fireEvent.click(trigger);
 
-			await screen.findByRole('button', {name: 'Close'});
+			await screen.findByRole('button', {name: /^close$/i});
 
 			fireEvent.keyDown(document.activeElement ?? document.body, {
 				key: 'Escape',

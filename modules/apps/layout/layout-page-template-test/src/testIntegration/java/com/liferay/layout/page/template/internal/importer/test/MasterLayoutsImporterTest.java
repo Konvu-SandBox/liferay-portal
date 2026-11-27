@@ -21,7 +21,9 @@ import com.liferay.fragment.service.FragmentCollectionLocalService;
 import com.liferay.fragment.service.FragmentEntryLinkLocalService;
 import com.liferay.fragment.service.FragmentEntryLocalService;
 import com.liferay.fragment.service.FragmentEntryLocalServiceUtil;
+import com.liferay.layout.admin.constants.LayoutAdminPortletKeys;
 import com.liferay.layout.exporter.LayoutsExporter;
+import com.liferay.layout.helper.DropZoneAllowedFragmentEntriesHelper;
 import com.liferay.layout.importer.LayoutsImportStrategy;
 import com.liferay.layout.importer.LayoutsImporter;
 import com.liferay.layout.importer.LayoutsImporterResultEntry;
@@ -73,7 +75,6 @@ import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.kernel.zip.ZipWriter;
-import com.liferay.portal.kernel.zip.ZipWriterFactory;
 import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
@@ -297,7 +298,7 @@ public class MasterLayoutsImporterTest {
 				ServiceContextTestUtil.getServiceContext(_group.getGroupId()));
 
 		Repository repository = PortletFileRepositoryUtil.addPortletRepository(
-			_group.getGroupId(), RandomTestUtil.randomString(),
+			_group.getGroupId(), LayoutAdminPortletKeys.GROUP_PAGES,
 			ServiceContextTestUtil.getServiceContext(_group.getGroupId()));
 
 		Class<?> clazz = getClass();
@@ -306,7 +307,7 @@ public class MasterLayoutsImporterTest {
 			null, _group.getGroupId(), TestPropsValues.getUserId(),
 			LayoutPageTemplateEntry.class.getName(),
 			layoutPageTemplateEntry.getLayoutPageTemplateEntryId(),
-			RandomTestUtil.randomString(), repository.getDlFolderId(),
+			LayoutAdminPortletKeys.GROUP_PAGES, repository.getDlFolderId(),
 			clazz.getResourceAsStream("dependencies/thumbnail.png"),
 			"thumbnail.png", ContentTypes.IMAGE_PNG, false);
 
@@ -716,7 +717,7 @@ public class MasterLayoutsImporterTest {
 	}
 
 	private File _generateZipFile(String testCaseName) throws Exception {
-		ZipWriter zipWriter = _zipWriterFactory.getZipWriter();
+		ZipWriter zipWriter = new ZipWriter();
 
 		Enumeration<URL> enumeration = _bundle.findEntries(
 			StringBundler.concat(
@@ -877,7 +878,9 @@ public class MasterLayoutsImporterTest {
 
 		Assert.assertTrue(
 			expectedFragmentEntryKeys.containsAll(
-				dropZoneLayoutStructureItem.getFragmentEntryKeys()));
+				_dropZoneAllowedFragmentEntriesHelper.getFragmentEntryKeys(
+					_user.getCompanyId(), dropZoneLayoutStructureItem,
+					_group.getGroupId())));
 
 		Assert.assertEquals(
 			expectedIsAllowNewFragments,
@@ -899,6 +902,10 @@ public class MasterLayoutsImporterTest {
 
 	@Inject
 	private DepotEntryLocalService _depotEntryLocalService;
+
+	@Inject
+	private DropZoneAllowedFragmentEntriesHelper
+		_dropZoneAllowedFragmentEntriesHelper;
 
 	@Inject
 	private FragmentCollectionContributorRegistry
@@ -942,9 +949,6 @@ public class MasterLayoutsImporterTest {
 	private ServiceRegistration<FragmentCollectionContributor>
 		_serviceRegistration;
 	private User _user;
-
-	@Inject
-	private ZipWriterFactory _zipWriterFactory;
 
 	private static class TestMasterPageFragmentCollectionContributor
 		implements FragmentCollectionContributor {

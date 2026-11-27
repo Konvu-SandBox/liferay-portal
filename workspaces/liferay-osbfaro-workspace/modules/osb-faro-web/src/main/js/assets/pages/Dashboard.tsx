@@ -19,7 +19,7 @@ import {useAccountFilter} from 'shared/hooks/useAccountFilter';
 import {useChannelContext} from 'shared/context/channel';
 import {useDataSources} from 'shared/context/dataSources';
 import {useLDPEnabled} from 'shared/hooks/useLDPEnabled';
-import {useQueryRangeSelectors} from 'shared/hooks/useQueryRangeSelectors';
+import {useRangeQueryValues} from 'shared/hooks/useRangeQueryValues';
 import {useSegmentFilter} from 'shared/hooks/useSegmentFilter';
 
 const Accounts = lazy(
@@ -36,9 +36,11 @@ const Overview = lazy(
 	() => import(/* webpackChunkName: "AssetOverview" */ './Overview')
 );
 
-const ACCOUNTS_TAB_ID = 'accounts';
+export const ACCOUNTS_TAB_ID = 'accounts';
 
-const KNOWN_INDIVIDUALS_TAB_ID = 'known-individuals';
+export const KNOWN_INDIVIDUALS_TAB_ID = 'known-individuals';
+
+export const OVERVIEW_TAB_ID = 'page';
 
 const AssetDashboard: React.FC<{
 	className: string;
@@ -95,7 +97,7 @@ const AssetDashboard: React.FC<{
 	const decodedTitle = getSafeDecodedURIComponent(title);
 	const decodedType = getSafeDecodedURIComponent(type);
 
-	const rangeSelectorsFromQuery = useQueryRangeSelectors();
+	const {apiRangeParams, rangeSelectors} = useRangeQueryValues();
 
 	const {selectedChannel} = useChannelContext();
 
@@ -111,7 +113,7 @@ const AssetDashboard: React.FC<{
 	// Shared by the tab links and the breadcrumb back to the list.
 
 	const routeQueries = pickBy({
-		...rangeSelectorsFromQuery,
+		...rangeSelectors,
 		accountId,
 		accountName,
 		segmentId,
@@ -172,6 +174,7 @@ const AssetDashboard: React.FC<{
 								initialAccountId={accountId}
 								initialAccountName={accountName}
 								onFilterChange={setAccount}
+								rangeQueryValues={apiRangeParams}
 							/>
 						)}
 
