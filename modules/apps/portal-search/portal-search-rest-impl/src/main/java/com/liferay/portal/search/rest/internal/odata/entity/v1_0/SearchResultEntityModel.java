@@ -26,10 +26,16 @@ public class SearchResultEntityModel implements EntityModel {
 
 	public SearchResultEntityModel() {
 		_entityFieldsMap = EntityModel.toEntityFieldsMap(
+			new BooleanEntityField(
+				"cmpProjectTask", locale -> "cmpProjectTask"),
 			new BooleanEntityField("cmsRoot", locale -> "cms_root"),
+			new BooleanEntityField("cmsTask", locale -> "cmsTask"),
 			new BooleanEntityField("completed", locale -> "completed"),
 			new BooleanEntityField(
 				"rootDescendantNode", locale -> "rootDescendantNode"),
+			new CollectionEntityField(
+				new IntegerEntityField(
+					"assigneeClassPKs", locale -> "assigneeClassPKs")),
 			new CollectionEntityField(
 				new IntegerEntityField(
 					"cmpFunnelStageCategoryIds",

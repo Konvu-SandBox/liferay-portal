@@ -358,6 +358,20 @@ public class PLOEntryLocalServiceWrapper
 			companyId, keywords, start, end, orderByComparator);
 	}
 
+	@Override
+	public java.util.List<com.liferay.portal.language.override.model.PLOEntry>
+		getPLOEntries(
+			long companyId, String keywords,
+			com.liferay.petra.sql.dsl.expression.Predicate predicate, int start,
+			int end,
+			com.liferay.portal.kernel.util.OrderByComparator
+				<com.liferay.portal.language.override.model.PLOEntry>
+					orderByComparator) {
+
+		return _ploEntryLocalService.getPLOEntries(
+			companyId, keywords, predicate, start, end, orderByComparator);
+	}
+
 	/**
 	 * Returns the number of plo entries.
 	 *
@@ -369,13 +383,17 @@ public class PLOEntryLocalServiceWrapper
 	}
 
 	@Override
-	public int getPLOEntriesCount(long companyId) {
-		return _ploEntryLocalService.getPLOEntriesCount(companyId);
+	public int getPLOEntriesCount(long companyId, String keywords) {
+		return _ploEntryLocalService.getPLOEntriesCount(companyId, keywords);
 	}
 
 	@Override
-	public int getPLOEntriesCount(long companyId, String keywords) {
-		return _ploEntryLocalService.getPLOEntriesCount(companyId, keywords);
+	public int getPLOEntriesCount(
+		long companyId, String keywords,
+		com.liferay.petra.sql.dsl.expression.Predicate predicate) {
+
+		return _ploEntryLocalService.getPLOEntriesCount(
+			companyId, keywords, predicate);
 	}
 
 	/**
@@ -458,4 +476,4 @@ public class PLOEntryLocalServiceWrapper
 	private PLOEntryLocalService _ploEntryLocalService;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1052574815
+// LIFERAY-SERVICE-BUILDER-HASH:-1806720149

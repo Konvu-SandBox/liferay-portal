@@ -16,7 +16,6 @@ import com.liferay.adaptive.media.image.scaler.AMImageScaler;
 import com.liferay.adaptive.media.image.scaler.AMImageScalerRegistry;
 import com.liferay.adaptive.media.image.service.AMImageEntryLocalService;
 import com.liferay.adaptive.media.image.validator.AMImageValidator;
-import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.repository.model.FileVersion;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
@@ -62,78 +61,6 @@ public class AMImageProcessorImplTest {
 	}
 
 	@Test
-	public void testCleanUpFileVersion() throws Exception {
-		Mockito.when(
-			_amImageValidator.isValid(Mockito.any(FileVersion.class))
-		).thenReturn(
-			true
-		);
-
-		_amImageAMProcessor.cleanUp(_fileVersion);
-
-		Mockito.verify(
-			_amImageEntryLocalService
-		).deleteAMImageEntryFileVersion(
-			_fileVersion
-		);
-	}
-
-	@Test(expected = AMRuntimeException.IOException.class)
-	public void testCleanUpIOException() throws Exception {
-		Mockito.when(
-			_amImageValidator.isValid(Mockito.any(FileVersion.class))
-		).thenReturn(
-			true
-		);
-
-		Mockito.doThrow(
-			AMRuntimeException.IOException.class
-		).when(
-			_amImageEntryLocalService
-		).deleteAMImageEntryFileVersion(
-			Mockito.any(FileVersion.class)
-		);
-
-		_amImageAMProcessor.cleanUp(_fileVersion);
-	}
-
-	@Test(expected = PortalException.class)
-	public void testCleanUpPortalException() throws Exception {
-		Mockito.when(
-			_amImageValidator.isValid(Mockito.any(FileVersion.class))
-		).thenReturn(
-			true
-		);
-
-		Mockito.doThrow(
-			PortalException.class
-		).when(
-			_amImageEntryLocalService
-		).deleteAMImageEntryFileVersion(
-			Mockito.any(FileVersion.class)
-		);
-
-		_amImageAMProcessor.cleanUp(_fileVersion);
-	}
-
-	@Test
-	public void testCleanUpWhenNotSupported() throws Exception {
-		Mockito.when(
-			_amImageValidator.isValid(Mockito.any(FileVersion.class))
-		).thenReturn(
-			false
-		);
-
-		_amImageAMProcessor.cleanUp(_fileVersion);
-
-		Mockito.verify(
-			_amImageEntryLocalService, Mockito.never()
-		).deleteAMImageEntryFileVersion(
-			_fileVersion
-		);
-	}
-
-	@Test
 	public void testProcessConfigurationWhenAMImageEntryAlreadyExists()
 		throws Exception {
 
@@ -157,6 +84,13 @@ public class AMImageProcessorImplTest {
 				Mockito.anyString(), Mockito.anyLong())
 		).thenReturn(
 			_amImageEntry
+		);
+
+		Mockito.when(
+			_amImageEntryLocalService.hasAMImageEntryContent(
+				Mockito.nullable(String.class), Mockito.eq(_fileVersion))
+		).thenReturn(
+			true
 		);
 
 		Mockito.when(
@@ -187,6 +121,13 @@ public class AMImageProcessorImplTest {
 			_fileEntry.isCheckedOut()
 		).thenReturn(
 			false
+		);
+
+		Mockito.when(
+			_amImageScalerRegistry.getAMImageScaler(
+				Mockito.nullable(String.class))
+		).thenReturn(
+			_amImageScaler
 		);
 
 		_amImageAMProcessor.process(
@@ -355,54 +296,6 @@ public class AMImageProcessorImplTest {
 		).scaleImage(
 			Mockito.any(FileVersion.class),
 			Mockito.any(AMImageConfigurationEntry.class)
-		);
-	}
-
-	@Test
-	public void testProcessConfigurationWhenNoAMImageScalerAvailable()
-		throws Exception {
-
-		Mockito.when(
-			_amImageValidator.isProcessingSupported(_fileVersion)
-		).thenReturn(
-			true
-		);
-
-		AMImageConfigurationEntry amImageConfigurationEntry =
-			new AMImageConfigurationEntryImpl(
-				RandomTestUtil.randomString(), RandomTestUtil.randomString(),
-				Collections.emptyMap());
-
-		Mockito.when(
-			_amImageConfigurationHelper.getAMImageConfigurationEntries(
-				Mockito.anyLong())
-		).thenReturn(
-			Collections.singleton(amImageConfigurationEntry)
-		);
-
-		Mockito.when(
-			_amImageConfigurationHelper.getAMImageConfigurationEntry(
-				Mockito.anyLong(), Mockito.nullable(String.class))
-		).thenReturn(
-			amImageConfigurationEntry
-		);
-
-		Mockito.when(
-			_amImageScalerRegistry.getAMImageScaler(
-				Mockito.nullable(String.class))
-		).thenReturn(
-			null
-		);
-
-		_amImageAMProcessor.process(
-			_fileVersion, RandomTestUtil.randomString());
-
-		Mockito.verify(
-			_amImageEntryLocalService, Mockito.never()
-		).addAMImageEntry(
-			Mockito.any(AMImageConfigurationEntry.class),
-			Mockito.any(FileVersion.class), Mockito.anyInt(), Mockito.anyInt(),
-			Mockito.any(InputStream.class), Mockito.anyLong()
 		);
 	}
 
