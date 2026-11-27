@@ -51,6 +51,7 @@ import com.liferay.portal.kernel.audit.AuditMessage;
 import com.liferay.portal.kernel.audit.AuditRouter;
 import com.liferay.portal.kernel.exception.ModelListenerException;
 import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.json.JSONArray;
 import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.json.JSONObject;
@@ -121,6 +122,10 @@ public class ObjectEntryModelListener extends BaseModelListener<ObjectEntry> {
 	public void onAfterRemove(ObjectEntry objectEntry)
 		throws ModelListenerException {
 
+		if (objectEntry.isTypeDraft()) {
+			return;
+		}
+
 		try {
 			_route(EventTypes.DELETE, null, objectEntry);
 
@@ -172,6 +177,10 @@ public class ObjectEntryModelListener extends BaseModelListener<ObjectEntry> {
 			ObjectEntry originalObjectEntry, ObjectEntry objectEntry)
 		throws ModelListenerException {
 
+		if (objectEntry.isTypeDraft()) {
+			return;
+		}
+
 		try {
 			_route(EventTypes.UPDATE, originalObjectEntry, objectEntry);
 
@@ -214,6 +223,10 @@ public class ObjectEntryModelListener extends BaseModelListener<ObjectEntry> {
 	public void onBeforeRemove(ObjectEntry objectEntry)
 		throws ModelListenerException {
 
+		if (objectEntry.isTypeDraft()) {
+			return;
+		}
+
 		_runRelevantObjectEntryModelListeners(
 			objectEntry,
 			relevantObjectEntryModelListener ->
@@ -226,6 +239,10 @@ public class ObjectEntryModelListener extends BaseModelListener<ObjectEntry> {
 		throws ModelListenerException {
 
 		_validateObjectEntry(originalObjectEntry, objectEntry);
+
+		if (objectEntry.isTypeDraft()) {
+			return;
+		}
 
 		_runRelevantObjectEntryModelListeners(
 			objectEntry,
@@ -720,7 +737,10 @@ public class ObjectEntryModelListener extends BaseModelListener<ObjectEntry> {
 			}
 		}
 
-		if (!objectDefinition.isEnableObjectEntryVersioning()) {
+		if (FeatureFlagManagerUtil.isEnabled(
+				rootObjectEntry.getCompanyId(), "LPD-116183") ||
+			!objectDefinition.isEnableObjectEntryVersioning()) {
+
 			return;
 		}
 

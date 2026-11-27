@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
-import {DateRenderer, IInternalRenderer} from '@liferay/frontend-data-set-web';
+import {IInternalRenderer} from '@liferay/frontend-data-set-web';
 
-import {openCMSModal} from '../../common/utils/openCMSModal';
-import AssignToModalContent from '../home/modal/AssignToModalContent';
-import UpdateDueDateModalContent from '../home/modal/UpdateDueDateModalContent';
-import AuthorRenderer from './cell_renderers/AuthorRenderer';
+import {tasksFDSAtom} from '../tasks/atoms';
+import {onWorkflowTaskActionClick} from '../tasks/onWorkflowTaskActionClick';
+import AssigneeRenderer from './cell_renderers/AssigneeRenderer';
+import DueDateRenderer from './cell_renderers/DueDateRenderer';
 import SimpleActionLinkRenderer from './cell_renderers/SimpleActionLinkRenderer';
-import TaskStatusRenderer from './cell_renderers/TaskStatusRenderer';
+import WorkflowStateRenderer from './cell_renderers/WorkflowStateRenderer';
 
 export default function TasksFDSPropsTransformer({
 	...otherProps
@@ -20,17 +20,12 @@ export default function TasksFDSPropsTransformer({
 }) {
 	return {
 		...otherProps,
+		atom: tasksFDSAtom,
 		customRenderers: {
 			tableCell: [
 				{
-					component: AuthorRenderer,
-					name: 'authorTableCellRenderer',
-					type: 'internal',
-				} as IInternalRenderer,
-				{
-					component: ({itemData}) =>
-						DateRenderer({value: itemData.embedded?.dateDue}),
-					name: 'dueDateTableCellRenderer',
+					component: AssigneeRenderer,
+					name: 'assigneeTableCellRenderer',
 					type: 'internal',
 				} as IInternalRenderer,
 				{
@@ -43,72 +38,18 @@ export default function TasksFDSPropsTransformer({
 					type: 'internal',
 				} as IInternalRenderer,
 				{
-					component: TaskStatusRenderer,
-					name: 'taskStatusTableCellRenderer',
+					component: DueDateRenderer,
+					name: 'dueDateTableCellRenderer',
+					type: 'internal',
+				} as IInternalRenderer,
+				{
+					component: WorkflowStateRenderer,
+					name: 'workflowStateTableCellRenderer',
 					type: 'internal',
 				} as IInternalRenderer,
 			],
 		},
 		hideManagementBarInEmptyState: true,
-		async onActionDropdownItemClick({
-			action,
-			itemData,
-			loadData,
-		}: {
-			action: {data?: {id?: string}};
-			itemData: {embedded?: {dateDue?: string; id?: string}};
-			loadData: () => Promise<void>;
-		}) {
-			const workflowTaskId = Number(itemData.embedded?.id);
-
-			if (action?.data?.id === 'assignToMeWorkflowTask') {
-				openCMSModal({
-					contentComponent: ({
-						closeModal,
-					}: {
-						closeModal: () => void;
-					}) =>
-						AssignToModalContent({
-							assignable: false,
-							closeModal,
-							loadData,
-							workflowTaskId,
-						}),
-					size: 'md',
-				});
-			}
-			else if (action?.data?.id === 'assignToWorkflowTask') {
-				openCMSModal({
-					contentComponent: ({
-						closeModal,
-					}: {
-						closeModal: () => void;
-					}) =>
-						AssignToModalContent({
-							assignable: true,
-							closeModal,
-							loadData,
-							workflowTaskId,
-						}),
-					size: 'md',
-				});
-			}
-			else if (action?.data?.id === 'updateDueDateWorkflowTask') {
-				openCMSModal({
-					contentComponent: ({
-						closeModal,
-					}: {
-						closeModal: () => void;
-					}) =>
-						UpdateDueDateModalContent({
-							closeModal,
-							dueDate: itemData.embedded?.dateDue as string,
-							loadData,
-							workflowTaskId,
-						}),
-					size: 'md',
-				});
-			}
-		},
+		onActionDropdownItemClick: onWorkflowTaskActionClick,
 	};
 }

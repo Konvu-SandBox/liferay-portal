@@ -6,8 +6,6 @@ import {Provider} from 'react-redux';
 import {render, screen} from '@testing-library/react';
 import {useLDPEnabled} from 'shared/hooks/useLDPEnabled';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/components/download-report/DownloadCSVReport', () => ({
 	__esModule: true,
 	default: ({assetType}: {assetType?: string}) => (
@@ -37,7 +35,16 @@ jest.mock('route-middleware/BundleRouter', () => ({
 
 jest.mock('shared/components/AccountDropdown', () => ({
 	__esModule: true,
-	default: () => <div data-testid="account-dropdown" />,
+	default: ({
+		rangeQueryValues,
+	}: {
+		rangeQueryValues?: Record<string, string | null>;
+	}) => (
+		<div
+			data-range-key={rangeQueryValues?.rangeKey}
+			data-testid="account-dropdown"
+		/>
+	),
 }));
 
 jest.mock('shared/components/SegmentDropdown', () => ({
@@ -120,6 +127,15 @@ describe('AssetDashboard', () => {
 		expect(screen.getByTestId('account-dropdown')).toBeInTheDocument();
 		expect(screen.getByTestId('download-pdf')).toBeInTheDocument();
 		expect(screen.queryByTestId('download-csv')).toBeNull();
+	});
+
+	it('scopes the account filter to the selected range', () => {
+		renderDashboard();
+
+		expect(screen.getByTestId('account-dropdown')).toHaveAttribute(
+			'data-range-key',
+			'30'
+		);
 	});
 
 	it('shows an unscoped segment filter on the accounts tab', () => {

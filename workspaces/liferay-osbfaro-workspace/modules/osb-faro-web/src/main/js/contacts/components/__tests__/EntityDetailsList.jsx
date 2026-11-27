@@ -7,8 +7,6 @@ import {MemoryRouter, Route, Routes as RouterRoutes} from 'react-router-dom';
 import {Routes} from 'shared/util/router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const defaultProps = {
 	groupId: '23',
 	title: 'Test Test'
@@ -57,7 +55,7 @@ describe('EntityDetailsList', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		fireEvent.change(getByPlaceholderText('Search'), {
+		fireEvent.change(getByPlaceholderText(/^search$/i), {
 			target: {value: 'Agriculture'}
 		});
 

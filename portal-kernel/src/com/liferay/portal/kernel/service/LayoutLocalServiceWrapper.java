@@ -691,6 +691,11 @@ public class LayoutLocalServiceWrapper
 	}
 
 	@Override
+	public java.util.List<Layout> fetchDraftLayouts(long plid) {
+		return _layoutLocalService.fetchDraftLayouts(plid);
+	}
+
+	@Override
 	public Layout fetchFirstLayout(
 		long groupId, boolean privateLayout, long parentLayoutId) {
 
@@ -797,6 +802,12 @@ public class LayoutLocalServiceWrapper
 		return _layoutLocalService.getBrowsableLayout(layout);
 	}
 
+	@Override
+	public long[] getClassPKsByLaunchSetId(long groupId, long launchSetId) {
+		return _layoutLocalService.getClassPKsByLaunchSetId(
+			groupId, launchSetId);
+	}
+
 	/**
 	 * Returns the primary key of the default layout for the group.
 	 *
@@ -820,24 +831,6 @@ public class LayoutLocalServiceWrapper
 	@Override
 	public long getDefaultPlid(long groupId, boolean privateLayout) {
 		return _layoutLocalService.getDefaultPlid(groupId, privateLayout);
-	}
-
-	/**
-	 * Returns primary key of the default portlet layout for the group
-	 *
-	 * @param groupId the primary key of the group
-	 * @param privateLayout whether the layout is private to the group
-	 * @param portletId the primary key of the portlet
-	 * @return the primary key of the default portlet layout for the group;
-	 {@link LayoutConstants#DEFAULT_PLID} otherwise
-	 * @throws PortalException
-	 */
-	@Override
-	public long getDefaultPlid(
-		long groupId, boolean privateLayout, String portletId) {
-
-		return _layoutLocalService.getDefaultPlid(
-			groupId, privateLayout, portletId);
 	}
 
 	@Override
@@ -1428,6 +1421,14 @@ public class LayoutLocalServiceWrapper
 
 	@Override
 	public int getLayoutsCount(
+		long groupId, boolean privateLayout, int[] statuses) {
+
+		return _layoutLocalService.getLayoutsCount(
+			groupId, privateLayout, statuses);
+	}
+
+	@Override
+	public int getLayoutsCount(
 		long groupId, boolean privateLayout, long parentLayoutId) {
 
 		return _layoutLocalService.getLayoutsCount(
@@ -1486,14 +1487,6 @@ public class LayoutLocalServiceWrapper
 
 		return _layoutLocalService.getLayoutsCount(
 			user, privateLayout, includeUserGroups);
-	}
-
-	@Override
-	public java.util.List<Layout> getMasterLayouts(
-		long groupId, String masterLayoutPageTemplateEntryERC) {
-
-		return _layoutLocalService.getMasterLayouts(
-			groupId, masterLayoutPageTemplateEntryERC);
 	}
 
 	@Override
@@ -1674,24 +1667,6 @@ public class LayoutLocalServiceWrapper
 	}
 
 	@Override
-	public boolean hasLayoutSetPrototypeLayout(
-			long layoutSetPrototypeId, String layoutUuid)
-		throws com.liferay.portal.kernel.exception.PortalException {
-
-		return _layoutLocalService.hasLayoutSetPrototypeLayout(
-			layoutSetPrototypeId, layoutUuid);
-	}
-
-	@Override
-	public boolean hasLayoutSetPrototypeLayout(
-			String layoutSetPrototypeUuid, long companyId, String layoutUuid)
-		throws com.liferay.portal.kernel.exception.PortalException {
-
-		return _layoutLocalService.hasLayoutSetPrototypeLayout(
-			layoutSetPrototypeUuid, companyId, layoutUuid);
-	}
-
-	@Override
 	public java.util.List<Layout> search(
 			long groupId, boolean privateLayout, String keywords,
 			boolean searchOnlyByTitle, String[] types, int start, int end,
@@ -1702,6 +1677,20 @@ public class LayoutLocalServiceWrapper
 		return _layoutLocalService.search(
 			groupId, privateLayout, keywords, searchOnlyByTitle, types, start,
 			end, orderByComparator);
+	}
+
+	@Override
+	public java.util.List<Layout> search(
+			long groupId, boolean privateLayout, String keywords,
+			boolean searchOnlyByTitle, String[] types, int[] statuses,
+			int start, int end,
+			com.liferay.portal.kernel.util.OrderByComparator<Layout>
+				orderByComparator)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _layoutLocalService.search(
+			groupId, privateLayout, keywords, searchOnlyByTitle, types,
+			statuses, start, end, orderByComparator);
 	}
 
 	@Override
@@ -1743,12 +1732,34 @@ public class LayoutLocalServiceWrapper
 
 	@Override
 	public int searchCount(
+			com.liferay.portal.kernel.model.Group group, boolean privateLayout,
+			String keywords, boolean searchOnlyByTitle, String[] types,
+			int[] statuses)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _layoutLocalService.searchCount(
+			group, privateLayout, keywords, searchOnlyByTitle, types, statuses);
+	}
+
+	@Override
+	public int searchCount(
 			long groupId, long userId, boolean privateLayout, String keywords,
 			boolean searchOnlyByTitle, String[] types)
 		throws com.liferay.portal.kernel.exception.PortalException {
 
 		return _layoutLocalService.searchCount(
 			groupId, userId, privateLayout, keywords, searchOnlyByTitle, types);
+	}
+
+	@Override
+	public int searchCount(
+			long groupId, long userId, boolean privateLayout, String keywords,
+			boolean searchOnlyByTitle, String[] types, int[] statuses)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _layoutLocalService.searchCount(
+			groupId, userId, privateLayout, keywords, searchOnlyByTitle, types,
+			statuses);
 	}
 
 	/**
@@ -1989,6 +2000,18 @@ public class LayoutLocalServiceWrapper
 
 		return _layoutLocalService.updateLookAndFeel(
 			groupId, privateLayout, layoutId, themeId, colorSchemeId, css);
+	}
+
+	@Override
+	public Layout updateMasterLayoutPageTemplateEntry(
+			long groupId, boolean privateLayout, long layoutId,
+			String masterLayoutPageTemplateEntryERC,
+			String masterLayoutPageTemplateEntryScopeERC)
+		throws com.liferay.portal.kernel.exception.PortalException {
+
+		return _layoutLocalService.updateMasterLayoutPageTemplateEntry(
+			groupId, privateLayout, layoutId, masterLayoutPageTemplateEntryERC,
+			masterLayoutPageTemplateEntryScopeERC);
 	}
 
 	/**
@@ -2313,4 +2336,4 @@ public class LayoutLocalServiceWrapper
 	private LayoutLocalService _layoutLocalService;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:711216464
+// LIFERAY-SERVICE-BUILDER-HASH:-180539413
