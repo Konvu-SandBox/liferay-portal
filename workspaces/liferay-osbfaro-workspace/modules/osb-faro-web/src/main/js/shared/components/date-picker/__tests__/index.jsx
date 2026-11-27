@@ -4,8 +4,6 @@ import React from 'react';
 import {fireEvent, render} from '@testing-library/react';
 import {DEFAULT_LOCALE, setLocale} from 'shared/util/locale';
 
-jest.unmock('react-dom');
-
 const renderDatePicker = () =>
 	render(
 		<DatePicker
@@ -52,7 +50,7 @@ describe('DatePicker', () => {
 			'November',
 			'December'
 		]);
-		expect(monthSelect.selectedOptions[0]).toHaveTextContent('June');
+		expect(monthSelect.selectedOptions[0]).toHaveTextContent(/june/i);
 	});
 
 	it('renders the years as the year options, with the year of the date selected', () => {

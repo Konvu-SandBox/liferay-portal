@@ -12,11 +12,11 @@ import com.liferay.oauth2.provider.service.OAuth2ApplicationLocalService;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.configuration.test.util.ConfigurationTestUtil;
 import com.liferay.portal.kernel.model.User;
-import com.liferay.portal.kernel.module.util.SystemBundleUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
+import com.liferay.portal.kernel.test.util.BundleContextTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
@@ -61,7 +61,10 @@ public class OAuth2ApplicationLocalServiceTest {
 
 	@Before
 	public void setUp() throws Exception {
-		_serviceRegistration = _bundleContext.registerService(
+		BundleContext bundleContext = BundleContextTestUtil.getBundleContext(
+			OAuth2ApplicationLocalServiceTest.class);
+
+		_serviceRegistration = bundleContext.registerService(
 			SecretProvider.class, new TestSecretProvider(),
 			HashMapDictionaryBuilder.<String, Object>put(
 				"secret.provider.id", _PROVIDER_ID
@@ -72,7 +75,7 @@ public class OAuth2ApplicationLocalServiceTest {
 			HashMapDictionaryBuilder.<String, Object>put(
 				"companySecretProviderId", _PROVIDER_ID
 			).put(
-				"systemSecretProviderId", _PROVIDER_ID
+				"systemSecretProviderId", RandomTestUtil.randomString()
 			).build());
 
 		_user = UserTestUtil.addUser();
@@ -88,38 +91,9 @@ public class OAuth2ApplicationLocalServiceTest {
 
 	@Test
 	public void testGetPlaintextClientSecret() throws Exception {
-		try (AutoCloseable autoCloseable =
-				ReflectionTestUtil.setFieldValueWithAutoCloseable(
-					PropsValues.class, "FIPS_ENABLED", true)) {
-
-			String clientSecret = RandomTestUtil.randomString();
-
-			_oAuth2Application = _addOAuth2Application(clientSecret);
-
-			Assert.assertEquals(
-				clientSecret,
-				_oAuth2ApplicationLocalService.getPlaintextClientSecret(
-					_oAuth2Application));
-
-			String storedClientSecret = _oAuth2Application.getClientSecret();
-
-			Assert.assertTrue(
-				storedClientSecret,
-				KeyReferenceUtil.isKeyReference(storedClientSecret));
-		}
-	}
-
-	@Test
-	public void testGetPlaintextClientSecretWhenDisabled() throws Exception {
-		String clientSecret = RandomTestUtil.randomString();
-
-		_oAuth2Application = _addOAuth2Application(clientSecret);
-
-		Assert.assertEquals(clientSecret, _oAuth2Application.getClientSecret());
-		Assert.assertEquals(
-			clientSecret,
-			_oAuth2ApplicationLocalService.getPlaintextClientSecret(
-				_oAuth2Application));
+		_testGetPlaintextClientSecret();
+		_testGetPlaintextClientSecretWhenDisabled();
+		_testGetPlaintextClientSecretWhenSecretProviderIsNotConfigured();
 	}
 
 	private OAuth2Application _addOAuth2Application(String clientSecret)
@@ -134,17 +108,80 @@ public class OAuth2ApplicationLocalServiceTest {
 			null, false, null, false, new ServiceContext());
 	}
 
+	private void _testGetPlaintextClientSecret() throws Exception {
+		try (AutoCloseable autoCloseable =
+				ReflectionTestUtil.setFieldValueWithAutoCloseable(
+					PropsValues.class, "FIPS_ENABLED", true)) {
+
+			String clientSecret = RandomTestUtil.randomString();
+
+			OAuth2Application oAuth2Application = _addOAuth2Application(
+				clientSecret);
+
+			Assert.assertEquals(
+				clientSecret,
+				_oAuth2ApplicationLocalService.getPlaintextClientSecret(
+					oAuth2Application));
+
+			String storedClientSecret = oAuth2Application.getClientSecret();
+
+			Assert.assertTrue(
+				storedClientSecret,
+				KeyReferenceUtil.isKeyReference(storedClientSecret));
+
+			_oAuth2ApplicationLocalService.deleteOAuth2Application(
+				oAuth2Application);
+		}
+	}
+
+	private void _testGetPlaintextClientSecretWhenDisabled() throws Exception {
+		String clientSecret = RandomTestUtil.randomString();
+
+		OAuth2Application oAuth2Application = _addOAuth2Application(
+			clientSecret);
+
+		Assert.assertEquals(clientSecret, oAuth2Application.getClientSecret());
+		Assert.assertEquals(
+			clientSecret,
+			_oAuth2ApplicationLocalService.getPlaintextClientSecret(
+				oAuth2Application));
+
+		_oAuth2ApplicationLocalService.deleteOAuth2Application(
+			oAuth2Application);
+	}
+
+	private void _testGetPlaintextClientSecretWhenSecretProviderIsNotConfigured()
+		throws Exception {
+
+		ConfigurationTestUtil.deleteConfiguration(
+			_KEY_MANAGER_CUSTOM_PROFILE_CONFIGURATION_PID);
+
+		try (AutoCloseable autoCloseable =
+				ReflectionTestUtil.setFieldValueWithAutoCloseable(
+					PropsValues.class, "FIPS_ENABLED", true)) {
+
+			String clientSecret = RandomTestUtil.randomString();
+
+			OAuth2Application oAuth2Application = _addOAuth2Application(
+				clientSecret);
+
+			Assert.assertEquals(
+				clientSecret, oAuth2Application.getClientSecret());
+			Assert.assertEquals(
+				clientSecret,
+				_oAuth2ApplicationLocalService.getPlaintextClientSecret(
+					oAuth2Application));
+
+			_oAuth2ApplicationLocalService.deleteOAuth2Application(
+				oAuth2Application);
+		}
+	}
+
 	private static final String _KEY_MANAGER_CUSTOM_PROFILE_CONFIGURATION_PID =
 		"com.liferay.portal.security.key.internal.profile.configuration." +
 			"KeyManagerCustomProfileConfiguration";
 
 	private static final String _PROVIDER_ID = "test-oauth2-secret";
-
-	private static final BundleContext _bundleContext =
-		SystemBundleUtil.getBundleContext();
-
-	@DeleteAfterTestRun
-	private OAuth2Application _oAuth2Application;
 
 	@Inject
 	private OAuth2ApplicationLocalService _oAuth2ApplicationLocalService;
