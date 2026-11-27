@@ -10,6 +10,7 @@ interface IProject {
 	friendlyURL: string;
 	groupId: number;
 	incidentReportEmailAddresses: List<string>;
+	ldpEnabled: boolean;
 	name: string;
 	ownerEmailAddress: string;
 	recommendationsEnabled: boolean;
@@ -18,6 +19,7 @@ interface IProject {
 	state: string;
 	stateStartDate: number;
 	timeZone: TimeZone;
+	url: string;
 	userId: number;
 }
 
@@ -31,6 +33,7 @@ export default class Project
 		friendlyURL: null,
 		groupId: null,
 		incidentReportEmailAddresses: List(),
+		ldpEnabled: false,
 		name: '',
 		ownerEmailAddress: '',
 		recommendationsEnabled: false,
@@ -39,6 +42,7 @@ export default class Project
 		state: null,
 		stateStartDate: null,
 		timeZone: new TimeZone(),
+		url: null,
 		userId: null,
 	})
 	implements IProject
@@ -51,6 +55,7 @@ export default class Project
 	declare friendlyURL: string;
 	declare groupId: number;
 	declare incidentReportEmailAddresses: List<string>;
+	declare ldpEnabled: boolean;
 	declare name: string;
 	declare ownerEmailAddress: string;
 	declare recommendationsEnabled: boolean;
@@ -58,6 +63,7 @@ export default class Project
 	declare serverLocation: string;
 	declare state: string;
 	declare stateStartDate: number;
+	declare url: string;
 	declare timeZone: TimeZone;
 	declare userId: number;
 

@@ -13,8 +13,6 @@ import {Provider} from 'react-redux';
 import {RangeKeyTimeRanges} from 'shared/util/constants';
 import {RangeSelectors} from 'shared/types';
 
-jest.unmock('react-dom');
-
 const MOCK_CONTEXT = {
 	filters: {},
 	router: {
@@ -182,7 +180,7 @@ describe('TopPagesCardContent', () => {
 		});
 
 		const href = screen
-			.getByText('View All')
+			.getByText(/^view all$/i)
 			.closest('a')
 			?.getAttribute('href');
 

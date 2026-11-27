@@ -2,8 +2,6 @@ import AccountMetricsCard from '../AccountMetricsCard';
 import React from 'react';
 import {cleanup, fireEvent, render, screen} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const renderAccountMetricsCard = (props = {}) =>
 	render(
 		<AccountMetricsCard
@@ -151,7 +149,7 @@ describe('AccountMetricsCard', () => {
 			renderAccountMetricsCard({error: true});
 
 			expect(
-				screen.getByText('An unexpected error occurred.')
+				screen.getByText(/^an unexpected error occurred\.$/i)
 			).toBeInTheDocument();
 			expect(screen.queryByText('1.2K')).not.toBeInTheDocument();
 		});
@@ -175,7 +173,7 @@ describe('AccountMetricsCard', () => {
 			renderAccountMetricsCard({error: false});
 
 			expect(
-				screen.queryByText('An unexpected error occurred.')
+				screen.queryByText(/^an unexpected error occurred\.$/i)
 			).not.toBeInTheDocument();
 			expect(screen.getByText('1.2K')).toBeInTheDocument();
 		});
@@ -193,7 +191,7 @@ describe('AccountMetricsCard', () => {
 				container.querySelector('.loading-root')
 			).toBeInTheDocument();
 			expect(
-				screen.queryByText('An unexpected error occurred.')
+				screen.queryByText(/^an unexpected error occurred\.$/i)
 			).not.toBeInTheDocument();
 		});
 
@@ -202,7 +200,7 @@ describe('AccountMetricsCard', () => {
 
 			renderAccountMetricsCard({error: true, refetch});
 
-			fireEvent.click(screen.getByText('Reload'));
+			fireEvent.click(screen.getByText(/^reload$/i));
 
 			expect(refetch).toHaveBeenCalledTimes(1);
 		});
@@ -211,9 +209,9 @@ describe('AccountMetricsCard', () => {
 			renderAccountMetricsCard({error: true});
 
 			expect(
-				screen.getByText('An unexpected error occurred.')
+				screen.getByText(/^an unexpected error occurred\.$/i)
 			).toBeInTheDocument();
-			expect(screen.queryByText('Reload')).not.toBeInTheDocument();
+			expect(screen.queryByText(/^reload$/i)).not.toBeInTheDocument();
 		});
 	});
 

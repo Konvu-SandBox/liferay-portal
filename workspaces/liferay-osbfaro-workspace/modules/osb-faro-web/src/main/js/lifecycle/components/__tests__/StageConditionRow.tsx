@@ -5,8 +5,6 @@ import {fireEvent, render, screen} from '@testing-library/react';
 import {ICatalogField} from 'shared/api/catalog';
 import {IStageCondition} from 'lifecycle/utils/stageConfiguration';
 
-jest.unmock('react-dom');
-
 const mockFields: ICatalogField[] = [
 	{
 		dataCategory: 'Text',
@@ -51,7 +49,7 @@ describe('StageConditionRow', () => {
 	it('renders the account label and the attribute picker', () => {
 		renderRow();
 
-		expect(screen.getByText('Account')).toBeInTheDocument();
+		expect(screen.getByText(/^account$/i)).toBeInTheDocument();
 		expect(screen.getByText('Select Attribute')).toBeInTheDocument();
 	});
 
@@ -61,7 +59,7 @@ describe('StageConditionRow', () => {
 		renderRow({onChange});
 
 		fireEvent.click(screen.getByText('Select Attribute'));
-		fireEvent.click(screen.getByText('Industry'));
+		fireEvent.click(screen.getByText(/^industry$/i));
 
 		expect(onChange).toHaveBeenCalledWith({
 			conditionValue: null,

@@ -12,6 +12,7 @@ import com.liferay.asset.display.page.service.AssetDisplayPageEntryLocalServiceU
 import com.liferay.depot.model.DepotEntryGroupRel;
 import com.liferay.depot.service.DepotEntryGroupRelLocalService;
 import com.liferay.depot.service.DepotEntryLocalService;
+import com.liferay.design.library.util.DesignLibraryUtil;
 import com.liferay.document.library.kernel.service.DLAppLocalServiceUtil;
 import com.liferay.dynamic.data.mapping.form.renderer.constants.DDMFormRendererConstants;
 import com.liferay.dynamic.data.mapping.form.values.factory.DDMFormValuesFactory;
@@ -19,9 +20,11 @@ import com.liferay.dynamic.data.mapping.item.selector.DDMTemplateItemSelectorCri
 import com.liferay.dynamic.data.mapping.item.selector.DDMTemplateItemSelectorReturnType;
 import com.liferay.dynamic.data.mapping.model.DDMStructure;
 import com.liferay.dynamic.data.mapping.model.DDMTemplate;
+import com.liferay.dynamic.data.mapping.model.Value;
 import com.liferay.dynamic.data.mapping.service.DDMStructureLocalServiceUtil;
 import com.liferay.dynamic.data.mapping.service.DDMTemplateLocalServiceUtil;
 import com.liferay.dynamic.data.mapping.service.DDMTemplateServiceUtil;
+import com.liferay.dynamic.data.mapping.storage.DDMFormFieldValue;
 import com.liferay.dynamic.data.mapping.storage.DDMFormValues;
 import com.liferay.dynamic.data.mapping.util.DDMFormValuesToMapConverter;
 import com.liferay.frontend.taglib.clay.servlet.taglib.util.TabsItem;
@@ -48,7 +51,7 @@ import com.liferay.journal.web.internal.util.RecentGroupManagerUtil;
 import com.liferay.layout.item.selector.LayoutItemSelectorCriterion;
 import com.liferay.layout.page.template.model.LayoutPageTemplateEntry;
 import com.liferay.layout.page.template.service.LayoutPageTemplateEntryLocalServiceUtil;
-import com.liferay.layout.page.template.service.LayoutPageTemplateEntryServiceUtil;
+import com.liferay.layout.page.template.util.LayoutPageTemplateEntryUtil;
 import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
@@ -146,6 +149,19 @@ public class JournalEditArticleDisplayContext {
 			WebKeys.THEME_DISPLAY);
 
 		setViewAttributes();
+
+		if ((article != null) && article.isNew()) {
+			Locale defaultArticleLocale = LocaleUtil.fromLanguageId(
+				getDefaultArticleLanguageId());
+			Locale defaultLocale = LocaleUtil.fromLanguageId(
+				article.getDefaultLanguageId());
+
+			_moveLocalizedValue(
+				article.getDescriptionMap(), defaultLocale,
+				defaultArticleLocale);
+			_moveLocalizedValue(
+				article.getTitleMap(), defaultLocale, defaultArticleLocale);
+		}
 	}
 
 	public String getArticleId() {
@@ -531,6 +547,46 @@ public class JournalEditArticleDisplayContext {
 					ddmStructure.getStructureId());
 
 			ddmFormValues = ddmStructureArticle.getDDMFormValues();
+
+			Locale defaultArticleLocale = LocaleUtil.fromLanguageId(
+				getDefaultArticleLanguageId());
+
+			if ((ddmFormValues != null) &&
+				!defaultArticleLocale.equals(
+					ddmFormValues.getDefaultLocale())) {
+
+				Map<String, List<DDMFormFieldValue>> ddmFormFieldValuesMap =
+					ddmFormValues.getDDMFormFieldValuesMap(true);
+				Locale defaultLocale = ddmFormValues.getDefaultLocale();
+
+				for (List<DDMFormFieldValue> ddmFormFieldValues :
+						ddmFormFieldValuesMap.values()) {
+
+					for (DDMFormFieldValue ddmFormFieldValue :
+							ddmFormFieldValues) {
+
+						Value value = ddmFormFieldValue.getValue();
+
+						if ((value == null) || !value.isLocalized()) {
+							continue;
+						}
+
+						_moveLocalizedValue(
+							value.getValues(), defaultLocale,
+							defaultArticleLocale);
+
+						value.setDefaultLocale(defaultArticleLocale);
+					}
+				}
+
+				Set<Locale> availableLocales =
+					ddmFormValues.getAvailableLocales();
+
+				availableLocales.remove(defaultLocale);
+				availableLocales.add(defaultArticleLocale);
+
+				ddmFormValues.setDefaultLocale(defaultArticleLocale);
+			}
 		}
 
 		if (ddmFormValues != null) {
@@ -1619,11 +1675,12 @@ public class JournalEditArticleDisplayContext {
 		}
 
 		_defaultLayoutPageTemplateEntry =
-			LayoutPageTemplateEntryServiceUtil.
-				fetchDefaultLayoutPageTemplateEntry(
-					getGroupId(),
-					PortalUtil.getClassNameId(JournalArticle.class),
-					getDDMStructureId());
+			LayoutPageTemplateEntryUtil.fetchDefaultLayoutPageTemplateEntry(
+				PortalUtil.getClassNameId(JournalArticle.class),
+				getDDMStructureId(),
+				DesignLibraryUtil.fetchConnectedDesignLibraryGroupIds(
+					getGroupId()),
+				getGroupId());
 
 		return _defaultLayoutPageTemplateEntry;
 	}
@@ -1852,6 +1909,21 @@ public class JournalEditArticleDisplayContext {
 		}
 
 		return false;
+	}
+
+	private void _moveLocalizedValue(
+		Map<Locale, String> localizedValues, Locale fromLocale,
+		Locale toLocale) {
+
+		if (fromLocale.equals(toLocale)) {
+			return;
+		}
+
+		String localizedValue = localizedValues.remove(fromLocale);
+
+		if (localizedValue != null) {
+			localizedValues.putIfAbsent(toLocale, localizedValue);
+		}
 	}
 
 	private static final int _MAX_SITES = 6;

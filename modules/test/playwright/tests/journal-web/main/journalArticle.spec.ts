@@ -266,20 +266,30 @@ baseTest(
 
 		await waitForAlert(page);
 
-		await journalEditArticlePage.goto({siteUrl: site.friendlyUrlPath});
+		try {
+			await journalEditArticlePage.goto({siteUrl: site.friendlyUrlPath});
 
-		await journalEditArticlePage.changeDefaultLanguage('pt_BR');
+			await journalEditArticlePage.changeDefaultLanguage('pt_BR');
 
-		const title = getRandomString();
+			const title = getRandomString();
 
-		await page.waitForTimeout(5000);
+			await page.waitForTimeout(5000);
 
-		await journalEditArticlePage.saveAsDraftWithPermissions(title);
+			await journalEditArticlePage.saveAsDraftWithPermissions(title);
 
-		await waitForAlert(
-			page,
-			`Success:${title} was successfully saved as a draft.`
-		);
+			await waitForAlert(
+				page,
+				`Success:${title} was successfully saved as a draft.`
+			);
+		}
+		finally {
+			await systemSettingsPage.goToSystemSetting(
+				'Web Content',
+				'Administration'
+			);
+
+			await systemSettingsPage.resetToDefaultValues();
+		}
 	}
 );
 
@@ -3423,5 +3433,76 @@ baseTest(
 		await journalEditArticlePage.previewButton.scrollIntoViewIfNeeded();
 
 		await expect(journalEditArticlePage.previewButton).toBeDisabled();
+	}
+);
+
+baseTest(
+	'Display Page Preview does not create a draft when nothing changed',
+	{
+		tag: '@LPD-113833',
+	},
+	async ({displayPageTemplatesPage, journalEditArticlePage, page, site}) => {
+		const articleTitle = getRandomString();
+		const displayPageTemplateName = getRandomString();
+
+		await displayPageTemplatesPage.goto(site.friendlyUrlPath);
+
+		await displayPageTemplatesPage.createTemplate({
+			contentSubtype: 'Basic Web Content',
+			contentType: 'Web Content Article',
+			name: displayPageTemplateName,
+		});
+
+		await journalEditArticlePage.goto({siteUrl: site.friendlyUrlPath});
+
+		await journalEditArticlePage.fillTitle(articleTitle);
+
+		await journalEditArticlePage.selectSpecificDisplayPage(
+			displayPageTemplateName
+		);
+
+		await journalEditArticlePage.publishArticle();
+
+		const articleRow = page
+			.getByTestId('row')
+			.filter({hasText: articleTitle});
+
+		await articleRow.getByRole('link', {name: articleTitle}).click();
+
+		const previewAndGoBack = async () => {
+			await journalEditArticlePage.openFieldSet(
+				'Display Page',
+				'displayPage'
+			);
+
+			await clickAndExpectToBeVisible({
+				target: page.getByRole('heading', {name: 'Preview'}),
+				trigger: journalEditArticlePage.previewButton,
+			});
+
+			await page
+				.getByRole('dialog')
+				.getByLabel('Close', {exact: true})
+				.click();
+
+			await page.goBack();
+		};
+
+		await previewAndGoBack();
+
+		await expect(articleRow).toContainText('Approved');
+		await expect(articleRow).not.toContainText('Draft');
+
+		const updatedArticleTitle = getRandomString();
+
+		await articleRow.getByRole('link', {name: articleTitle}).click();
+
+		await journalEditArticlePage.fillTitle(updatedArticleTitle);
+
+		await previewAndGoBack();
+
+		await expect(
+			page.getByTestId('row').filter({hasText: updatedArticleTitle})
+		).toContainText('Draft');
 	}
 );

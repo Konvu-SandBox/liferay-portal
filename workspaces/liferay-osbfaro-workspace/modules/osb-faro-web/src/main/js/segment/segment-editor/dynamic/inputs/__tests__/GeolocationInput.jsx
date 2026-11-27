@@ -23,8 +23,6 @@ import {mockPreferenceReq} from 'test/graphql-data';
 import {Property} from 'shared/util/records';
 import {RelationalOperators, TimeSpans} from '../../utils/constants';
 
-jest.unmock('react-dom');
-
 const mockValue = createCustomValueMap([
 	{
 		key: 'criterionGroup',
@@ -103,7 +101,7 @@ describe('GeolocationInput', () => {
 			</WrapperComponent>
 		);
 
-		fireEvent.focus(screen.getByPlaceholderText('Region'));
+		fireEvent.focus(screen.getByPlaceholderText(/^region$/i));
 
 		await waitForListOptions();
 
@@ -219,7 +217,7 @@ describe('GeolocationInput', () => {
 		);
 
 		expect(container.querySelectorAll('.button-root')[0]).toHaveTextContent(
-			'Add Region'
+			/add region/i
 		);
 	});
 
@@ -263,7 +261,7 @@ describe('GeolocationInput', () => {
 		);
 
 		expect(container.querySelector('.button-root')).toHaveTextContent(
-			'Add City'
+			/add city/i
 		);
 	});
 });

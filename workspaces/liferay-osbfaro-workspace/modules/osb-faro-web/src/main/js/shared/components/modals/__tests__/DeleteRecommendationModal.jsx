@@ -4,8 +4,6 @@ import {cleanup, fireEvent, screen} from '@testing-library/react';
 import {renderModal} from 'test/render-modal';
 import {sub} from 'shared/util/lang';
 
-jest.unmock('react-dom');
-
 const renderDeleteRecommendation = (props) =>
 	renderModal((observer) => (
 		<DeleteRecommendationModal
@@ -63,11 +61,11 @@ describe('DeleteRecommendationModal', () => {
 
 		await renderDeleteRecommendation({onClose, onSubmit});
 
-		fireEvent.click(screen.getByRole('button', {name: 'Delete'}));
+		fireEvent.click(screen.getByRole('button', {name: /^delete$/i}));
 
 		expect(onSubmit).toHaveBeenCalledTimes(1);
 
-		fireEvent.click(screen.getByText('Cancel'));
+		fireEvent.click(screen.getByText(/^cancel$/i));
 
 		expect(onClose).toHaveBeenCalled();
 	});

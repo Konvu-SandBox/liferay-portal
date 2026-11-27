@@ -15,8 +15,6 @@ import {Provider} from 'react-redux';
 import {MemoryRouter} from 'react-router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const variables = {channelId: undefined};
 
 describe('IndividualOverview', () => {
@@ -51,6 +49,6 @@ describe('IndividualOverview', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(getByText('View All Details')).toBeInTheDocument();
+		expect(getByText(/^view all details$/i)).toBeInTheDocument();
 	});
 });

@@ -83,19 +83,22 @@ public abstract class BaseSharepointRepositoryDefiner
 	public void registerCapabilities(
 		CapabilityRegistry<DocumentRepository> capabilityRegistry) {
 
+		DocumentRepository documentRepository = capabilityRegistry.getTarget();
+
 		capabilityRegistry.addSupportedCapability(
 			ProcessorCapability.class,
 			portalCapabilityLocator.getProcessorCapability(
-				capabilityRegistry.getTarget(),
+				documentRepository,
 				ProcessorCapability.ResourceGenerationStrategy.
 					ALWAYS_GENERATE));
 
 		capabilityRegistry.addExportedCapability(
 			AuthorizationCapability.class,
 			new SharepointRepositoryAuthorizationCapability(
-				tokenStore, _sharepointRepositoryConfiguration,
+				documentRepository, tokenStore,
+				_sharepointRepositoryConfiguration,
 				SharepointRepositoryTokenBrokerFactoryUtil.create(
-					_sharepointRepositoryConfiguration)));
+					_properties, _sharepointRepositoryConfiguration)));
 	}
 
 	@Override
@@ -114,6 +117,7 @@ public abstract class BaseSharepointRepositoryDefiner
 
 	@Activate
 	protected void activate(Map<String, Object> properties) {
+		_properties = properties;
 		_sharepointRepositoryConfiguration =
 			ConfigurableUtil.createConfigurable(
 				SharepointRepositoryConfiguration.class, properties);
@@ -149,6 +153,7 @@ public abstract class BaseSharepointRepositoryDefiner
 	@Reference
 	protected UserLocalService userLocalService;
 
+	private Map<String, Object> _properties;
 	private SharepointRepositoryConfiguration
 		_sharepointRepositoryConfiguration;
 
@@ -185,7 +190,8 @@ public abstract class BaseSharepointRepositoryDefiner
 				new SharepointExtRepositoryAdapter(
 					new SharepointCachingExtRepository(
 						new SharepointExtRepository(
-							tokenStore, _sharepointRepositoryConfiguration)));
+							_properties, _sharepointRepositoryConfiguration,
+							tokenStore)));
 
 			sharepointExtRepositoryAdapter.setAssetEntryLocalService(
 				assetEntryLocalService);
