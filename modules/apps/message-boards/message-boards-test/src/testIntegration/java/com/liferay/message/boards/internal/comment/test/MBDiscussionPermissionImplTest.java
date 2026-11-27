@@ -7,7 +7,6 @@ package com.liferay.message.boards.internal.comment.test;
 
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
 import com.liferay.comment.configuration.CommentGroupServiceConfiguration;
-import com.liferay.content.marketing.platform.test.util.CMPTestUtil;
 import com.liferay.depot.constants.DepotConstants;
 import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.service.DepotEntryLocalService;
@@ -15,7 +14,10 @@ import com.liferay.document.library.kernel.model.DLFileEntry;
 import com.liferay.document.library.kernel.model.DLFileEntryConstants;
 import com.liferay.document.library.kernel.model.DLFolderConstants;
 import com.liferay.document.library.kernel.service.DLAppLocalServiceUtil;
+import com.liferay.fragment.model.FragmentEntryLink;
+import com.liferay.message.boards.model.MBMessage;
 import com.liferay.message.boards.service.MBBanLocalService;
+import com.liferay.message.boards.test.util.MBTestUtil;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectEntryFolder;
@@ -25,7 +27,6 @@ import com.liferay.object.service.ObjectEntryLocalService;
 import com.liferay.petra.function.UnsafeRunnable;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.configuration.test.util.ConfigurationTestUtil;
-import com.liferay.portal.kernel.comment.Comment;
 import com.liferay.portal.kernel.comment.CommentManager;
 import com.liferay.portal.kernel.comment.DiscussionPermission;
 import com.liferay.portal.kernel.model.Group;
@@ -44,12 +45,12 @@ import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.IdentityServiceContextFunction;
 import com.liferay.portal.kernel.service.ResourcePermissionLocalService;
 import com.liferay.portal.kernel.service.RoleLocalServiceUtil;
+import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
 import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
-import com.liferay.portal.kernel.test.util.RoleTestUtil;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
@@ -153,6 +154,61 @@ public class MBDiscussionPermissionImplTest {
 	}
 
 	@Test
+	@TestInfo("LPD-115808")
+	public void testGuestCannotDeleteGuestCommentOnEntityWithoutDiscussionActions()
+		throws Exception {
+
+		User guestUser = _userLocalService.getGuestUser(
+			TestPropsValues.getCompanyId());
+
+		long commentId = _addFragmentEntryLinkComment(guestUser);
+
+		PermissionChecker permissionChecker =
+			PermissionCheckerFactoryUtil.create(guestUser);
+
+		Assert.assertFalse(
+			_discussionPermission.hasDeletePermission(
+				permissionChecker, commentId));
+	}
+
+	@Test
+	@TestInfo("LPD-115808")
+	public void testGuestCannotUpdateGuestCommentOnEntityWithoutDiscussionActions()
+		throws Exception {
+
+		User guestUser = _userLocalService.getGuestUser(
+			TestPropsValues.getCompanyId());
+
+		long commentId = _addFragmentEntryLinkComment(guestUser);
+
+		PermissionChecker permissionChecker =
+			PermissionCheckerFactoryUtil.create(guestUser);
+
+		Assert.assertFalse(
+			_discussionPermission.hasUpdatePermission(
+				permissionChecker, commentId));
+	}
+
+	@Test
+	@TestInfo("LPD-115808")
+	public void testSiteAdministratorCanUpdateAndDeleteSomeoneElseCommentOnEntityWithoutDiscussionActions()
+		throws Exception {
+
+		long commentId = _addFragmentEntryLinkComment(_siteUser1);
+
+		PermissionChecker permissionChecker =
+			PermissionCheckerFactoryUtil.create(
+				UserTestUtil.addGroupAdminUser(_group));
+
+		Assert.assertTrue(
+			_discussionPermission.hasUpdatePermission(
+				permissionChecker, commentId));
+		Assert.assertTrue(
+			_discussionPermission.hasDeletePermission(
+				permissionChecker, commentId));
+	}
+
+	@Test
 	public void testSiteMemberCanAddComment() throws Exception {
 		PermissionChecker permissionChecker =
 			PermissionCheckerFactoryUtil.create(_siteUser1);
@@ -162,39 +218,6 @@ public class MBDiscussionPermissionImplTest {
 				permissionChecker, TestPropsValues.getCompanyId(),
 				_group.getGroupId(), DLFileEntry.class.getName(),
 				_fileEntry.getFileEntryId()));
-	}
-
-	@Test
-	@TestInfo("LPD-100338")
-	public void testUserCanUpdateAndDeleteHisCommentInCMPProject()
-		throws Exception {
-
-		PermissionChecker originalPermissionChecker =
-			PermissionThreadLocal.getPermissionChecker();
-		String originalName = PrincipalThreadLocal.getName();
-
-		try {
-			PermissionThreadLocal.setPermissionChecker(
-				PermissionCheckerFactoryUtil.create(_user));
-			PrincipalThreadLocal.setName(_user.getUserId());
-
-			long commentId = _addCMPProjectComment(_siteUser1);
-
-			PermissionChecker permissionChecker =
-				PermissionCheckerFactoryUtil.create(_siteUser1);
-
-			Assert.assertTrue(
-				_discussionPermission.hasUpdatePermission(
-					permissionChecker, commentId));
-			Assert.assertTrue(
-				_discussionPermission.hasDeletePermission(
-					permissionChecker, commentId));
-		}
-		finally {
-			PermissionThreadLocal.setPermissionChecker(
-				originalPermissionChecker);
-			PrincipalThreadLocal.setName(originalName);
-		}
 	}
 
 	@Test
@@ -270,6 +293,24 @@ public class MBDiscussionPermissionImplTest {
 	}
 
 	@Test
+	@TestInfo("LPD-115808")
+	public void testUserCanUpdateAndDeleteHisCommentOnEntityWithoutDiscussionActions()
+		throws Exception {
+
+		long commentId = _addFragmentEntryLinkComment(_siteUser1);
+
+		PermissionChecker permissionChecker =
+			PermissionCheckerFactoryUtil.create(_siteUser1);
+
+		Assert.assertTrue(
+			_discussionPermission.hasUpdatePermission(
+				permissionChecker, commentId));
+		Assert.assertTrue(
+			_discussionPermission.hasDeletePermission(
+				permissionChecker, commentId));
+	}
+
+	@Test
 	public void testUserCanUpdateHisCommentIfPropsEnabled() throws Exception {
 		_withAlwaysEditableByOwnerEnabled(
 			() -> {
@@ -282,6 +323,36 @@ public class MBDiscussionPermissionImplTest {
 					_discussionPermission.hasUpdatePermission(
 						permissionChecker, commentId));
 			});
+	}
+
+	@Test
+	@TestInfo("LPD-115808")
+	public void testUserCanUpdateHisMessage() throws Exception {
+		MBMessage message = MBTestUtil.addMessage(
+			_group.getGroupId(), _siteUser1.getUserId(),
+			RandomTestUtil.randomString(), RandomTestUtil.randomString());
+
+		PermissionChecker permissionChecker =
+			PermissionCheckerFactoryUtil.create(_siteUser1);
+
+		Assert.assertTrue(
+			_discussionPermission.hasUpdatePermission(
+				permissionChecker, message.getMessageId()));
+	}
+
+	@Test
+	@TestInfo("LPD-115808")
+	public void testUserCannotDeleteSomeoneElseCommentOnEntityWithoutDiscussionActions()
+		throws Exception {
+
+		long commentId = _addFragmentEntryLinkComment(_siteUser1);
+
+		PermissionChecker permissionChecker =
+			PermissionCheckerFactoryUtil.create(_siteUser2);
+
+		Assert.assertFalse(
+			_discussionPermission.hasDeletePermission(
+				permissionChecker, commentId));
 	}
 
 	@Test
@@ -314,73 +385,33 @@ public class MBDiscussionPermissionImplTest {
 	}
 
 	@Test
-	@TestInfo("LPD-100338")
-	public void testUserCannotUpdateSomeoneElseCommentInCMPProject()
+	@TestInfo("LPD-115808")
+	public void testUserCannotUpdateSomeoneElseCommentOnEntityWithoutDiscussionActions()
 		throws Exception {
 
-		PermissionChecker originalPermissionChecker =
-			PermissionThreadLocal.getPermissionChecker();
-		String originalName = PrincipalThreadLocal.getName();
+		long commentId = _addFragmentEntryLinkComment(_siteUser1);
 
-		try {
-			PermissionThreadLocal.setPermissionChecker(
-				PermissionCheckerFactoryUtil.create(_user));
-			PrincipalThreadLocal.setName(_user.getUserId());
+		PermissionChecker permissionChecker =
+			PermissionCheckerFactoryUtil.create(_siteUser2);
 
-			long commentId = _addCMPProjectComment(_siteUser1);
-
-			Comment comment = _commentManager.fetchComment(commentId);
-
-			_role = RoleTestUtil.addRole(RoleConstants.TYPE_REGULAR);
-
-			_resourcePermissionLocalService.setResourcePermissions(
-				TestPropsValues.getCompanyId(), comment.getClassName(),
-				ResourceConstants.SCOPE_INDIVIDUAL,
-				String.valueOf(comment.getClassPK()), _role.getRoleId(),
-				new String[] {
-					ActionKeys.DELETE_DISCUSSION, ActionKeys.UPDATE_DISCUSSION,
-					ActionKeys.VIEW
-				});
-
-			RoleLocalServiceUtil.addUserRole(
-				_siteUser2.getUserId(), _role.getRoleId());
-
-			PermissionChecker permissionChecker =
-				PermissionCheckerFactoryUtil.create(_siteUser2);
-
-			Assert.assertFalse(
-				_discussionPermission.hasUpdatePermission(
-					permissionChecker, commentId));
-			Assert.assertTrue(
-				_discussionPermission.hasDeletePermission(
-					permissionChecker, commentId));
-		}
-		finally {
-			PermissionThreadLocal.setPermissionChecker(
-				originalPermissionChecker);
-			PrincipalThreadLocal.setName(originalName);
-		}
+		Assert.assertFalse(
+			_discussionPermission.hasUpdatePermission(
+				permissionChecker, commentId));
 	}
 
-	private long _addCMPProjectComment(User user) throws Exception {
-		CMPTestUtil.getOrAddGroup(MBDiscussionPermissionImplTest.class);
+	@Test
+	@TestInfo("LPD-115808")
+	public void testUserCannotUpdateSomeoneElseMessage() throws Exception {
+		MBMessage message = MBTestUtil.addMessage(
+			_group.getGroupId(), _siteUser1.getUserId(),
+			RandomTestUtil.randomString(), RandomTestUtil.randomString());
 
-		ObjectEntry objectEntry = CMPTestUtil.addCMPProjectObjectEntry();
+		PermissionChecker permissionChecker =
+			PermissionCheckerFactoryUtil.create(_siteUser2);
 
-		_depotEntry = _depotEntryLocalService.fetchGroupDepotEntry(
-			objectEntry.getGroupId());
-
-		ObjectDefinition objectDefinition =
-			_objectDefinitionLocalService.getObjectDefinition(
-				objectEntry.getObjectDefinitionId());
-
-		return _commentManager.addComment(
-			user.getUserId(), objectEntry.getGroupId(),
-			objectDefinition.getClassName(), objectEntry.getObjectEntryId(),
-			StringUtil.randomString(),
-			new IdentityServiceContextFunction(
-				ServiceContextTestUtil.getServiceContext(
-					objectEntry.getGroupId(), user.getUserId())));
+		Assert.assertFalse(
+			_discussionPermission.hasUpdatePermission(
+				permissionChecker, message.getMessageId()));
 	}
 
 	private long _addComment(User user) throws Exception {
@@ -392,6 +423,18 @@ public class MBDiscussionPermissionImplTest {
 		return _commentManager.addComment(
 			user.getUserId(), _group.getGroupId(),
 			DLFileEntryConstants.getClassName(), _fileEntry.getFileEntryId(),
+			StringUtil.randomString(), serviceContextFunction);
+	}
+
+	private long _addFragmentEntryLinkComment(User user) throws Exception {
+		IdentityServiceContextFunction serviceContextFunction =
+			new IdentityServiceContextFunction(
+				ServiceContextTestUtil.getServiceContext(
+					_group, user.getUserId()));
+
+		return _commentManager.addComment(
+			user.getUserId(), _group.getGroupId(),
+			FragmentEntryLink.class.getName(), RandomTestUtil.randomLong(),
 			StringUtil.randomString(), serviceContextFunction);
 	}
 
@@ -464,14 +507,14 @@ public class MBDiscussionPermissionImplTest {
 	private ResourcePermissionLocalService _resourcePermissionLocalService;
 
 	@DeleteAfterTestRun
-	private Role _role;
-
-	@DeleteAfterTestRun
 	private User _siteUser1;
 
 	@DeleteAfterTestRun
 	private User _siteUser2;
 
 	private User _user;
+
+	@Inject
+	private UserLocalService _userLocalService;
 
 }

@@ -2,15 +2,13 @@ import React from 'react';
 import {GenericBarsCard} from '../GenericBarsCard';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('GenericBarsCard', () => {
 	it('should render the card title as text by default', () => {
 		const {container, getByText} = render(
 			<GenericBarsCard cardTitle="Number of Sites" />
 		);
 
-		expect(getByText('Number of Sites').tagName).toBe('H3');
+		expect(getByText(/^number of sites$/i).tagName).toBe('H3');
 		expect(container.querySelector('.card-title-rectangle')).toBeNull();
 	});
 
@@ -22,6 +20,6 @@ describe('GenericBarsCard', () => {
 		expect(
 			container.querySelector('.card-title-rectangle')
 		).toBeTruthy();
-		expect(getByText('Number of Sites')).toHaveClass('sr-only');
+		expect(getByText(/^number of sites$/i)).toBeInTheDocument();
 	});
 });

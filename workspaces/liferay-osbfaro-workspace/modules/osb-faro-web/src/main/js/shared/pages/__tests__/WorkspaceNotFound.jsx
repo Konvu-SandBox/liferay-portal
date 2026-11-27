@@ -8,8 +8,6 @@ import {Provider} from 'react-redux';
 
 Router.navigate = jest.fn();
 
-jest.unmock('react-dom');
-
 const renderWithProvider = props => (
 	<Provider store={mockStore()}>
 		<BrowserRouter>
@@ -30,7 +28,7 @@ describe('WorkspaceNotFound', () => {
 	it('should contain the link to go back to the workspaces page', () => {
 		const {getByText} = render(renderWithProvider());
 
-		expect(getByText('Go Back to Your Workspaces')).toHaveAttribute(
+		expect(getByText(/^go back to your workspaces$/i)).toHaveAttribute(
 			'href',
 			'/workspaces'
 		);
