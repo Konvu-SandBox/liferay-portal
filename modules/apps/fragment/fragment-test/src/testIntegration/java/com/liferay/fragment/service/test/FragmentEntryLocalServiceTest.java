@@ -17,6 +17,7 @@ import com.liferay.fragment.configuration.FragmentEntryVersionConfiguration;
 import com.liferay.fragment.configuration.FragmentServiceConfiguration;
 import com.liferay.fragment.constants.FragmentConstants;
 import com.liferay.fragment.exception.DuplicateFragmentEntryExternalReferenceCodeException;
+import com.liferay.fragment.exception.FragmentEntryPreviewFileEntryIdException;
 import com.liferay.fragment.exception.NoSuchEntryException;
 import com.liferay.fragment.model.FragmentCollection;
 import com.liferay.fragment.model.FragmentEntry;
@@ -40,6 +41,8 @@ import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Layout;
+import com.liferay.portal.kernel.portletfilerepository.PortletFileRepositoryUtil;
+import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.service.GroupLocalServiceUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.test.TestInfo;
@@ -160,63 +163,25 @@ public class FragmentEntryLocalServiceTest {
 	}
 
 	@Test
+	public void testGetDraft() throws Exception {
+		FragmentEntry fragmentEntry =
+			FragmentEntryTestUtil.addFragmentEntryByStatus(
+				_fragmentCollection.getFragmentCollectionId(),
+				WorkflowConstants.STATUS_APPROVED);
+
+		FragmentEntry draftFragmentEntry = _fragmentEntryLocalService.getDraft(
+			fragmentEntry);
+
+		Assert.assertEquals(
+			WorkflowConstants.STATUS_DRAFT, draftFragmentEntry.getStatus());
+	}
+
+	@Test
 	public void testGetFragmentEntries() throws Exception {
 		_testGetFragmentEntriesByFragmentCollectionId();
-		_testGetFragmentEntriesByGroupIdAndFragmentCollectionIdOrderByCreateDateComparator();
-		_testGetFragmentEntriesByGroupIdAndFragmentCollectionIdOrderByNameComparator();
 		_testGetFragmentEntriesByGroupIdFragmentCollectionIdAndNameOrderByCreateDateComparator();
 		_testGetFragmentEntriesByGroupIdFragmentCollectionIdAndNameOrderByNameComparator();
 		_testGetFragmentEntriesByGroupIdFragmentCollectionIdAndStatus();
-	}
-
-	@Test
-	public void testGetFragmentEntriesByUuidAndCompanyId() throws Exception {
-		Group group = GroupTestUtil.addGroup();
-
-		FragmentEntry fragmentEntry1 = FragmentEntryTestUtil.addFragmentEntry(
-			_fragmentCollection.getFragmentCollectionId(),
-			RandomTestUtil.randomString());
-
-		List<FragmentEntry> fragmentEntries1 =
-			_fragmentEntryLocalService.getFragmentEntriesByUuidAndCompanyId(
-				fragmentEntry1.getUuid(), _group.getCompanyId());
-
-		Assert.assertEquals(
-			fragmentEntries1.toString(), 1, fragmentEntries1.size());
-		Assert.assertEquals(fragmentEntry1, fragmentEntries1.get(0));
-
-		FragmentCollection fragmentCollection =
-			FragmentTestUtil.addFragmentCollection(group.getGroupId());
-
-		FragmentEntry fragmentEntry2 = FragmentEntryTestUtil.addFragmentEntry(
-			fragmentCollection.getFragmentCollectionId(),
-			RandomTestUtil.randomString());
-
-		List<FragmentEntry> fragmentEntries2 =
-			_fragmentEntryLocalService.getFragmentEntriesByUuidAndCompanyId(
-				fragmentEntry2.getUuid(), group.getCompanyId());
-
-		Assert.assertEquals(
-			fragmentEntries2.toString(), 1, fragmentEntries2.size());
-		Assert.assertEquals(fragmentEntry2, fragmentEntries2.get(0));
-
-		GroupLocalServiceUtil.deleteGroup(group);
-	}
-
-	@Test
-	public void testGetFragmentEntriesCount() throws Exception {
-		int originalCount = _fragmentEntryLocalService.getFragmentEntriesCount(
-			_fragmentCollection.getFragmentCollectionId());
-
-		FragmentEntryTestUtil.addFragmentEntry(
-			_fragmentCollection.getFragmentCollectionId());
-		FragmentEntryTestUtil.addFragmentEntry(
-			_fragmentCollection.getFragmentCollectionId());
-
-		int actualCount = _fragmentEntryLocalService.getFragmentEntriesCount(
-			_fragmentCollection.getFragmentCollectionId());
-
-		Assert.assertEquals(originalCount + 2, actualCount);
 	}
 
 	@Test
@@ -237,17 +202,19 @@ public class FragmentEntryLocalServiceTest {
 	}
 
 	@Test
-	@TestInfo({"LPD-75909", "LPD-98882"})
+	@TestInfo({"LPD-75909", "LPD-98882", "LPD-115706"})
 	public void testUpdateFragmentEntry() throws Exception {
 		_testUpdateFragmentEntryFragmentCollectionId();
 		_testUpdateFragmentEntryName();
 		_testUpdateFragmentEntryNameCssHtmlJsConfigurationAndStatus();
 		_testUpdateFragmentEntryNameCssHtmlJsConfigurationPreviewFileEntryIdAndStatus();
 		_testUpdateFragmentEntryPreviewFileEntryId();
+		_testUpdateFragmentEntryPreviewFileEntryIdWithPreviewFileEntryFromPublishedFragmentEntry();
 		_testUpdateFragmentEntryVersions();
 		_testUpdateFragmentEntryVersionsWithMaximumVersionsPerEntryDisabled();
 		_testUpdateFragmentEntryWithCacheable();
 		_testUpdateFragmentEntryWithHtmlWithAmpersand();
+		_testUpdateFragmentEntryWithPreviewFileEntryFromDifferentGroup();
 		_testUpdateFragmentEntryWithPreviewFileEntryId();
 		_testUpdateFragmentEntryWithPropagateChanges();
 	}
@@ -402,7 +369,12 @@ public class FragmentEntryLocalServiceTest {
 		String html = RandomTestUtil.randomString();
 		String js = RandomTestUtil.randomString();
 		String configuration = _read("configuration-valid-complete.json");
-		long previewFileEntryId = RandomTestUtil.randomLong();
+
+		FileEntry previewFileEntry = FragmentTestUtil.addPreviewFileEntry(
+			_group.getGroupId());
+
+		long previewFileEntryId = previewFileEntry.getFileEntryId();
+
 		int type = FragmentConstants.TYPE_COMPONENT;
 		int status = WorkflowConstants.STATUS_APPROVED;
 
@@ -437,7 +409,12 @@ public class FragmentEntryLocalServiceTest {
 		String css = RandomTestUtil.randomString();
 		String html = RandomTestUtil.randomString();
 		String js = RandomTestUtil.randomString();
-		long previewFileEntryId = RandomTestUtil.randomLong();
+
+		FileEntry previewFileEntry = FragmentTestUtil.addPreviewFileEntry(
+			_group.getGroupId());
+
+		long previewFileEntryId = previewFileEntry.getFileEntryId();
+
 		int status = WorkflowConstants.STATUS_APPROVED;
 
 		FragmentEntry fragmentEntry =
@@ -470,7 +447,12 @@ public class FragmentEntryLocalServiceTest {
 		String css = RandomTestUtil.randomString();
 		String html = RandomTestUtil.randomString();
 		String js = RandomTestUtil.randomString();
-		long previewFileEntryId = RandomTestUtil.randomLong();
+
+		FileEntry previewFileEntry = FragmentTestUtil.addPreviewFileEntry(
+			_group.getGroupId());
+
+		long previewFileEntryId = previewFileEntry.getFileEntryId();
+
 		int type = FragmentConstants.TYPE_COMPONENT;
 		int status = WorkflowConstants.STATUS_APPROVED;
 
@@ -532,7 +514,12 @@ public class FragmentEntryLocalServiceTest {
 
 		String fragmentEntryKey = RandomTestUtil.randomString();
 		String name = RandomTestUtil.randomString();
-		long previewFileEntryId = RandomTestUtil.randomLong();
+
+		FileEntry previewFileEntry = FragmentTestUtil.addPreviewFileEntry(
+			_group.getGroupId());
+
+		long previewFileEntryId = previewFileEntry.getFileEntryId();
+
 		int type = FragmentConstants.TYPE_COMPONENT;
 		int status = WorkflowConstants.STATUS_DRAFT;
 
@@ -565,8 +552,8 @@ public class FragmentEntryLocalServiceTest {
 				_fragmentCollection.getFragmentCollectionId(),
 				RandomTestUtil.randomString(), RandomTestUtil.randomString(),
 				StringPool.BLANK, html, StringPool.BLANK, false,
-				StringPool.BLANK, null, RandomTestUtil.randomLong(), false,
-				false, FragmentConstants.TYPE_COMPONENT, null,
+				StringPool.BLANK, null, 0, false, false,
+				FragmentConstants.TYPE_COMPONENT, null,
 				WorkflowConstants.STATUS_APPROVED,
 				ServiceContextTestUtil.getServiceContext(
 					_group.getGroupId(), TestPropsValues.getUserId()));
@@ -610,8 +597,8 @@ public class FragmentEntryLocalServiceTest {
 				null, TestPropsValues.getUserId(), _group.getGroupId(),
 				_fragmentCollection.getFragmentCollectionId(),
 				RandomTestUtil.randomString(), name, css, html, js, false,
-				StringPool.BLANK, null, RandomTestUtil.randomLong(), false,
-				false, FragmentConstants.TYPE_COMPONENT, null, status,
+				StringPool.BLANK, null, 0, false, false,
+				FragmentConstants.TYPE_COMPONENT, null, status,
 				ServiceContextTestUtil.getServiceContext(
 					_group.getGroupId(), TestPropsValues.getUserId()));
 
@@ -629,7 +616,12 @@ public class FragmentEntryLocalServiceTest {
 		String css = RandomTestUtil.randomString();
 		String html = RandomTestUtil.randomString();
 		String js = RandomTestUtil.randomString();
-		long previewFileEntryId = RandomTestUtil.randomLong();
+
+		FileEntry previewFileEntry = FragmentTestUtil.addPreviewFileEntry(
+			_group.getGroupId());
+
+		long previewFileEntryId = previewFileEntry.getFileEntryId();
+
 		int status = WorkflowConstants.STATUS_APPROVED;
 
 		FragmentEntry fragmentEntry =
@@ -658,8 +650,14 @@ public class FragmentEntryLocalServiceTest {
 		String css = RandomTestUtil.randomString();
 		String html = RandomTestUtil.randomString();
 		String js = RandomTestUtil.randomString();
-		long previewFileEntryId = RandomTestUtil.randomLong();
+
+		FileEntry previewFileEntry = FragmentTestUtil.addPreviewFileEntry(
+			_group.getGroupId());
+
+		long previewFileEntryId = previewFileEntry.getFileEntryId();
+
 		int type = FragmentConstants.TYPE_COMPONENT;
+
 		int status = WorkflowConstants.STATUS_APPROVED;
 
 		FragmentEntry fragmentEntry =
@@ -949,88 +947,6 @@ public class FragmentEntryLocalServiceTest {
 			originalFragmentEntries.size() + 2, actualFragmentEntries.size());
 	}
 
-	private void _testGetFragmentEntriesByGroupIdAndFragmentCollectionIdOrderByCreateDateComparator()
-		throws Exception {
-
-		FragmentCollection fragmentCollection =
-			FragmentTestUtil.addFragmentCollection(_group.getGroupId());
-
-		LocalDateTime localDateTime = LocalDateTime.now();
-
-		FragmentEntry fragmentEntry = FragmentEntryTestUtil.addFragmentEntry(
-			fragmentCollection.getFragmentCollectionId(), "AB Fragment Entry",
-			Timestamp.valueOf(localDateTime));
-
-		localDateTime = localDateTime.plus(1, ChronoUnit.SECONDS);
-
-		FragmentEntryTestUtil.addFragmentEntry(
-			fragmentCollection.getFragmentCollectionId(), "AA Fragment Entry",
-			Timestamp.valueOf(localDateTime));
-
-		List<FragmentEntry> fragmentEntries =
-			_fragmentEntryLocalService.getFragmentEntries(
-				_group.getGroupId(),
-				fragmentCollection.getFragmentCollectionId(), QueryUtil.ALL_POS,
-				QueryUtil.ALL_POS,
-				FragmentEntryCreateDateComparator.getInstance(true));
-
-		FragmentEntry firstFragmentEntry = fragmentEntries.get(0);
-
-		Assert.assertEquals(
-			fragmentEntries.toString(), fragmentEntry.getName(),
-			firstFragmentEntry.getName());
-
-		fragmentEntries = _fragmentEntryLocalService.getFragmentEntries(
-			_group.getGroupId(), fragmentCollection.getFragmentCollectionId(),
-			QueryUtil.ALL_POS, QueryUtil.ALL_POS,
-			FragmentEntryCreateDateComparator.getInstance(false));
-
-		FragmentEntry lastFragmentEntry = fragmentEntries.get(
-			fragmentEntries.size() - 1);
-
-		Assert.assertEquals(
-			fragmentEntries.toString(), fragmentEntry.getName(),
-			lastFragmentEntry.getName());
-	}
-
-	private void _testGetFragmentEntriesByGroupIdAndFragmentCollectionIdOrderByNameComparator()
-		throws Exception {
-
-		FragmentCollection fragmentCollection =
-			FragmentTestUtil.addFragmentCollection(_group.getGroupId());
-
-		FragmentEntry fragmentEntry = FragmentEntryTestUtil.addFragmentEntry(
-			fragmentCollection.getFragmentCollectionId(), "AB Fragment Entry");
-
-		FragmentEntryTestUtil.addFragmentEntry(
-			fragmentCollection.getFragmentCollectionId(), "AA Fragment Entry");
-
-		List<FragmentEntry> fragmentEntries =
-			_fragmentEntryLocalService.getFragmentEntries(
-				_group.getGroupId(),
-				fragmentCollection.getFragmentCollectionId(), QueryUtil.ALL_POS,
-				QueryUtil.ALL_POS,
-				FragmentEntryNameComparator.getInstance(true));
-
-		FragmentEntry lastFragmentEntry = fragmentEntries.get(
-			fragmentEntries.size() - 1);
-
-		Assert.assertEquals(
-			fragmentEntries.toString(), fragmentEntry.getName(),
-			lastFragmentEntry.getName());
-
-		fragmentEntries = _fragmentEntryLocalService.getFragmentEntries(
-			_group.getGroupId(), fragmentCollection.getFragmentCollectionId(),
-			QueryUtil.ALL_POS, QueryUtil.ALL_POS,
-			FragmentEntryNameComparator.getInstance(false));
-
-		FragmentEntry firstFragmentEntry = fragmentEntries.get(0);
-
-		Assert.assertEquals(
-			fragmentEntries.toString(), fragmentEntry.getName(),
-			firstFragmentEntry.getName());
-	}
-
 	private void _testGetFragmentEntriesByGroupIdFragmentCollectionIdAndNameOrderByCreateDateComparator()
 		throws Exception {
 
@@ -1229,7 +1145,12 @@ public class FragmentEntryLocalServiceTest {
 		String html = RandomTestUtil.randomString();
 		String js = RandomTestUtil.randomString();
 		String configuration = _read("configuration-valid-complete.json");
-		long previewFileEntryId = RandomTestUtil.randomLong();
+
+		FileEntry previewFileEntry = FragmentTestUtil.addPreviewFileEntry(
+			_group.getGroupId());
+
+		long previewFileEntryId = previewFileEntry.getFileEntryId();
+
 		int status = WorkflowConstants.STATUS_APPROVED;
 
 		FragmentEntry fragmentEntry = FragmentEntryTestUtil.addFragmentEntry(
@@ -1254,14 +1175,49 @@ public class FragmentEntryLocalServiceTest {
 	private void _testUpdateFragmentEntryPreviewFileEntryId() throws Exception {
 		FragmentEntry fragmentEntry = FragmentEntryTestUtil.addFragmentEntry(
 			_fragmentCollection.getFragmentCollectionId());
-
-		long previewFileEntryId = fragmentEntry.getPreviewFileEntryId();
+		FileEntry previewFileEntry = FragmentTestUtil.addPreviewFileEntry(
+			_group.getGroupId());
 
 		fragmentEntry = _fragmentEntryLocalService.updateFragmentEntry(
-			fragmentEntry.getFragmentEntryId(), previewFileEntryId + 1);
+			fragmentEntry.getFragmentEntryId(),
+			previewFileEntry.getFileEntryId());
 
 		Assert.assertEquals(
-			previewFileEntryId + 1, fragmentEntry.getPreviewFileEntryId());
+			previewFileEntry.getFileEntryId(),
+			fragmentEntry.getPreviewFileEntryId());
+	}
+
+	private void _testUpdateFragmentEntryPreviewFileEntryIdWithPreviewFileEntryFromPublishedFragmentEntry()
+		throws Exception {
+
+		FragmentEntry fragmentEntry = FragmentEntryTestUtil.addFragmentEntry(
+			_fragmentCollection.getFragmentCollectionId());
+		FileEntry previewFileEntry = FragmentTestUtil.addPreviewFileEntry(
+			_group.getGroupId());
+
+		fragmentEntry = _fragmentEntryLocalService.updateFragmentEntry(
+			fragmentEntry.getFragmentEntryId(),
+			previewFileEntry.getFileEntryId());
+
+		FragmentEntry draftFragmentEntry =
+			_fragmentEntryLocalService.updateDraft(
+				_fragmentEntryLocalService.getDraft(fragmentEntry));
+
+		draftFragmentEntry = _fragmentEntryLocalService.updateFragmentEntry(
+			draftFragmentEntry.getFragmentEntryId(), 0);
+
+		Assert.assertEquals(0, draftFragmentEntry.getPreviewFileEntryId());
+
+		fragmentEntry = _fragmentEntryLocalService.getFragmentEntry(
+			fragmentEntry.getFragmentEntryId());
+
+		Assert.assertEquals(
+			previewFileEntry.getFileEntryId(),
+			fragmentEntry.getPreviewFileEntryId());
+
+		Assert.assertNotNull(
+			PortletFileRepositoryUtil.getPortletFileEntry(
+				previewFileEntry.getFileEntryId()));
 	}
 
 	private void _testUpdateFragmentEntryVersions() throws Exception {
@@ -1403,9 +1359,8 @@ public class FragmentEntryLocalServiceTest {
 				_fragmentCollection.getFragmentCollectionId(),
 				RandomTestUtil.randomString(), RandomTestUtil.randomString(),
 				RandomTestUtil.randomString(), "<H1>A</H1>",
-				RandomTestUtil.randomString(), false, StringPool.BLANK, null,
-				RandomTestUtil.randomLong(), false, false,
-				FragmentConstants.TYPE_COMPONENT, null,
+				RandomTestUtil.randomString(), false, StringPool.BLANK, null, 0,
+				false, false, FragmentConstants.TYPE_COMPONENT, null,
 				WorkflowConstants.STATUS_APPROVED,
 				ServiceContextTestUtil.getServiceContext(
 					_group.getGroupId(), TestPropsValues.getUserId()));
@@ -1423,13 +1378,34 @@ public class FragmentEntryLocalServiceTest {
 		Assert.assertEquals(html, fragmentEntry.getHtml());
 	}
 
+	private void _testUpdateFragmentEntryWithPreviewFileEntryFromDifferentGroup()
+		throws Exception {
+
+		FragmentEntry fragmentEntry = FragmentEntryTestUtil.addFragmentEntry(
+			_fragmentCollection.getFragmentCollectionId());
+		FileEntry previewFileEntry = FragmentTestUtil.addPreviewFileEntry(
+			TestPropsValues.getGroupId());
+
+		Assert.assertThrows(
+			FragmentEntryPreviewFileEntryIdException.class,
+			() -> _fragmentEntryLocalService.updateFragmentEntry(
+				TestPropsValues.getUserId(), fragmentEntry.getFragmentEntryId(),
+				fragmentEntry.getFragmentCollectionId(),
+				fragmentEntry.getName(), fragmentEntry.getCss(),
+				fragmentEntry.getHtml(), fragmentEntry.getJs(),
+				fragmentEntry.isCacheable(), fragmentEntry.getConfiguration(),
+				fragmentEntry.getIcon(), previewFileEntry.getFileEntryId(),
+				fragmentEntry.isReadOnly(), fragmentEntry.getTypeOptions(),
+				fragmentEntry.getStatus()));
+	}
+
 	private void _testUpdateFragmentEntryWithPreviewFileEntryId()
 		throws Exception {
 
 		FragmentEntry fragmentEntry = FragmentEntryTestUtil.addFragmentEntry(
 			_fragmentCollection.getFragmentCollectionId());
-
-		long previewFileEntryId = fragmentEntry.getPreviewFileEntryId();
+		FileEntry previewFileEntry = FragmentTestUtil.addPreviewFileEntry(
+			_group.getGroupId());
 
 		fragmentEntry = _fragmentEntryLocalService.updateFragmentEntry(
 			TestPropsValues.getUserId(), fragmentEntry.getFragmentEntryId(),
@@ -1437,11 +1413,12 @@ public class FragmentEntryLocalServiceTest {
 			fragmentEntry.getCss(), fragmentEntry.getHtml(),
 			fragmentEntry.getJs(), fragmentEntry.isCacheable(),
 			fragmentEntry.getConfiguration(), fragmentEntry.getIcon(),
-			previewFileEntryId + 1, fragmentEntry.isReadOnly(),
+			previewFileEntry.getFileEntryId(), fragmentEntry.isReadOnly(),
 			fragmentEntry.getTypeOptions(), fragmentEntry.getStatus());
 
 		Assert.assertEquals(
-			previewFileEntryId + 1, fragmentEntry.getPreviewFileEntryId());
+			previewFileEntry.getFileEntryId(),
+			fragmentEntry.getPreviewFileEntryId());
 	}
 
 	private void _testUpdateFragmentEntryWithPropagateChanges()

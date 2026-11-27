@@ -271,12 +271,11 @@ public class KBAdminNavigationDisplayContext {
 	}
 
 	public boolean isProductMenuOpen() {
-		String productMenuState = SessionClicks.get(
-			_httpServletRequest,
-			"com.liferay.product.navigation.product.menu.web_productMenuState",
+		String sidebarState = SessionClicks.get(
+			_httpServletRequest, "com.liferay.application.list_sidebarState",
 			"closed");
 
-		return Objects.equals(productMenuState, "open");
+		return Objects.equals(sidebarState, "open");
 	}
 
 	private JSONArray _getChildKBArticlesJSONArray(KBArticle parentKBArticle)

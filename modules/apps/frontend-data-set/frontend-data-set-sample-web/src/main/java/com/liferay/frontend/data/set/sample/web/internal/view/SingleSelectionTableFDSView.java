@@ -23,7 +23,6 @@ import org.osgi.service.component.annotations.Reference;
  * @author Miguel Arroyo
  */
 @Component(
-	enabled = true,
 	property = "frontend.data.set.name=" + FDSSampleFDSNames.SINGLE_SELECTION,
 	service = FDSView.class
 )
@@ -51,11 +50,13 @@ public class SingleSelectionTableFDSView extends BaseTableFDSView {
 			fdsTableSchemaField -> fdsTableSchemaField.setContentRenderer(
 				"customAuthorTableCellRenderer")
 		).add(
-			"description", "description"
+			"description", "description",
+			fdsTableSchemaField -> fdsTableSchemaField.setHidden(true)
 		).add(
 			_addDateTimeFDSTableSchemaField()
 		).add(
-			"size", "size"
+			"size", "size",
+			fdsTableSchemaField -> fdsTableSchemaField.setHidden(true)
 		).add(
 			"status", "status",
 			fdsTableSchemaField -> fdsTableSchemaField.setContentRenderer(

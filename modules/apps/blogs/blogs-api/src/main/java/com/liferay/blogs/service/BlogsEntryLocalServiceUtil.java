@@ -41,11 +41,12 @@ public class BlogsEntryLocalServiceUtil {
 	public static com.liferay.portal.kernel.repository.model.FileEntry
 			addAttachmentFileEntry(
 				String externalReferenceCode, long userId, long groupId,
-				String fileName, String mimeType, InputStream inputStream)
+				long entryId, String fileName, String mimeType,
+				InputStream inputStream)
 		throws PortalException {
 
 		return getService().addAttachmentFileEntry(
-			externalReferenceCode, userId, groupId, fileName, mimeType,
+			externalReferenceCode, userId, groupId, entryId, fileName, mimeType,
 			inputStream);
 	}
 
@@ -87,14 +88,6 @@ public class BlogsEntryLocalServiceUtil {
 
 		return getService().addEntry(
 			userId, title, content, displayDate, serviceContext);
-	}
-
-	public static BlogsEntry addEntry(
-			long userId, String title, String content,
-			com.liferay.portal.kernel.service.ServiceContext serviceContext)
-		throws PortalException {
-
-		return getService().addEntry(userId, title, content, serviceContext);
 	}
 
 	public static BlogsEntry addEntry(
@@ -558,21 +551,6 @@ public class BlogsEntryLocalServiceUtil {
 			companyId, displayDate, queryDefinition);
 	}
 
-	public static int getCompanyEntriesCount(
-		long companyId, java.util.Date displayDate,
-		com.liferay.portal.kernel.dao.orm.QueryDefinition<BlogsEntry>
-			queryDefinition) {
-
-		return getService().getCompanyEntriesCount(
-			companyId, displayDate, queryDefinition);
-	}
-
-	public static BlogsEntry[] getEntriesPrevAndNext(long entryId)
-		throws PortalException {
-
-		return getService().getEntriesPrevAndNext(entryId);
-	}
-
 	public static BlogsEntry getEntry(long entryId) throws PortalException {
 		return getService().getEntry(entryId);
 	}
@@ -632,15 +610,6 @@ public class BlogsEntryLocalServiceUtil {
 
 		return getService().getGroupsEntries(
 			companyId, groupId, displayDate, queryDefinition);
-	}
-
-	public static List<BlogsEntry> getGroupUserEntries(
-		long groupId, long userId, java.util.Date displayDate,
-		com.liferay.portal.kernel.dao.orm.QueryDefinition<BlogsEntry>
-			queryDefinition) {
-
-		return getService().getGroupUserEntries(
-			groupId, userId, displayDate, queryDefinition);
 	}
 
 	public static
@@ -784,28 +753,6 @@ public class BlogsEntryLocalServiceUtil {
 
 	public static BlogsEntry updateEntry(
 			long userId, long entryId, String title, String subtitle,
-			String description, String content, int displayDateMonth,
-			int displayDateDay, int displayDateYear, int displayDateHour,
-			int displayDateMinute, boolean allowPingbacks,
-			boolean allowTrackbacks, String[] trackbacks,
-			String coverImageCaption,
-			com.liferay.portal.kernel.servlet.taglib.ui.ImageSelector
-				coverImageImageSelector,
-			com.liferay.portal.kernel.servlet.taglib.ui.ImageSelector
-				smallImageImageSelector,
-			com.liferay.portal.kernel.service.ServiceContext serviceContext)
-		throws PortalException {
-
-		return getService().updateEntry(
-			userId, entryId, title, subtitle, description, content,
-			displayDateMonth, displayDateDay, displayDateYear, displayDateHour,
-			displayDateMinute, allowPingbacks, allowTrackbacks, trackbacks,
-			coverImageCaption, coverImageImageSelector, smallImageImageSelector,
-			serviceContext);
-	}
-
-	public static BlogsEntry updateEntry(
-			long userId, long entryId, String title, String subtitle,
 			String urlTitle, String description, String content,
 			java.util.Date displayDate, boolean allowPingbacks,
 			boolean allowTrackbacks, String[] trackbacks,
@@ -846,24 +793,6 @@ public class BlogsEntryLocalServiceUtil {
 			serviceContext);
 	}
 
-	public static void updateEntryResources(
-			BlogsEntry entry,
-			com.liferay.portal.kernel.service.permission.ModelPermissions
-				modelPermissions)
-		throws PortalException {
-
-		getService().updateEntryResources(entry, modelPermissions);
-	}
-
-	public static void updateEntryResources(
-			BlogsEntry entry, String[] groupPermissions,
-			String[] guestPermissions)
-		throws PortalException {
-
-		getService().updateEntryResources(
-			entry, groupPermissions, guestPermissions);
-	}
-
 	public static BlogsEntry updateStatus(
 			long userId, long entryId, int status,
 			com.liferay.portal.kernel.service.ServiceContext serviceContext,
@@ -883,4 +812,4 @@ public class BlogsEntryLocalServiceUtil {
 			BlogsEntryLocalServiceUtil.class, BlogsEntryLocalService.class);
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1791826934
+// LIFERAY-SERVICE-BUILDER-HASH:-1409796745

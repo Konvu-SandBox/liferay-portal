@@ -130,6 +130,7 @@ const MillerColumnsItem = ({
 		hasDuplicatedFriendlyURL = false,
 		hasGuestViewPermission,
 		id: itemId,
+		launchSetDraftNames = [],
 		quickActions = [],
 		selectable,
 		states = [],
@@ -504,9 +505,11 @@ const MillerColumnsItem = ({
 						) : null}
 					</div>
 
-					{description && (
+					{(description || !!launchSetDraftNames.length) && (
 						<div className="d-flex flex-wrap h5 list-group-subtitle small">
-							<span className="mr-2">{description}</span>
+							{description && (
+								<span className="mr-2">{description}</span>
+							)}
 
 							{states.map((state) => (
 								<ClayLabel
@@ -516,6 +519,27 @@ const MillerColumnsItem = ({
 									{state.label}
 								</ClayLabel>
 							))}
+
+							{!!launchSetDraftNames.length && (
+								<span
+									className="c-ml-2 lfr-portal-tooltip miller-columns-item__launch-indicator position-relative"
+									data-title={sub(
+										launchSetDraftNames.length > 1
+											? Liferay.Language.get(
+													'in-launches-x'
+												)
+											: Liferay.Language.get(
+													'in-launch-x'
+												),
+										launchSetDraftNames.join(', ')
+									)}
+								>
+									<ClayIcon
+										className="mt-0 text-4 text-primary"
+										symbol="arrow-split"
+									/>
+								</span>
+							)}
 						</div>
 					)}
 				</ClayLayout.ContentCol>

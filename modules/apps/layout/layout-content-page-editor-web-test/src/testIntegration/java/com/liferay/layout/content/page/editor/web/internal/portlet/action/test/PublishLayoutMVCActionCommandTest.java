@@ -65,6 +65,7 @@ import com.liferay.portal.kernel.service.RoleLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.UserLocalService;
+import com.liferay.portal.kernel.service.WorkflowDefinitionLinkLocalService;
 import com.liferay.portal.kernel.service.permission.PortletPermissionUtil;
 import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
@@ -217,7 +218,7 @@ public class PublishLayoutMVCActionCommandTest {
 		ContentLayoutTestUtil.publishLayout(_draftLayout, _layout);
 
 		FragmentEntryLink publishedLayoutDropzoneFragmentEntryLink =
-			_fragmentEntryLinkLocalService.getFragmentEntryLink(
+			_fragmentEntryLinkLocalService.fetchFragmentEntryLink(
 				_group.getGroupId(),
 				dropzoneFragmentEntryLink.getExternalReferenceCode(),
 				_layout.getPlid());
@@ -225,7 +226,7 @@ public class PublishLayoutMVCActionCommandTest {
 		Assert.assertNotNull(publishedLayoutDropzoneFragmentEntryLink);
 
 		FragmentEntryLink publishedLayoutFragmentEntryLink =
-			_fragmentEntryLinkLocalService.getFragmentEntryLink(
+			_fragmentEntryLinkLocalService.fetchFragmentEntryLink(
 				_group.getGroupId(),
 				fragmentEntryLink.getExternalReferenceCode(),
 				_layout.getPlid());
@@ -487,6 +488,54 @@ public class PublishLayoutMVCActionCommandTest {
 		Assert.assertTrue(draftLayout.isApproved());
 
 		ServiceContextThreadLocal.popServiceContext();
+	}
+
+	@Test
+	@TestInfo("LPD-110723")
+	public void testPublishedLaunchSetDraftLayout() throws Exception {
+		Layout launchSetDraftLayout = LayoutTestUtil.addLaunchSetDraftLayout(
+			RandomTestUtil.randomLong(), _layout);
+
+		ContentLayoutTestUtil.publishLayout(launchSetDraftLayout, _layout);
+
+		launchSetDraftLayout = _layoutLocalService.getLayout(
+			launchSetDraftLayout.getPlid());
+
+		Assert.assertEquals(
+			WorkflowConstants.STATUS_READY_TO_PUBLISH,
+			launchSetDraftLayout.getStatus());
+
+		Layout layout = _layoutLocalService.getLayout(_layout.getPlid());
+
+		Assert.assertEquals(
+			_layout.getModifiedDate(), layout.getModifiedDate());
+	}
+
+	@Test
+	@TestInfo("LPD-110723")
+	public void testPublishedLaunchSetDraftLayoutWithWorkflowDefinitionLink()
+		throws Exception {
+
+		_workflowDefinitionLinkLocalService.updateWorkflowDefinitionLink(
+			TestPropsValues.getUserId(), TestPropsValues.getCompanyId(),
+			_group.getGroupId(), Layout.class.getName(), 0, 0,
+			"Single Approver@1");
+
+		Layout launchSetDraftLayout = LayoutTestUtil.addLaunchSetDraftLayout(
+			RandomTestUtil.randomLong(), _layout);
+
+		ContentLayoutTestUtil.publishLayout(launchSetDraftLayout, _layout);
+
+		Layout layout = _layoutLocalService.getLayout(_layout.getPlid());
+
+		Assert.assertEquals(_layout.getStatus(), layout.getStatus());
+
+		launchSetDraftLayout = _layoutLocalService.getLayout(
+			launchSetDraftLayout.getPlid());
+
+		Assert.assertEquals(
+			WorkflowConstants.STATUS_READY_TO_PUBLISH,
+			launchSetDraftLayout.getStatus());
 	}
 
 	@Test
@@ -1096,5 +1145,9 @@ public class PublishLayoutMVCActionCommandTest {
 
 	@Inject
 	private UserLocalService _userLocalService;
+
+	@Inject
+	private WorkflowDefinitionLinkLocalService
+		_workflowDefinitionLinkLocalService;
 
 }

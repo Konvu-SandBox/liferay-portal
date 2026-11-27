@@ -108,7 +108,7 @@ public class LaunchSetScheduledPublishMessageListenerTest {
 
 		String title = RandomTestUtil.randomString();
 
-		_updateLaunchDraft(
+		_updateLaunchSetDraft(
 			_addLaunchEntryObjectEntry(
 				JournalArticle.class.getName(),
 				_journalArticle.getResourcePrimKey(),
@@ -230,7 +230,7 @@ public class LaunchSetScheduledPublishMessageListenerTest {
 			_backgroundTaskManager.getBackgroundTasks(
 				BackgroundTaskConstants.GROUP_ID_DEFAULT,
 				"com.liferay.launch.internal.background.task." +
-					"LaunchSetScheduledPublishBackgroundTaskExecutor"),
+					"LaunchSetPublishBackgroundTaskExecutor"),
 			backgroundTask -> Objects.equals(
 				backgroundTask.getName(),
 				String.valueOf(_launchSetObjectEntry.getObjectEntryId())));
@@ -287,7 +287,7 @@ public class LaunchSetScheduledPublishMessageListenerTest {
 	private void _receiveWithError(long userId) throws Exception {
 		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
 				"com.liferay.launch.internal.background.task." +
-					"LaunchSetScheduledPublishBackgroundTaskExecutor",
+					"LaunchSetPublishBackgroundTaskExecutor",
 				LoggerTestUtil.ERROR)) {
 
 			_receive(_launchSetObjectEntry.getObjectEntryId(), userId);
@@ -305,14 +305,14 @@ public class LaunchSetScheduledPublishMessageListenerTest {
 		}
 	}
 
-	private void _updateLaunchDraft(
+	private void _updateLaunchSetDraft(
 			ObjectEntry launchEntryObjectEntry, String title)
 		throws Exception {
 
 		ObjectEntry objectEntry = _objectEntryLocalService.getObjectEntry(
 			launchEntryObjectEntry.getObjectEntryId());
 
-		JournalArticle launchDraftJournalArticle =
+		JournalArticle launchSetDraftJournalArticle =
 			_journalArticleLocalService.getLatestArticle(
 				MapUtil.getLong(objectEntry.getValues(), "draftId"),
 				WorkflowConstants.STATUS_ANY, false);
@@ -324,16 +324,17 @@ public class LaunchSetScheduledPublishMessageListenerTest {
 		serviceContext.setWorkflowAction(WorkflowConstants.ACTION_SAVE_DRAFT);
 
 		_journalArticleLocalService.updateArticle(
-			TestPropsValues.getUserId(), launchDraftJournalArticle.getGroupId(),
-			launchDraftJournalArticle.getFolderId(),
-			launchDraftJournalArticle.getArticleId(),
-			launchDraftJournalArticle.getVersion(),
+			TestPropsValues.getUserId(),
+			launchSetDraftJournalArticle.getGroupId(),
+			launchSetDraftJournalArticle.getFolderId(),
+			launchSetDraftJournalArticle.getArticleId(),
+			launchSetDraftJournalArticle.getVersion(),
 			HashMapBuilder.put(
 				LocaleUtil.getSiteDefault(), title
 			).build(),
-			launchDraftJournalArticle.getDescriptionMap(),
-			launchDraftJournalArticle.getContent(),
-			launchDraftJournalArticle.getLayoutUuid(), serviceContext);
+			launchSetDraftJournalArticle.getDescriptionMap(),
+			launchSetDraftJournalArticle.getContent(),
+			launchSetDraftJournalArticle.getLayoutUuid(), serviceContext);
 	}
 
 	private void _updateStatus(int status) throws Exception {

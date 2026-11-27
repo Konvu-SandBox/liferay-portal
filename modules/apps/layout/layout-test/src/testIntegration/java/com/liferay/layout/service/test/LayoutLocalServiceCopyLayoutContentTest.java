@@ -15,6 +15,7 @@ import com.liferay.asset.test.util.AssetTestUtil;
 import com.liferay.change.tracking.configuration.CTSettingsConfiguration;
 import com.liferay.change.tracking.model.CTCollection;
 import com.liferay.change.tracking.service.CTCollectionLocalService;
+import com.liferay.depot.service.DepotEntryGroupRelLocalService;
 import com.liferay.expando.kernel.model.ExpandoColumn;
 import com.liferay.expando.kernel.model.ExpandoColumnConstants;
 import com.liferay.expando.kernel.model.ExpandoTable;
@@ -43,6 +44,7 @@ import com.liferay.layout.page.template.service.LayoutPageTemplateStructureLocal
 import com.liferay.layout.page.template.service.LayoutPageTemplateStructureRelElementVariationAudienceEntryRelLocalService;
 import com.liferay.layout.page.template.service.LayoutPageTemplateStructureRelElementVariationLocalService;
 import com.liferay.layout.page.template.service.LayoutPageTemplateStructureRelLocalService;
+import com.liferay.layout.page.template.test.util.LayoutPageTemplateTestUtil;
 import com.liferay.layout.provider.LayoutStructureProvider;
 import com.liferay.layout.seo.model.LayoutSEOEntry;
 import com.liferay.layout.seo.model.LayoutSEOEntryCustomMetaTag;
@@ -51,6 +53,7 @@ import com.liferay.layout.seo.service.LayoutSEOEntryLocalService;
 import com.liferay.layout.service.LayoutClassedModelUsageLocalService;
 import com.liferay.layout.test.constants.LayoutPortletKeys;
 import com.liferay.layout.test.util.ContentLayoutTestUtil;
+import com.liferay.layout.test.util.DesignLibraryTestUtil;
 import com.liferay.layout.test.util.LayoutTestUtil;
 import com.liferay.layout.util.LayoutServiceContextHelper;
 import com.liferay.layout.util.structure.LayoutStructure;
@@ -90,6 +93,7 @@ import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.context.ContextUserReplace;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
+import com.liferay.portal.kernel.test.util.FeatureFlagTestUtil;
 import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.RoleTestUtil;
@@ -111,6 +115,7 @@ import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.kernel.util.UnicodePropertiesBuilder;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
+import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
@@ -594,7 +599,7 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 			2, mainDraftFragmentEntryLink1.getExternalReferenceCode(),
 			mainDraftLayout);
 
-		Layout launchDraftLayout = _addLaunchDraftLayout(
+		Layout launchSetDraftLayout = LayoutTestUtil.addLaunchSetDraftLayout(
 			RandomTestUtil.randomLong(), layout);
 
 		_testCopyLayoutContentPreservesLineage(
@@ -602,12 +607,12 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 				mainDraftFragmentEntryLink1.getExternalReferenceCode(),
 				mainDraftFragmentEntryLink2.getExternalReferenceCode()
 			},
-			mainDraftLayout, launchDraftLayout);
+			mainDraftLayout, launchSetDraftLayout);
 		_testCopyLayoutContentPreservesLineage(
 			new FragmentEntryLink[] {
 				mainDraftFragmentEntryLink1, mainDraftFragmentEntryLink2
 			},
-			launchDraftLayout, mainDraftLayout);
+			launchSetDraftLayout, mainDraftLayout);
 
 		_testCopyLayoutContentPreservesLineage(
 			new String[] {
@@ -620,7 +625,9 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 				mainDraftFragmentEntryLink1.getExternalReferenceCode(),
 				mainDraftFragmentEntryLink2.getExternalReferenceCode()
 			},
-			layout, _addLaunchDraftLayout(RandomTestUtil.randomLong(), layout));
+			layout,
+			LayoutTestUtil.addLaunchSetDraftLayout(
+				RandomTestUtil.randomLong(), layout));
 	}
 
 	@Test
@@ -739,13 +746,13 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 		_layoutLocalService.copyLayoutContent(draftLayout, layout);
 
 		FragmentEntryLink fragmentEntryLink1 =
-			_fragmentEntryLinkLocalService.getFragmentEntryLink(
+			_fragmentEntryLinkLocalService.fetchFragmentEntryLink(
 				_group.getGroupId(),
 				draftFragmentEntryLink1.getExternalReferenceCode(),
 				layout.getPlid());
 
 		FragmentEntryLink fragmentEntryLink2 =
-			_fragmentEntryLinkLocalService.getFragmentEntryLink(
+			_fragmentEntryLinkLocalService.fetchFragmentEntryLink(
 				_group.getGroupId(),
 				draftFragmentEntryLink2.getExternalReferenceCode(),
 				layout.getPlid());
@@ -775,13 +782,13 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 		_layoutLocalService.copyLayoutContent(draftLayout, layout);
 
 		FragmentEntryLink updatedFragmentEntryLink1 =
-			_fragmentEntryLinkLocalService.getFragmentEntryLink(
+			_fragmentEntryLinkLocalService.fetchFragmentEntryLink(
 				_group.getGroupId(),
 				draftFragmentEntryLink1.getExternalReferenceCode(),
 				layout.getPlid());
 
 		FragmentEntryLink updatedFragmentEntryLink2 =
-			_fragmentEntryLinkLocalService.getFragmentEntryLink(
+			_fragmentEntryLinkLocalService.fetchFragmentEntryLink(
 				_group.getGroupId(),
 				draftFragmentEntryLink2.getExternalReferenceCode(),
 				layout.getPlid());
@@ -1084,6 +1091,59 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 			sourceLayout.getThemeId(), targetLayout.getThemeId());
 
 		Assert.assertEquals(sourceLayout.getCss(), targetLayout.getCss());
+	}
+
+	@FeatureFlag("LPD-57283")
+	@Test
+	@TestInfo("LPD-108821")
+	public void testCopyLayoutMasterLayoutWithDesignLibrary() throws Exception {
+		FeatureFlagTestUtil.invokeFeatureFlagListeners(
+			_group.getCompanyId(), true, "LPD-57283");
+
+		Group designLibraryGroup = DesignLibraryTestUtil.addDesignLibraryGroup(
+			_group.getGroupId(), true);
+
+		Layout layout = LayoutTestUtil.addTypeContentLayout(_group);
+
+		Layout draftLayout = layout.fetchDraftLayout();
+
+		LayoutPageTemplateEntry masterLayoutPageTemplateEntry =
+			LayoutPageTemplateTestUtil.addLayoutPageTemplateEntry(
+				designLibraryGroup.getGroupId(),
+				LayoutPageTemplateEntryTypeConstants.MASTER_LAYOUT,
+				WorkflowConstants.STATUS_APPROVED);
+
+		draftLayout = _layoutLocalService.updateMasterLayoutPageTemplateEntry(
+			draftLayout.getGroupId(), draftLayout.isPrivateLayout(),
+			draftLayout.getLayoutId(),
+			masterLayoutPageTemplateEntry.getExternalReferenceCode(),
+			designLibraryGroup.getExternalReferenceCode());
+
+		layout = _layoutLocalService.copyLayoutContent(draftLayout, layout);
+
+		_assertMasterLayout(
+			designLibraryGroup, layout, masterLayoutPageTemplateEntry,
+			masterLayoutPageTemplateEntry.getPlid());
+
+		layout = _layoutLocalService.copyLayoutContent(draftLayout, layout);
+
+		_assertMasterLayout(
+			designLibraryGroup, layout, masterLayoutPageTemplateEntry,
+			masterLayoutPageTemplateEntry.getPlid());
+
+		_layoutLocalService.updateMasterLayoutPageTemplateEntry(
+			layout.getGroupId(), layout.isPrivateLayout(), layout.getLayoutId(),
+			null, null);
+
+		_depotEntryGroupRelLocalService.deleteDepotEntryGroupRel(
+			_depotEntryGroupRelLocalService.
+				fetchDepotEntryGroupRelByDepotEntryIdToGroupId(
+					designLibraryGroup.getClassPK(), _group.getGroupId()));
+
+		layout = _layoutLocalService.copyLayoutContent(draftLayout, layout);
+
+		_assertMasterLayout(
+			designLibraryGroup, layout, masterLayoutPageTemplateEntry, 0);
 	}
 
 	@Test
@@ -1747,26 +1807,6 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 		return _layoutLocalService.getLayout(layout.getPlid());
 	}
 
-	private Layout _addLaunchDraftLayout(long launchSetId, Layout layout)
-		throws Exception {
-
-		Layout launchDraftLayout = _layoutLocalService.addLayout(
-			StringBundler.concat(
-				layout.getExternalReferenceCode(), "-launch-", launchSetId),
-			TestPropsValues.getUserId(), layout.getGroupId(),
-			layout.isPrivateLayout(), layout.getParentLayoutId(),
-			_portal.getClassNameId(Layout.class), layout.getPlid(),
-			layout.getNameMap(), layout.getTitleMap(),
-			layout.getDescriptionMap(), layout.getKeywordsMap(),
-			layout.getRobotsMap(), layout.getType(), layout.getTypeSettings(),
-			true, true, Collections.emptyMap(),
-			layout.getMasterLayoutPageTemplateEntryERC(), _serviceContext);
-
-		launchDraftLayout.setLaunchSetId(launchSetId);
-
-		return _layoutLocalService.updateLayout(launchDraftLayout);
-	}
-
 	private void _addLayoutPageTemplateStructureRel(
 			LayoutPageTemplateStructure layoutPageTemplateStructure,
 			SegmentsExperience segmentsExperience)
@@ -1997,6 +2037,20 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 		Assert.assertEquals(
 			content,
 			_getLayoutContent(_layoutLocalService.getLayout(plid), locale));
+	}
+
+	private void _assertMasterLayout(
+		Group group, Layout layout,
+		LayoutPageTemplateEntry masterLayoutPageTemplateEntry,
+		long masterLayoutPlid) {
+
+		Assert.assertEquals(
+			masterLayoutPageTemplateEntry.getExternalReferenceCode(),
+			layout.getMasterLayoutPageTemplateEntryERC());
+		Assert.assertEquals(
+			group.getExternalReferenceCode(),
+			layout.getMasterLayoutPageTemplateEntryScopeERC());
+		Assert.assertEquals(masterLayoutPlid, layout.getMasterLayoutPlid());
 	}
 
 	private void _assertPortletPreferences(long count, String portletId) {
@@ -2459,6 +2513,9 @@ public class LayoutLocalServiceCopyLayoutContentTest {
 
 	@Inject
 	private CTCollectionLocalService _ctCollectionLocalService;
+
+	@Inject
+	private DepotEntryGroupRelLocalService _depotEntryGroupRelLocalService;
 
 	@Inject
 	private EntityCache _entityCache;
