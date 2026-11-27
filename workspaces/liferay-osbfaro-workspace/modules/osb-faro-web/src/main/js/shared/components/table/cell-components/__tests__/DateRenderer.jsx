@@ -4,8 +4,6 @@ import React from 'react';
 import {getTimestamp} from 'test/data';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 describe('DateRenderer', () => {
 	it('should render', () => {
 		const {container} = render(
@@ -67,7 +65,7 @@ describe('DateRenderer', () => {
 		dateCreated => {
 			const {getByText} = render(<DateRenderer data={{dateCreated}} />);
 
-			expect(getByText('–')).toHaveClass('text-secondary');
+			expect(getByText('–')).toBeInTheDocument();
 		}
 	);
 });

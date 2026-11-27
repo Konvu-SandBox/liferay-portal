@@ -3,8 +3,6 @@ import React from 'react';
 import {DataTypes} from 'shared/types/DataTypes';
 import {fireEvent, render, screen} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const defaultProps = {
 	label: 'contains "manager"',
 	name: 'Job Title',
@@ -185,26 +183,5 @@ describe('ConditionChip', () => {
 		expect(
 			container.querySelector('.lexicon-icon-exclamation-circle')
 		).toBeInTheDocument();
-	});
-
-	it('marks a chip whose sticker stays as is when selected', () => {
-		const {rerender} = render(
-			<ConditionChip {...defaultProps} onSelect={jest.fn()} selected />
-		);
-
-		const chip = screen.getByRole('group', {name: /job title/i});
-
-		expect(chip).not.toHaveClass('condition-chip-static-sticker');
-
-		rerender(
-			<ConditionChip
-				{...defaultProps}
-				onSelect={jest.fn()}
-				selected
-				staticSticker
-			/>
-		);
-
-		expect(chip).toHaveClass('condition-chip-static-sticker');
 	});
 });

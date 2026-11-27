@@ -15,8 +15,6 @@ import {
 	scrollListToBottom,
 } from 'test/infinite-scroll';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useParams: () => ({channelId: '456', groupId: '2000'}),
@@ -101,7 +99,7 @@ describe('FilterPicker', () => {
 			await screen.findByRole('option', {name: 'Tech'})
 		).toBeInTheDocument();
 		expect(
-			screen.getByRole('option', {name: 'Finance'})
+			screen.getByRole('option', {name: /^finance$/i})
 		).toBeInTheDocument();
 	});
 

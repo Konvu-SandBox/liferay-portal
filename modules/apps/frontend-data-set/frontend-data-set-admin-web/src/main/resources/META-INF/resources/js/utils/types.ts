@@ -114,6 +114,7 @@ export interface IDataSet {
 	restSchema: string;
 	searchAsYouType?: boolean;
 	searchSuggestionsEnabled?: boolean;
+	showPagination?: boolean;
 	showSearch: boolean;
 	snapshotsEnabled: boolean;
 	sortsOrder?: string;
@@ -255,6 +256,7 @@ export interface IVisualizationModeClientExtension {
 	externalReferenceCode: string;
 	icon: string;
 	name: string;
+	sections?: string;
 }
 
 type TLocalizedValue<T> = Liferay.Language.LocalizedValue<T>;

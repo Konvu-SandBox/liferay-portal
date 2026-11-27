@@ -14,17 +14,20 @@ import com.liferay.petra.io.unsync.UnsyncBufferedReader;
 import com.liferay.petra.string.CharPool;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
+import com.liferay.portal.configuration.module.configuration.ConfigurationProvider;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Company;
 import com.liferay.portal.kernel.model.User;
+import com.liferay.portal.kernel.module.configuration.ConfigurationException;
 import com.liferay.portal.kernel.portletfilerepository.PortletFileRepository;
 import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.UserLocalService;
+import com.liferay.portal.kernel.settings.GroupServiceSettingsLocator;
 import com.liferay.portal.kernel.util.GroupThreadLocal;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.MapUtil;
@@ -41,8 +44,8 @@ import com.liferay.portal.kernel.xml.DocumentException;
 import com.liferay.portal.kernel.xml.Element;
 import com.liferay.portal.kernel.xml.SAXReaderUtil;
 import com.liferay.portal.kernel.zip.ZipReader;
-import com.liferay.portal.kernel.zip.ZipReaderFactory;
 import com.liferay.wiki.configuration.WikiGroupServiceConfiguration;
+import com.liferay.wiki.constants.WikiConstants;
 import com.liferay.wiki.constants.WikiPageConstants;
 import com.liferay.wiki.constants.WikiWebKeys;
 import com.liferay.wiki.exception.ImportFilesException;
@@ -75,21 +78,19 @@ public class MediaWikiImporter {
 	public MediaWikiImporter(
 		AssetTagLocalService assetTagLocalService,
 		CompanyLocalService companyLocalService,
+		ConfigurationProvider configurationProvider,
 		PortletFileRepository portletFileRepository,
 		UserLocalService userLocalService,
-		WikiGroupServiceConfiguration wikiGroupServiceConfiguration,
 		WikiPageLocalService wikiPageLocalService,
-		WikiPageTitleValidator wikiPageTitleValidator,
-		ZipReaderFactory zipReaderFactory) {
+		WikiPageTitleValidator wikiPageTitleValidator) {
 
 		_assetTagLocalService = assetTagLocalService;
 		_companyLocalService = companyLocalService;
+		_configurationProvider = configurationProvider;
 		_portletFileRepository = portletFileRepository;
 		_userLocalService = userLocalService;
-		_wikiGroupServiceConfiguration = wikiGroupServiceConfiguration;
 		_wikiPageLocalService = wikiPageLocalService;
 		_wikiPageTitleValidator = wikiPageTitleValidator;
-		_zipReaderFactory = zipReaderFactory;
 	}
 
 	public void importPages(
@@ -279,7 +280,8 @@ public class MediaWikiImporter {
 	}
 
 	private void _moveFrontPage(
-		long userId, WikiNode node, Map<String, String[]> options) {
+			long userId, WikiNode node, Map<String, String[]> options)
+		throws ConfigurationException {
 
 		String frontPageTitle = MapUtil.getString(
 			options, WikiWebKeys.OPTIONS_FRONT_PAGE);
@@ -289,6 +291,12 @@ public class MediaWikiImporter {
 		}
 
 		frontPageTitle = _wikiPageTitleValidator.normalize(frontPageTitle);
+
+		WikiGroupServiceConfiguration wikiGroupServiceConfiguration =
+			_configurationProvider.getConfiguration(
+				WikiGroupServiceConfiguration.class,
+				new GroupServiceSettingsLocator(
+					node.getGroupId(), WikiConstants.SERVICE_NAME));
 
 		try {
 			int count = _wikiPageLocalService.getPagesCount(
@@ -302,7 +310,7 @@ public class MediaWikiImporter {
 
 				_wikiPageLocalService.renamePage(
 					userId, node.getNodeId(), frontPageTitle,
-					_wikiGroupServiceConfiguration.frontPageName(), false,
+					wikiGroupServiceConfiguration.frontPageName(), false,
 					serviceContext);
 			}
 		}
@@ -311,7 +319,7 @@ public class MediaWikiImporter {
 				_log.warn(
 					StringBundler.concat(
 						"Could not move ",
-						_wikiGroupServiceConfiguration.frontPageName(),
+						wikiGroupServiceConfiguration.frontPageName(),
 						" to the title provided: ", frontPageTitle),
 					exception);
 			}
@@ -332,9 +340,7 @@ public class MediaWikiImporter {
 			return;
 		}
 
-		try (ZipReader zipReader = _zipReaderFactory.getZipReader(
-				imagesInputStream)) {
-
+		try (ZipReader zipReader = new ZipReader(imagesInputStream)) {
 			List<String> entries = zipReader.getEntries();
 
 			if (entries == null) {
@@ -803,14 +809,12 @@ public class MediaWikiImporter {
 
 	private final AssetTagLocalService _assetTagLocalService;
 	private final CompanyLocalService _companyLocalService;
+	private final ConfigurationProvider _configurationProvider;
 	private final PortletFileRepository _portletFileRepository;
 	private final MediaWikiToCreoleTranslator _translator =
 		new MediaWikiToCreoleTranslator();
 	private final UserLocalService _userLocalService;
-	private volatile WikiGroupServiceConfiguration
-		_wikiGroupServiceConfiguration;
 	private final WikiPageLocalService _wikiPageLocalService;
 	private final WikiPageTitleValidator _wikiPageTitleValidator;
-	private final ZipReaderFactory _zipReaderFactory;
 
 }

@@ -373,14 +373,6 @@ public class AssetListEntryAssetEntryRelLocalServiceWrapper
 			getAssetListEntryAssetEntryRel(assetListEntryAssetEntryRelId);
 	}
 
-	@Override
-	public java.util.List<AssetListEntryAssetEntryRel>
-		getAssetListEntryAssetEntryRelByAssetEntryId(long assetEntryId) {
-
-		return _assetListEntryAssetEntryRelLocalService.
-			getAssetListEntryAssetEntryRelByAssetEntryId(assetEntryId);
-	}
-
 	/**
 	 * Returns the asset list entry asset entry rel matching the UUID and group.
 	 *
@@ -513,24 +505,6 @@ public class AssetListEntryAssetEntryRelLocalServiceWrapper
 	public int getAssetListEntryAssetEntryRelsCount(long assetListEntryId) {
 		return _assetListEntryAssetEntryRelLocalService.
 			getAssetListEntryAssetEntryRelsCount(assetListEntryId);
-	}
-
-	@Override
-	public int getAssetListEntryAssetEntryRelsCount(
-		long assetListEntryId, long segmentsEntryId) {
-
-		return _assetListEntryAssetEntryRelLocalService.
-			getAssetListEntryAssetEntryRelsCount(
-				assetListEntryId, segmentsEntryId);
-	}
-
-	@Override
-	public int getAssetListEntryAssetEntryRelsCount(
-		long assetListEntryId, long[] segmentsEntryIds) {
-
-		return _assetListEntryAssetEntryRelLocalService.
-			getAssetListEntryAssetEntryRelsCount(
-				assetListEntryId, segmentsEntryIds);
 	}
 
 	@Override
@@ -692,4 +666,4 @@ public class AssetListEntryAssetEntryRelLocalServiceWrapper
 		_assetListEntryAssetEntryRelLocalService;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1702860457
+// LIFERAY-SERVICE-BUILDER-HASH:-1684679299
