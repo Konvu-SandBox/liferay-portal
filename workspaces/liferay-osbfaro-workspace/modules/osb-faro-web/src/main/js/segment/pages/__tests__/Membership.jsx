@@ -10,8 +10,6 @@ import {SegmentTypes} from 'shared/util/constants';
 import {MemoryRouter} from 'react-router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const defaultProps = {
 	channelId: '123',
 	groupId: '23',
@@ -39,7 +37,7 @@ describe('Membership', () => {
 		await waitForLoadingToBeRemoved(container);
 
 		expect(
-			screen.getByText('Segment Membership Trend')
+			screen.getByText(/^segment membership trend$/i)
 		).toBeInTheDocument();
 	});
 

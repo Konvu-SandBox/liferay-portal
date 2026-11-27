@@ -14,8 +14,6 @@ import {Provider} from 'react-redux';
 import {RangeKeyTimeRanges} from 'shared/util/constants';
 import {useRequest} from 'shared/hooks/useRequest';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/api', () => ({
 	categories: {
 		fetchIndividualTopCategories: jest.fn(),
@@ -140,18 +138,22 @@ describe('TopCategoriesAndTags', () => {
 			renderTopCategoriesAndTags();
 
 			expect(
-				screen.getByRole('tab', {name: 'Category'})
+				screen.getByRole('tab', {name: /^category$/i})
 			).toBeInTheDocument();
-			expect(screen.getByRole('tab', {name: 'Tag'})).toBeInTheDocument();
+			expect(
+				screen.getByRole('tab', {name: /^tag$/i})
+			).toBeInTheDocument();
 		});
 
 		it('should render the Group By picker with the default metric (Impressions)', () => {
 			renderTopCategoriesAndTags();
 
-			expect(screen.getAllByText('Group By').length).toBeGreaterThan(0);
-			expect(screen.getAllByText('Impressions').length).toBeGreaterThan(
+			expect(screen.getAllByText(/^group by$/i).length).toBeGreaterThan(
 				0
 			);
+			expect(
+				screen.getAllByText(/^impressions$/i).length
+			).toBeGreaterThan(0);
 		});
 	});
 
@@ -162,7 +164,9 @@ describe('TopCategoriesAndTags', () => {
 			expect(
 				screen.getAllByText('Department Names').length
 			).toBeGreaterThan(0);
-			expect(screen.getAllByText('Department').length).toBeGreaterThan(0);
+			expect(screen.getAllByText(/^department$/i).length).toBeGreaterThan(
+				0
+			);
 			expect(screen.getAllByText('Specialties').length).toBeGreaterThan(
 				0
 			);
@@ -225,7 +229,7 @@ describe('TopCategoriesAndTags', () => {
 
 			renderTopCategoriesAndTags();
 
-			fireEvent.click(screen.getByRole('tab', {name: 'Tag'}));
+			fireEvent.click(screen.getByRole('tab', {name: /^tag$/i}));
 
 			const lastCall =
 				mockedUseRequest.mock.calls[
@@ -273,7 +277,7 @@ describe('TopCategoriesAndTags', () => {
 				},
 			});
 
-			fireEvent.click(screen.getByRole('tab', {name: 'Tag'}));
+			fireEvent.click(screen.getByRole('tab', {name: /^tag$/i}));
 
 			expect(screen.getAllByText('promo').length).toBeGreaterThan(0);
 		});
@@ -284,11 +288,11 @@ describe('TopCategoriesAndTags', () => {
 			renderTopCategoriesAndTags();
 
 			fireEvent.click(
-				screen.getAllByRole('combobox', {name: 'Group By'})[0]
+				screen.getAllByRole('combobox', {name: /^group by$/i})[0]
 			);
 
 			fireEvent.click(
-				screen.getAllByRole('option', {name: 'Downloads'})[0]
+				screen.getAllByRole('option', {name: /^downloads$/i})[0]
 			);
 
 			const lastCall =
@@ -319,7 +323,7 @@ describe('TopCategoriesAndTags', () => {
 			renderTopCategoriesAndTags();
 
 			expect(
-				screen.getAllByText('No Categories Available').length
+				screen.getAllByText(/^no categories available$/i).length
 			).toBeGreaterThan(0);
 		});
 
@@ -328,10 +332,10 @@ describe('TopCategoriesAndTags', () => {
 
 			renderTopCategoriesAndTags();
 
-			fireEvent.click(screen.getByRole('tab', {name: 'Tag'}));
+			fireEvent.click(screen.getByRole('tab', {name: /^tag$/i}));
 
 			expect(
-				screen.getAllByText('No Tags Available').length
+				screen.getAllByText(/^no tags available$/i).length
 			).toBeGreaterThan(0);
 		});
 	});

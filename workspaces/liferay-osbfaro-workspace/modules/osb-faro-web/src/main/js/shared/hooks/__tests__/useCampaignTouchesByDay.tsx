@@ -7,8 +7,6 @@ import {MockedProvider} from '@apollo/client/testing';
 import {SessionEntityTypes} from 'shared/util/constants';
 import {useCampaignTouchesByDay} from '../useCampaignTouchesByDay';
 
-jest.unmock('react-dom');
-
 const VARIABLES = {
 	accountId: 'account-1',
 	channelId: 'channel-1',
@@ -33,6 +31,7 @@ const buildTouch = (campaignId: string) => ({
 		},
 	],
 	touchesCount: 1,
+	visible: true,
 });
 
 const buildRequest = (variables: Record<string, unknown>, days: unknown[]) => ({

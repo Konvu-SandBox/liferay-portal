@@ -8,8 +8,6 @@ import {
 	within,
 } from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const buildCampaigns = (total: number) =>
 	Array.from({length: total}, (unused, index) => ({
 		campaignId: `c${index}`,
@@ -24,6 +22,7 @@ const buildCampaigns = (total: number) =>
 			},
 		],
 		touchesCount: 1,
+		visible: true,
 	}));
 
 const renderList = (props = {}) =>

@@ -1,0 +1,26 @@
+{
+	"friendlyURL": "/individuals-interest",
+	"hidden": true,
+	"name": "Individuals Interest",
+	"name_i18n": {
+		"en_US": "Individuals Interest"
+	},
+	"permissions": [
+		{
+			"actionIds": [
+			],
+			"roleName": "Guest",
+			"scope": 4
+		},
+		{
+			"actionIds": [
+				"VIEW"
+			],
+			"roleName": "Site Member",
+			"scope": 4
+		}
+	],
+	"private": false,
+	"system": false,
+	"type": "Content"
+}

@@ -20,6 +20,7 @@ import com.liferay.data.engine.rest.resource.v2_0.DataDefinitionResource;
 import com.liferay.data.engine.rest.test.util.DataDefinitionTestUtil;
 import com.liferay.document.library.kernel.model.DLFolderConstants;
 import com.liferay.document.library.kernel.service.DLAppLocalService;
+import com.liferay.dynamic.data.mapping.form.field.type.constants.DDMFormFieldTypeConstants;
 import com.liferay.dynamic.data.mapping.io.DDMFormDeserializer;
 import com.liferay.dynamic.data.mapping.io.DDMFormDeserializerDeserializeRequest;
 import com.liferay.dynamic.data.mapping.io.DDMFormDeserializerDeserializeResponse;
@@ -28,8 +29,12 @@ import com.liferay.dynamic.data.mapping.model.DDMFormField;
 import com.liferay.dynamic.data.mapping.model.DDMStructure;
 import com.liferay.dynamic.data.mapping.model.DDMTemplate;
 import com.liferay.dynamic.data.mapping.model.LocalizedValue;
+import com.liferay.dynamic.data.mapping.model.Value;
 import com.liferay.dynamic.data.mapping.service.DDMStructureLocalServiceUtil;
 import com.liferay.dynamic.data.mapping.service.DDMTemplateLocalServiceUtil;
+import com.liferay.dynamic.data.mapping.storage.DDMFormFieldValue;
+import com.liferay.dynamic.data.mapping.storage.DDMFormValues;
+import com.liferay.dynamic.data.mapping.test.util.DDMFormTestUtil;
 import com.liferay.dynamic.data.mapping.test.util.DDMStructureTestUtil;
 import com.liferay.dynamic.data.mapping.test.util.DDMTemplateTestUtil;
 import com.liferay.exportimport.changeset.Changeset;
@@ -77,7 +82,6 @@ import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.model.StagedModel;
 import com.liferay.portal.kernel.model.WorkflowDefinitionLink;
-import com.liferay.portal.kernel.module.util.SystemBundleUtil;
 import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.service.CompanyLocalServiceUtil;
 import com.liferay.portal.kernel.service.LayoutLocalServiceUtil;
@@ -91,6 +95,7 @@ import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
 import com.liferay.portal.kernel.test.rule.Sync;
 import com.liferay.portal.kernel.test.rule.SynchronousDestinationTestRule;
+import com.liferay.portal.kernel.test.util.BundleContextTestUtil;
 import com.liferay.portal.kernel.test.util.DateTestUtil;
 import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
@@ -115,7 +120,6 @@ import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.kernel.xml.Document;
 import com.liferay.portal.kernel.xml.Node;
 import com.liferay.portal.kernel.xml.SAXReaderUtil;
-import com.liferay.portal.kernel.zip.ZipReaderFactory;
 import com.liferay.portal.test.log.LogCapture;
 import com.liferay.portal.test.log.LogEntry;
 import com.liferay.portal.test.log.LoggerTestUtil;
@@ -178,6 +182,75 @@ public class JournalExportImportTest extends BasePortletExportImportTestCase {
 		super.setUp();
 
 		UserTestUtil.setUser(TestPropsValues.getUser());
+	}
+
+	@Test
+	@TestInfo("LPD-108748")
+	public void testEnableLocalStagingWithLegacyLinkToLayoutValues()
+		throws Exception {
+
+		_liveGroup = GroupTestUtil.addGroup();
+
+		DDMForm ddmForm = DDMFormTestUtil.createDDMForm();
+
+		ddmForm.addDDMFormField(
+			DDMFormTestUtil.createDDMFormField(
+				"link1", "link1", DDMFormFieldTypeConstants.LINK_TO_LAYOUT,
+				"string", false, false, false));
+		ddmForm.addDDMFormField(
+			DDMFormTestUtil.createDDMFormField(
+				"link2", "link2", DDMFormFieldTypeConstants.LINK_TO_LAYOUT,
+				"string", false, false, false));
+		ddmForm.addDDMFormField(
+			DDMFormTestUtil.createDDMFormField(
+				"link3", "link3", DDMFormFieldTypeConstants.LINK_TO_LAYOUT,
+				"string", false, false, false));
+
+		DDMStructure ddmStructure = DDMStructureTestUtil.addStructure(
+			_liveGroup.getGroupId(), JournalArticle.class.getName(), ddmForm);
+
+		Layout layout1 = LayoutTestUtil.addTypePortletLayout(_liveGroup);
+		Layout layout2 = LayoutTestUtil.addTypePortletLayout(_liveGroup);
+		Layout layout3 = LayoutTestUtil.addTypePortletLayout(_liveGroup, true);
+
+		JournalArticle article = JournalTestUtil.addArticleWithXMLContent(
+			_liveGroup.getGroupId(),
+			StringBundler.concat(
+				"<?xml version=\"1.0\"?><root available-locales=\"en_US\" ",
+				"default-locale=\"en_US\">",
+				_buildLegacyLinkToLayoutDynamicElementXML("link1", layout1),
+				_buildLegacyLinkToLayoutDynamicElementXML("link2", layout2),
+				_buildLegacyLinkToLayoutDynamicElementXML("link3", layout3),
+				"</root>"),
+			ddmStructure.getStructureKey(), null);
+
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(_liveGroup.getGroupId());
+
+		Map<String, Serializable> attributes = serviceContext.getAttributes();
+
+		attributes.putAll(
+			ExportImportConfigurationParameterMapFactoryUtil.
+				buildParameterMap());
+
+		StagingLocalServiceUtil.enableLocalStaging(
+			TestPropsValues.getUserId(), _liveGroup, false, false,
+			serviceContext);
+
+		Group stagingGroup = _liveGroup.getStagingGroup();
+
+		JournalArticle stagingArticle =
+			JournalArticleLocalServiceUtil.getArticle(
+				stagingGroup.getGroupId(), article.getArticleId());
+
+		DDMFormValues ddmFormValues = stagingArticle.getDDMFormValues();
+
+		Map<String, List<DDMFormFieldValue>> ddmFormFieldValuesMap =
+			ddmFormValues.getDDMFormFieldValuesMap(false);
+
+		_assertLinkToLayout(ddmFormFieldValuesMap.get("link1"), layout1);
+		_assertLinkToLayout(ddmFormFieldValuesMap.get("link2"), layout2);
+		_assertLinkToLayout(ddmFormFieldValuesMap.get("link3"), layout3);
 	}
 
 	@Test
@@ -2016,6 +2089,28 @@ public class JournalExportImportTest extends BasePortletExportImportTestCase {
 		}
 	}
 
+	private void _assertLinkToLayout(
+			List<DDMFormFieldValue> ddmFormFieldValues, Layout expectedLayout)
+		throws Exception {
+
+		DDMFormFieldValue ddmFormFieldValue = ddmFormFieldValues.get(0);
+
+		Value value = ddmFormFieldValue.getValue();
+
+		JSONObject jsonObject = _jsonFactory.createJSONObject(
+			value.getString(LocaleUtil.US));
+
+		Assert.assertEquals(
+			jsonObject.toString(), expectedLayout.getUuid(),
+			jsonObject.getString("id"));
+		Assert.assertEquals(
+			jsonObject.toString(), expectedLayout.getLayoutId(),
+			jsonObject.getLong("layoutId"));
+		Assert.assertEquals(
+			jsonObject.toString(), expectedLayout.isPrivateLayout(),
+			jsonObject.getBoolean("privateLayout"));
+	}
+
 	private String _buildImageDynamicElementXML(FileEntry fileEntry) {
 		return StringBundler.concat(
 			"<dynamic-element index-type=\"text\" instance-id=\"",
@@ -2029,6 +2124,19 @@ public class JournalExportImportTest extends BasePortletExportImportTestCase {
 				"uuid", fileEntry.getUuid()
 			),
 			"]]></dynamic-content></dynamic-element>");
+	}
+
+	private String _buildLegacyLinkToLayoutDynamicElementXML(
+		String name, Layout layout) {
+
+		return StringBundler.concat(
+			"<dynamic-element index-type=\"keyword\" instance-id=\"",
+			RandomTestUtil.randomString(), "\" name=\"", name,
+			"\" type=\"link_to_layout\"><dynamic-content language-id=",
+			"\"en_US\"><![CDATA[{\"groupId\": ", layout.getGroupId(),
+			", \"layoutId\": \"", layout.getLayoutId(),
+			"\", \"privateLayout\": ", layout.isPrivateLayout(),
+			"}]]></dynamic-content></dynamic-element>");
 	}
 
 	private String _buildXMLContent(String referenceJSON) {
@@ -2160,7 +2268,8 @@ public class JournalExportImportTest extends BasePortletExportImportTestCase {
 			AtomicInteger getArticlesCount,
 			AtomicInteger updateJournalArticleCount) {
 
-		BundleContext bundleContext = SystemBundleUtil.getBundleContext();
+		BundleContext bundleContext = BundleContextTestUtil.getBundleContext(
+			JournalExportImportTest.class);
 
 		return bundleContext.registerService(
 			ServiceWrapper.class,
@@ -2249,8 +2358,5 @@ public class JournalExportImportTest extends BasePortletExportImportTestCase {
 
 	@Inject
 	private Portal _portal;
-
-	@Inject
-	private ZipReaderFactory _zipReaderFactory;
 
 }

@@ -8,6 +8,7 @@ package com.liferay.object.service.impl;
 import com.liferay.object.configuration.ObjectEntryScheduleConfiguration;
 import com.liferay.object.configuration.ObjectEntryVersionConfiguration;
 import com.liferay.object.entry.util.ObjectEntryDTOConverterUtil;
+import com.liferay.object.entry.util.ObjectEntryThreadLocal;
 import com.liferay.object.exception.RequiredObjectEntryVersionException;
 import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectEntryVersion;
@@ -210,14 +211,6 @@ public class ObjectEntryVersionLocalServiceImpl
 	}
 
 	@Override
-	public ObjectEntryVersion expireObjectEntryVersion(
-			long userId, ObjectEntryVersion objectEntryVersion)
-		throws PortalException {
-
-		return _expireObjectEntryVersion(userId, objectEntryVersion);
-	}
-
-	@Override
 	public void expireObjectEntryVersions(
 			long userId, ObjectEntry objectEntry, ServiceContext serviceContext)
 		throws Exception {
@@ -270,23 +263,6 @@ public class ObjectEntryVersionLocalServiceImpl
 	@Override
 	public List<ObjectEntryVersion> getObjectEntryVersions(long objectEntryId) {
 		return objectEntryVersionPersistence.findByObjectEntryId(objectEntryId);
-	}
-
-	@Override
-	public List<ObjectEntryVersion> getObjectEntryVersions(
-		long objectEntryId, int start, int end) {
-
-		return objectEntryVersionPersistence.findByObjectEntryId(
-			objectEntryId, start, end);
-	}
-
-	@Override
-	public List<ObjectEntryVersion> getObjectEntryVersions(
-		long objectEntryId, int start, int end,
-		OrderByComparator<ObjectEntryVersion> orderByComparator) {
-
-		return objectEntryVersionPersistence.findByObjectEntryId(
-			objectEntryId, start, end, orderByComparator);
 	}
 
 	@Override
@@ -405,13 +381,22 @@ public class ObjectEntryVersionLocalServiceImpl
 			objectEntry.getObjectDefinitionId());
 		objectEntryVersion.setObjectEntryId(objectEntry.getObjectEntryId());
 
+		boolean skipObjectEntryResourcePermission =
+			ObjectEntryThreadLocal.isSkipObjectEntryResourcePermission();
+
 		try {
+			ObjectEntryThreadLocal.setSkipObjectEntryResourcePermission(true);
+
 			objectEntryVersion.setContent(
 				ObjectEntryDTOConverterUtil.toDTO(
 					_dtoConverterRegistry, _jsonFactory, objectEntry, user));
 		}
 		catch (Exception exception) {
 			throw new PortalException(exception);
+		}
+		finally {
+			ObjectEntryThreadLocal.setSkipObjectEntryResourcePermission(
+				skipObjectEntryResourcePermission);
 		}
 
 		objectEntryVersion.setDisplayDate(objectEntry.getDisplayDate());

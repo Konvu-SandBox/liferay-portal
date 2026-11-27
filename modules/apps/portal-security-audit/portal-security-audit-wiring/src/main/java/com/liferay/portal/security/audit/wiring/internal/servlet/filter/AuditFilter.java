@@ -10,7 +10,6 @@ import com.liferay.petra.string.StringPool;
 import com.liferay.portal.configuration.metatype.bnd.util.ConfigurableUtil;
 import com.liferay.portal.kernel.audit.AuditRequestContext;
 import com.liferay.portal.kernel.audit.AuditRequestContextThreadLocal;
-import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogContext;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
@@ -119,43 +118,38 @@ public class AuditFilter extends BaseFilter implements TryFilter {
 		auditRequestContext.setServerPort(httpServletRequest.getServerPort());
 		auditRequestContext.setSessionID(auditSessionId);
 
-		long companyId = CompanyThreadLocal.getCompanyId();
+		String requestId = auditRequestContext.getRequestId();
 
 		String xRequestId = httpServletRequest.getHeader(
 			HttpHeaders.X_REQUEST_ID);
 
-		if (FeatureFlagManagerUtil.isEnabled(companyId, "LPD-6417")) {
-			if (_isValidXRequestId(xRequestId)) {
-				auditRequestContext.setRequestId(xRequestId);
-				auditRequestContext.setRequestIdGenerated(false);
-			}
-			else {
-				xRequestId = auditRequestContext.getRequestId();
-			}
-
-			auditRequestContext.setHttpMethod(
-				_truncate(75, httpServletRequest.getMethod()));
-			auditRequestContext.setUserAgent(
-				_truncate(
-					255, httpServletRequest.getHeader(HttpHeaders.USER_AGENT)));
+		if (_isValidXRequestId(xRequestId)) {
+			auditRequestContext.setRequestId(xRequestId);
+			auditRequestContext.setRequestIdGenerated(false);
 		}
+
+		auditRequestContext.setHttpMethod(
+			_truncate(75, httpServletRequest.getMethod()));
+		auditRequestContext.setUserAgent(
+			_truncate(
+				255, httpServletRequest.getHeader(HttpHeaders.USER_AGENT)));
 
 		if (!_auditLogContextConfiguration.enabled()) {
 			return null;
 		}
 
-		if (!FeatureFlagManagerUtil.isEnabled(companyId, "LPD-6417") &&
-			(!_auditLogContextConfiguration.useIncomingXRequestId() ||
-			 !_isValidXRequestId(xRequestId))) {
+		if (!_auditLogContextConfiguration.useIncomingXRequestId() ||
+			!_isValidXRequestId(xRequestId)) {
 
-			xRequestId = auditRequestContext.getRequestId();
+			xRequestId = requestId;
 		}
 
 		httpServletResponse.setHeader(HttpHeaders.X_REQUEST_ID, xRequestId);
 
 		_auditLogContext.setContext(
-			remoteAddr, companyId, httpServletRequest.getServerName(),
-			userEmailAddress, userId, userLogin, xRequestId);
+			remoteAddr, CompanyThreadLocal.getCompanyId(),
+			httpServletRequest.getServerName(), userEmailAddress, userId,
+			userLogin, xRequestId);
 
 		return null;
 	}
