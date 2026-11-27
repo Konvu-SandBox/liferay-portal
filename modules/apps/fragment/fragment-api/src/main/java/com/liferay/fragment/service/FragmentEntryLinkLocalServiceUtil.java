@@ -56,6 +56,20 @@ public class FragmentEntryLinkLocalServiceUtil {
 
 	public static FragmentEntryLink addFragmentEntryLink(
 			String externalReferenceCode, long userId, long groupId,
+			String fragmentEntryERC, String fragmentEntryScopeERC,
+			long segmentsExperienceId, long plid, String editableValues,
+			String rendererKey,
+			com.liferay.portal.kernel.service.ServiceContext serviceContext)
+		throws PortalException {
+
+		return getService().addFragmentEntryLink(
+			externalReferenceCode, userId, groupId, fragmentEntryERC,
+			fragmentEntryScopeERC, segmentsExperienceId, plid, editableValues,
+			rendererKey, serviceContext);
+	}
+
+	public static FragmentEntryLink addFragmentEntryLink(
+			String externalReferenceCode, long userId, long groupId,
 			String originalFragmentEntryLinkERC, String fragmentEntryERC,
 			String fragmentEntryScopeERC, long segmentsExperienceId, long plid,
 			String css, String html, String js, String configuration,
@@ -126,14 +140,6 @@ public class FragmentEntryLinkLocalServiceUtil {
 		throws PortalException {
 
 		return getService().deleteFragmentEntryLink(fragmentEntryLinkId);
-	}
-
-	public static FragmentEntryLink deleteFragmentEntryLink(
-			String externalReferenceCode, long groupId)
-		throws PortalException {
-
-		return getService().deleteFragmentEntryLink(
-			externalReferenceCode, groupId);
 	}
 
 	public static void deleteFragmentEntryLinks(long groupId) {
@@ -388,18 +394,6 @@ public class FragmentEntryLinkLocalServiceUtil {
 				fragmentEntry, layoutPageTemplateType);
 	}
 
-	/**
-	 * @deprecated As of Athanasius (7.3.x), replaced by {@link
-	 #getFragmentEntryLinksCountByPlid(long, long)}
-	 */
-	@Deprecated
-	public static int getClassedModelFragmentEntryLinksCount(
-		long groupId, long classNameId, long classPK) {
-
-		return getService().getClassedModelFragmentEntryLinksCount(
-			groupId, classNameId, classPK);
-	}
-
 	public static com.liferay.portal.kernel.dao.orm.ExportActionableDynamicQuery
 		getExportActionableDynamicQuery(
 			com.liferay.exportimport.kernel.lar.PortletDataContext
@@ -420,14 +414,6 @@ public class FragmentEntryLinkLocalServiceUtil {
 		throws PortalException {
 
 		return getService().getFragmentEntryLink(fragmentEntryLinkId);
-	}
-
-	public static FragmentEntryLink getFragmentEntryLink(
-			long groupId, String originalFragmentEntryLinkERC, long plid)
-		throws PortalException {
-
-		return getService().getFragmentEntryLink(
-			groupId, originalFragmentEntryLinkERC, plid);
 	}
 
 	public static FragmentEntryLink getFragmentEntryLinkByExternalReferenceCode(
@@ -602,16 +588,6 @@ public class FragmentEntryLinkLocalServiceUtil {
 		return getService().getFragmentEntryLinksCount();
 	}
 
-	public static int getFragmentEntryLinksCountByFragmentEntry(
-			long groupId,
-			com.liferay.fragment.model.FragmentEntry fragmentEntry,
-			boolean deleted)
-		throws PortalException {
-
-		return getService().getFragmentEntryLinksCountByFragmentEntry(
-			groupId, fragmentEntry, deleted);
-	}
-
 	public static int getFragmentEntryLinksCountByPlid(
 		long groupId, long plid) {
 
@@ -726,4 +702,4 @@ public class FragmentEntryLinkLocalServiceUtil {
 			FragmentEntryLinkLocalService.class);
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1380888483
+// LIFERAY-SERVICE-BUILDER-HASH:-1530852026
