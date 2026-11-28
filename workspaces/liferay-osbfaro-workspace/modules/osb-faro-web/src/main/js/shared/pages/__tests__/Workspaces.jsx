@@ -4,8 +4,13 @@ import mockStore from 'test/mock-store';
 import React from 'react';
 import Workspaces, {routingFn} from '../Workspaces';
 import {ApolloProvider} from '@apollo/client';
-import {BrowserRouter} from 'react-router-dom';
-import {cleanup, render} from '@testing-library/react';
+import {
+	BrowserRouter,
+	MemoryRouter,
+	Route,
+	Routes as RouterRoutes
+} from 'react-router-dom';
+import {cleanup, render, screen} from '@testing-library/react';
 import {Map} from 'immutable';
 import {noop} from 'lodash';
 import {Project} from 'shared/util/records';
@@ -45,12 +50,29 @@ const DefaultComponent = props => (
 	</ApolloProvider>
 );
 
+const RoutedComponent = () => (
+	<ApolloProvider client={client}>
+		<Provider store={mockStore()}>
+			<MemoryRouter initialEntries={['/workspaces']}>
+				<RouterRoutes>
+					<Route element={<Workspaces />} path='/workspaces' />
+
+					<Route
+						element={<p>{'workspace creation'}</p>}
+						path={toRoute(Routes.WORKSPACE_ADD_WITH_CORP_PROJECT_UUID, {
+							corpProjectUuid
+						})}
+					/>
+				</RouterRoutes>
+			</MemoryRouter>
+		</Provider>
+	</ApolloProvider>
+);
+
 jest.mock('shared/hooks/useProjects', () => ({
 	useFetchJoinableProjects: () => ({data: [], loading: false}),
 	useFetchProjects: jest.fn()
 }));
-
-jest.unmock('react-dom');
 
 jest.mock('shared/hooks/useIncidentAlert', () => ({
 	useIncidentAlert: jest.fn(() => ({
@@ -93,7 +115,7 @@ describe('Workspaces', () => {
 		).toBeInTheDocument();
 
 		expect(
-			getByText('Visit our Status Page for more details.')
+			getByText(/^visit our status page for more details\.$/i)
 		).toBeInTheDocument();
 
 		const statusPageAnnouncementsLink = container.querySelector(
@@ -152,6 +174,17 @@ describe('Workspaces', () => {
 		const {container} = render(<DefaultComponent />);
 
 		expect(container).toMatchSnapshot();
+	});
+
+	it('should send a single account without a workspace to the workspace creation', () => {
+		useFetchProjects.mockImplementation(() => ({
+			data: [mockBasicProjectUnconfigured(0)],
+			loading: false
+		}));
+
+		render(<RoutedComponent />);
+
+		expect(screen.getByText('workspace creation')).toBeInTheDocument();
 	});
 });
 

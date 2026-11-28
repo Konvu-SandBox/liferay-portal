@@ -51,7 +51,6 @@ import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.odata.entity.EntityField;
 import com.liferay.portal.test.log.LogCapture;
 import com.liferay.portal.test.log.LoggerTestUtil;
-import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.Inject;
 
 import java.util.ArrayList;
@@ -173,7 +172,6 @@ public class AssetLibraryResourceTest extends BaseAssetLibraryResourceTestCase {
 		}
 	}
 
-	@FeatureFlag("LPD-11388")
 	@Override
 	@Test
 	public void testGetAssetLibrary() throws Exception {
@@ -182,7 +180,6 @@ public class AssetLibraryResourceTest extends BaseAssetLibraryResourceTestCase {
 		_testGetAssetLibraryWithoutUpdatePermission();
 	}
 
-	@FeatureFlag("LPD-11388")
 	@Override
 	@Test
 	@TestInfo({"LPD-99972", "LPD-102154", "LPD-112197"})
@@ -201,7 +198,6 @@ public class AssetLibraryResourceTest extends BaseAssetLibraryResourceTestCase {
 		_testPatchAssetLibraryWithoutUpdatePermission();
 	}
 
-	@FeatureFlag("LPD-11388")
 	@Override
 	@Test
 	@TestInfo({"LPD-92654", "LPD-108842"})
@@ -261,7 +257,6 @@ public class AssetLibraryResourceTest extends BaseAssetLibraryResourceTestCase {
 		}
 	}
 
-	@FeatureFlag("LPD-11388")
 	@Override
 	@Test
 	@TestInfo("LPD-112197")
@@ -1161,6 +1156,25 @@ public class AssetLibraryResourceTest extends BaseAssetLibraryResourceTestCase {
 				TestPropsValues.getCompanyId(), PropsKeys.TRASH_ENTRIES_MAX_AGE,
 				PropsValues.TRASH_ENTRIES_MAX_AGE),
 			(int)settings.getTrashEntriesMaxAge());
+
+		Group group = _groupLocalService.getGroupByExternalReferenceCode(
+			postedAssetLibrary.getExternalReferenceCode(),
+			testCompany.getCompanyId());
+
+		Assert.assertNull(group.getTypeSettingsProperty("trashEntriesMaxAge"));
+
+		AssetLibrary patchAssetLibrary = new AssetLibrary();
+
+		patchAssetLibrary.setName(RandomTestUtil.randomString());
+
+		assetLibraryResource.patchAssetLibrary(
+			postedAssetLibrary.getExternalReferenceCode(), patchAssetLibrary);
+
+		group = _groupLocalService.getGroupByExternalReferenceCode(
+			postedAssetLibrary.getExternalReferenceCode(),
+			testCompany.getCompanyId());
+
+		Assert.assertNull(group.getTypeSettingsProperty("trashEntriesMaxAge"));
 	}
 
 	private void _testPostAssetLibraryWithNoSettings() throws Exception {

@@ -3,8 +3,6 @@ import React from 'react';
 import {cleanup, render} from '@testing-library/react';
 import {mockIndividual, mockSegment} from 'test/data';
 
-jest.unmock('react-dom');
-
 describe('Avatar', () => {
 	afterEach(cleanup);
 
@@ -23,7 +21,7 @@ describe('Avatar', () => {
 			/>
 		);
 
-		expect(getByText('F')).toBeTruthy();
+		expect(getByText(/^f$/i)).toBeTruthy();
 	});
 
 	it('should render with a first and last name', () => {

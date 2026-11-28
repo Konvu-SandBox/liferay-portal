@@ -29,9 +29,9 @@ import com.liferay.commerce.exception.CommerceOrderPaymentMethodException;
 import com.liferay.commerce.exception.CommerceOrderPurchaseOrderNumberException;
 import com.liferay.commerce.exception.CommerceOrderRequestedDeliveryDateException;
 import com.liferay.commerce.exception.GuestCartMaxAllowedException;
-import com.liferay.commerce.internal.order.comparator.CommerceOrderModifiedDateComparator;
 import com.liferay.commerce.model.CommerceAddress;
 import com.liferay.commerce.model.CommerceOrder;
+import com.liferay.commerce.model.CommerceOrderAttachment;
 import com.liferay.commerce.model.CommerceOrderItem;
 import com.liferay.commerce.model.CommerceOrderTable;
 import com.liferay.commerce.model.CommerceOrderType;
@@ -64,6 +64,7 @@ import com.liferay.commerce.service.CommerceOrderPaymentLocalService;
 import com.liferay.commerce.service.CommerceOrderTypeLocalService;
 import com.liferay.commerce.service.CommerceShippingOptionAccountEntryRelService;
 import com.liferay.commerce.service.base.CommerceOrderLocalServiceBaseImpl;
+import com.liferay.commerce.service.persistence.CommerceOrderAttachmentPersistence;
 import com.liferay.commerce.service.persistence.CommerceOrderItemPersistence;
 import com.liferay.commerce.service.persistence.CommerceShippingMethodPersistence;
 import com.liferay.commerce.shipping.engine.fixed.model.CommerceShippingFixedOption;
@@ -74,6 +75,7 @@ import com.liferay.commerce.util.CommerceOrderThreadLocal;
 import com.liferay.commerce.util.CommerceShippingEngineRegistry;
 import com.liferay.commerce.util.CommerceUtil;
 import com.liferay.commerce.util.comparator.CommerceShippingMethodPriorityComparator;
+import com.liferay.document.library.kernel.exception.NoSuchFileEntryException;
 import com.liferay.document.library.kernel.util.DLAppHelperThreadLocal;
 import com.liferay.expando.kernel.service.ExpandoRowLocalService;
 import com.liferay.petra.sql.dsl.DSLQueryFactoryUtil;
@@ -567,6 +569,20 @@ public class CommerceOrderLocalServiceImpl
 
 		LocalRepository localRepository = commerceOrder.getLocalRepository();
 
+		FileEntry fileEntry = localRepository.getFileEntry(
+			attachmentFileEntryId);
+		Folder folder = commerceOrder.getFolder(localRepository);
+
+		if ((folder == null) ||
+			(fileEntry.getFolderId() != folder.getFolderId()) ||
+			_hasCommerceOrderAttachment(
+				commerceOrderId, attachmentFileEntryId)) {
+
+			throw new NoSuchFileEntryException(
+				"No DLFileEntry exists with the primary key " +
+					attachmentFileEntryId);
+		}
+
 		localRepository.deleteFileEntry(attachmentFileEntryId);
 	}
 
@@ -687,19 +703,6 @@ public class CommerceOrderLocalServiceImpl
 		return commerceOrder;
 	}
 
-	/**
-	 * @deprecated As of Athanasius (7.3.x)
-	 */
-	@Deprecated
-	@Override
-	public CommerceOrder fetchCommerceOrder(
-		long commerceAccountId, long groupId, int orderStatus) {
-
-		return commerceOrderPersistence.fetchByG_C_O_First(
-			groupId, commerceAccountId, orderStatus,
-			CommerceOrderModifiedDateComparator.getInstance(false));
-	}
-
 	@Override
 	public CommerceOrder fetchCommerceOrder(
 		long commerceAccountId, long groupId, long userId, int orderStatus) {
@@ -730,15 +733,6 @@ public class CommerceOrderLocalServiceImpl
 
 		return commerceOrderFinder.findByG_O(
 			groupId, orderStatuses, start, end);
-	}
-
-	@Override
-	public List<CommerceOrder> getCommerceOrders(
-		long groupId, long commerceAccountId, int start, int end,
-		OrderByComparator<CommerceOrder> orderByComparator) {
-
-		return commerceOrderPersistence.findByG_C(
-			groupId, commerceAccountId, start, end, orderByComparator);
 	}
 
 	@Override
@@ -793,38 +787,12 @@ public class CommerceOrderLocalServiceImpl
 	}
 
 	@Override
-	public List<CommerceOrder> getCommerceOrdersByBillingAddress(
-		long billingAddressId) {
-
-		return commerceOrderPersistence.findByBillingAddressId(
-			billingAddressId);
-	}
-
-	@Override
 	public List<CommerceOrder> getCommerceOrdersByCommerceAccountId(
 		long commerceAccountId, int start, int end,
 		OrderByComparator<CommerceOrder> orderByComparator) {
 
 		return commerceOrderPersistence.findByCommerceAccountId(
 			commerceAccountId, start, end, orderByComparator);
-	}
-
-	@Override
-	public List<CommerceOrder> getCommerceOrdersByShippingAddress(
-		long shippingAddressId) {
-
-		return commerceOrderPersistence.findByShippingAddressId(
-			shippingAddressId);
-	}
-
-	@Override
-	public int getCommerceOrdersCount(long groupId) {
-		return commerceOrderPersistence.countByGroupId(groupId);
-	}
-
-	@Override
-	public int getCommerceOrdersCount(long groupId, long commerceAccountId) {
-		return commerceOrderPersistence.countByG_C(groupId, commerceAccountId);
 	}
 
 	@Override
@@ -867,54 +835,6 @@ public class CommerceOrderLocalServiceImpl
 
 		return commerceOrderFinder.getShippedCommerceOrdersByCommerceShipmentId(
 			commerceShipmentId, start, end);
-	}
-
-	/**
-	 * @deprecated As of Mueller (7.2.x)
-	 */
-	@Deprecated
-	@Override
-	public List<CommerceOrder> getUserCommerceOrders(
-		long groupId, long userId, long commerceAccountId, Integer orderStatus,
-		boolean excludeOrderStatus, String keywords, int start, int end) {
-
-		try {
-			Group group = _groupLocalService.getGroup(groupId);
-
-			return commerceOrderLocalService.getCommerceOrders(
-				group.getCompanyId(), groupId, new long[] {commerceAccountId},
-				keywords, new int[] {CommerceOrderConstants.ORDER_STATUS_OPEN},
-				false, start, end);
-		}
-		catch (PortalException portalException) {
-			_log.error(portalException);
-		}
-
-		return Collections.emptyList();
-	}
-
-	/**
-	 * @deprecated As of Mueller (7.2.x)
-	 */
-	@Deprecated
-	@Override
-	public int getUserCommerceOrdersCount(
-		long groupId, long userId, long commerceAccountId, Integer orderStatus,
-		boolean excludeOrderStatus, String keywords) {
-
-		try {
-			Group group = _groupLocalService.getGroup(groupId);
-
-			return (int)commerceOrderLocalService.getCommerceOrdersCount(
-				group.getCompanyId(), groupId, new long[] {commerceAccountId},
-				keywords, new int[] {CommerceOrderConstants.ORDER_STATUS_OPEN},
-				false);
-		}
-		catch (PortalException portalException) {
-			_log.error(portalException);
-		}
-
-		return 0;
 	}
 
 	@Override
@@ -2610,6 +2530,21 @@ public class CommerceOrderLocalServiceImpl
 		return commerceOrder.getUserId();
 	}
 
+	private boolean _hasCommerceOrderAttachment(
+		long commerceOrderId, long fileEntryId) {
+
+		for (CommerceOrderAttachment commerceOrderAttachment :
+				_commerceOrderAttachmentPersistence.findByCommerceOrderId(
+					commerceOrderId)) {
+
+			if (commerceOrderAttachment.getFileEntryId() == fileEntryId) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private boolean _hasWorkflowDefinition(long groupId, long typePK)
 		throws PortalException {
 
@@ -3570,6 +3505,10 @@ public class CommerceOrderLocalServiceImpl
 
 	@Reference
 	private CommerceModelAttributesProvider _commerceModelAttributesProvider;
+
+	@Reference
+	private CommerceOrderAttachmentPersistence
+		_commerceOrderAttachmentPersistence;
 
 	private CommerceOrderConfiguration _commerceOrderConfiguration;
 

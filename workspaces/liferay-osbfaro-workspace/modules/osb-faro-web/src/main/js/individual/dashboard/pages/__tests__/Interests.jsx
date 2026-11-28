@@ -11,8 +11,6 @@ import {Provider} from 'react-redux';
 import {Routes} from 'shared/util/router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const mockUseDataSource = useDataSources;
 
 const WrappedComponent = () => (
@@ -57,7 +55,7 @@ describe('Individuals Dashboard Individuals Interests', () => {
 
 		jest.runAllTimers();
 
-		expect(getByText('Interest Topics')).toBeInTheDocument();
+		expect(getByText(/^interest topics$/i)).toBeInTheDocument();
 	});
 
 	it('renders with data source empty state', () => {
@@ -66,7 +64,7 @@ describe('Individuals Dashboard Individuals Interests', () => {
 		const {getByText} = render(<WrappedComponent />);
 
 		expect(
-			getByText('No Sites Synced from Data Sources')
+			getByText(/^no sites have been synced from data sources$/i)
 		).toBeInTheDocument();
 	});
 });
