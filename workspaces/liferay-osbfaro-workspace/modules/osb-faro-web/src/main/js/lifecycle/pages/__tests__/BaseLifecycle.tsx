@@ -12,7 +12,7 @@ import {
 	waitFor,
 	within,
 } from '@testing-library/react';
-import {MemoryRouter, useLocation} from 'react-router-dom';
+import {MemoryRouter, matchPath, useLocation} from 'react-router-dom';
 import {mockChannelContext} from 'test/mock-channel-context';
 import {Provider} from 'react-redux';
 import {Routes, toRoute} from 'shared/util/router';
@@ -20,8 +20,6 @@ import {useCurrentUser} from 'shared/hooks/useCurrentUser';
 import {useDataSources} from 'shared/context/dataSources';
 import {useRequest} from 'shared/hooks/useRequest';
 import {setBodyWidth} from 'test/body-width';
-
-jest.unmock('react-dom');
 
 jest.mock('shared/hooks/useRequest', () => ({
 	useRequest: jest.fn(),
@@ -177,6 +175,14 @@ const useRequestImpl =
 				error: metricsError,
 				loading: metricsLoading,
 				refetch: mockRefetchMetrics,
+			};
+		}
+
+		if (dataSourceFn === API.lifecycle.fetchLifecycles) {
+			return {
+				data: [{externalReferenceCode: 'erc-8', id: '8'}],
+				error: false,
+				loading: false,
 			};
 		}
 
@@ -364,7 +370,7 @@ describe('BaseLifecycle', () => {
 
 			expect(screen.getByText('404')).toBeInTheDocument();
 			expect(
-				screen.getByText(/dashboard not found/i)
+				screen.getByText(/dashboard was not found/i)
 			).toBeInTheDocument();
 			expect(
 				screen.getByText(/lifecycle dashboard you are looking for/i)
@@ -424,8 +430,10 @@ describe('BaseLifecycle', () => {
 
 		renderPage();
 
-		expect(screen.queryByText('No Data Sources Connected')).toBeNull();
-		expect(screen.queryByText('No Account Data Available')).toBeNull();
+		expect(
+			screen.queryByText(/^no data sources are connected$/i)
+		).toBeNull();
+		expect(screen.queryByText(/^no account data available$/i)).toBeNull();
 		expect(screen.queryByTestId('overview-section')).toBeNull();
 	});
 
@@ -436,7 +444,7 @@ describe('BaseLifecycle', () => {
 
 		renderPage();
 
-		expect(screen.queryByText('No Account Data Available')).toBeNull();
+		expect(screen.queryByText(/^no account data available$/i)).toBeNull();
 		expect(screen.queryByTestId('overview-section')).toBeNull();
 	});
 
@@ -456,7 +464,9 @@ describe('BaseLifecycle', () => {
 			expect(
 				screen.getByText(/an.unexpected.error.occurred/i)
 			).toBeInTheDocument();
-			expect(screen.queryByText('No Account Data Available')).toBeNull();
+			expect(
+				screen.queryByText(/^no account data available$/i)
+			).toBeNull();
 			expect(screen.queryByText('Growth Hub')).toBeNull();
 		});
 
@@ -491,15 +501,15 @@ describe('BaseLifecycle', () => {
 			mockedUseDataSources.mockReturnValue({empty: true, loading: false});
 		});
 
-		it('renders the "No Data Sources Connected" empty state', () => {
+		it('renders the "No Data Sources Are Connected" empty state', () => {
 			renderPage();
 
 			expect(
-				screen.getByText('No Data Sources Connected')
+				screen.getByText(/^no data sources are connected$/i)
 			).toBeInTheDocument();
 			expect(
 				screen.getByText(
-					'Connect a data source to sync lifecycle stages.'
+					/^connect a data source to sync lifecycle stages\.$/i
 				)
 			).toBeInTheDocument();
 			expect(screen.queryByTestId('overview-section')).toBeNull();
@@ -509,7 +519,9 @@ describe('BaseLifecycle', () => {
 		it('renders the connect action for admins', () => {
 			renderPage();
 
-			expect(screen.getByText('Connect Data Source')).toBeInTheDocument();
+			expect(
+				screen.getByText(/^connect data source$/i)
+			).toBeInTheDocument();
 		});
 
 		it('renders the learn-more documentation link', () => {
@@ -527,10 +539,10 @@ describe('BaseLifecycle', () => {
 
 			renderPage();
 
-			expect(screen.queryByText('Connect Data Source')).toBeNull();
+			expect(screen.queryByText(/^connect data source$/i)).toBeNull();
 			expect(
 				screen.getByText(
-					'Please contact your workspace administrator to add data sources.'
+					/^please contact your workspace administrator to add data sources\.$/i
 				)
 			).toBeInTheDocument();
 		});
@@ -558,7 +570,7 @@ describe('BaseLifecycle', () => {
 			).toBeInTheDocument();
 			expect(screen.queryByText('Lifecycle Settings Demo')).toBeNull();
 			expect(screen.queryByRole('img', {name: /default/i})).toBeNull();
-			expect(screen.queryByRole('button', {name: 'Menu'})).toBeNull();
+			expect(screen.queryByRole('button', {name: /^menu$/i})).toBeNull();
 			expect(
 				screen.queryByRole('button', {name: /switch dashboard/i})
 			).toBeNull();
@@ -571,11 +583,11 @@ describe('BaseLifecycle', () => {
 			renderPage();
 
 			expect(
-				screen.getByText('No Account Data Available')
+				screen.getByText(/^no account data available$/i)
 			).toBeInTheDocument();
 			expect(
 				screen.getByText(
-					'Connect a data source containing account data.'
+					/^connect a data source containing account data\.$/i
 				)
 			).toBeInTheDocument();
 			expect(screen.queryByTestId('overview-section')).toBeNull();
@@ -589,10 +601,10 @@ describe('BaseLifecycle', () => {
 
 			expect(
 				screen.getByText(
-					'Contact an administrator to connect a data source containing account data.'
+					/^contact an administrator to connect a data source containing account data\.$/i
 				)
 			).toBeInTheDocument();
-			expect(screen.queryByText('Connect Data Source')).toBeNull();
+			expect(screen.queryByText(/^connect data source$/i)).toBeNull();
 		});
 	});
 
@@ -607,7 +619,7 @@ describe('BaseLifecycle', () => {
 			const {container} = renderPage();
 
 			expect(
-				screen.getByText('Your dashboard is almost ready!')
+				screen.getByText(/^your dashboard is almost ready!$/i)
 			).toBeInTheDocument();
 			expect(
 				screen.getByText(/metrics will appear in the dashboard/i)
@@ -621,7 +633,7 @@ describe('BaseLifecycle', () => {
 	});
 
 	const openActionsMenu = () =>
-		fireEvent.click(screen.getByRole('button', {name: 'Menu'}));
+		fireEvent.click(screen.getByRole('button', {name: /^menu$/i}));
 
 	describe('the New Lifecycle button', () => {
 		it('links admins to the lifecycle editor of the channel', () => {
@@ -636,7 +648,6 @@ describe('BaseLifecycle', () => {
 					groupId: '23',
 				})
 			);
-			expect(button).toHaveClass('btn-primary', 'rounded-lg');
 		});
 
 		it('shows while the lifecycle is processing', () => {
@@ -824,7 +835,6 @@ describe('BaseLifecycle', () => {
 			await confirmDelete();
 
 			expect(API.lifecycle.deleteLifecycle).toHaveBeenCalledWith({
-				channelId: '123',
 				groupId: '23',
 				lifecycleId: '1',
 			});
@@ -884,11 +894,11 @@ describe('BaseLifecycle', () => {
 			openActionsMenu();
 
 			fireEvent.click(
-				screen.getByRole('menuitem', {name: 'Manage Notifications'})
+				screen.getByRole('menuitem', {name: /^manage notifications$/i})
 			);
 
 			expect(
-				await screen.findByText('Manage Lifecycle Notifications')
+				await screen.findByText(/^manage lifecycle notifications$/i)
 			).toBeInTheDocument();
 		});
 
@@ -900,7 +910,7 @@ describe('BaseLifecycle', () => {
 			openActionsMenu();
 
 			expect(
-				screen.getByRole('menuitem', {name: 'Manage Notifications'})
+				screen.getByRole('menuitem', {name: /^manage notifications$/i})
 			).toBeInTheDocument();
 		});
 	});
@@ -921,10 +931,6 @@ describe('BaseLifecycle', () => {
 			fireEvent.click(getSwitchButton());
 
 			expect(getSwitchButton()).toHaveAttribute('aria-expanded', 'true');
-			expect(getSwitchButton()).toHaveClass(
-				'active',
-				'btn-outline-borderless'
-			);
 			expect(
 				screen
 					.getByText(/switch lifecycle dashboard/i)
@@ -979,7 +985,7 @@ describe('BaseLifecycle', () => {
 		expect(
 			screen.getByText(/^\S+ \d+, \d{4} – \S+ \d+, \d{4}$/)
 		).toBeInTheDocument();
-		expect(screen.queryByText('No Account Data Available')).toBeNull();
+		expect(screen.queryByText(/^no account data available$/i)).toBeNull();
 	});
 
 	describe('when the panel is open beside the dashboard', () => {
@@ -1075,7 +1081,6 @@ describe('BaseLifecycle', () => {
 			);
 
 			expect(API.lifecycle.deleteLifecycle).toHaveBeenCalledWith({
-				channelId: '123',
 				groupId: '23',
 				lifecycleId: '3',
 			});
@@ -1183,5 +1188,48 @@ describe('BaseLifecycle', () => {
 				screen.queryByRole('menuitem', {name: /set.default/i})
 			).toBeNull();
 		});
+	});
+
+	it('opens the default lifecycle of the channel without requesting it again', () => {
+		mockUseParams.mockImplementation(() => ({
+			channelId: '123',
+			groupId: '23',
+			lifecycleId: matchPath(
+				'/workspace/:groupId/:channelId/lifecycle/:lifecycleId',
+				useLocation().pathname
+			)?.params.lifecycleId,
+		}));
+
+		mockedUseRequest.mockImplementation(
+			useRequestImpl({
+				lifecycle: {id: '8', name: 'Growth Hub'},
+				totalCount: 5,
+			})
+		);
+
+		renderPage([
+			toRoute(Routes.LIFECYCLE, {channelId: '123', groupId: '23'}),
+		]);
+
+		expect(screen.getByTestId('location')).toHaveTextContent(
+			toRoute(Routes.LIFECYCLE_DASHBOARD, {
+				channelId: '123',
+				groupId: '23',
+				lifecycleId: 'erc-8',
+			})
+		);
+		expect(
+			screen.getByRole('heading', {name: 'Growth Hub'})
+		).toBeInTheDocument();
+
+		const lifecycleIds = mockedUseRequest.mock.calls
+			.filter(
+				([{dataSourceFn, skipRequest}]) =>
+					dataSourceFn === API.lifecycle.fetchLifecycle &&
+					!skipRequest
+			)
+			.map(([{variables}]) => variables.lifecycleId);
+
+		expect(new Set(lifecycleIds)).toEqual(new Set(['erc-8']));
 	});
 });

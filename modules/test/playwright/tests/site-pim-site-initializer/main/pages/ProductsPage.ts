@@ -74,26 +74,24 @@ export class ProductsPage {
 		await this.newButton.waitFor({state: 'visible'});
 	}
 
-	async openNewProductEditor(space: string = 'Default', type?: string) {
-		if (type) {
-			const menuItem = this.page.getByRole('menuitem', {
-				exact: true,
-				name: type,
-			});
+	async openNewProductEditor(
+		space: string = 'Default',
+		type: string = 'PIM Basic Product'
+	) {
+		const menuItem = this.page.getByRole('menuitem', {
+			exact: true,
+			name: type,
+		});
 
-			await expect(async () => {
-				if (!(await menuItem.isVisible())) {
-					await this.newButton.click({timeout: 1000});
-				}
+		await expect(async () => {
+			if (!(await menuItem.isVisible())) {
+				await this.newButton.click({timeout: 1000});
+			}
 
-				await expect(menuItem).toBeVisible({timeout: 2000});
-			}).toPass({timeout: 20000});
+			await expect(menuItem).toBeVisible({timeout: 2000});
+		}).toPass({timeout: 20000});
 
-			await menuItem.click();
-		}
-		else {
-			await this.newButton.click();
-		}
+		await menuItem.click();
 
 		const shown = await Promise.race([
 			this.generalTab
@@ -125,7 +123,7 @@ export class ProductsPage {
 		await this.searchInput.press('Enter');
 
 		await expect(
-			this.page.locator('.search-resume-label', {
+			this.page.locator('.search-resume', {
 				has: this.page.locator('strong', {hasText: value}),
 			})
 		).toBeVisible();

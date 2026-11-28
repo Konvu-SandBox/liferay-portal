@@ -27,13 +27,11 @@ import com.liferay.portal.kernel.audit.AuditException;
 import com.liferay.portal.kernel.audit.AuditMessage;
 import com.liferay.portal.kernel.audit.AuditRouterUtil;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Company;
-import com.liferay.portal.kernel.model.CompanyConstants;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.UserLocalService;
@@ -43,6 +41,7 @@ import com.liferay.portal.kernel.util.HashMapDictionary;
 import com.liferay.portal.kernel.util.ParamUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.PropsValues;
+import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.security.audit.event.generators.util.AuditMessageBuilder;
 
@@ -124,7 +123,8 @@ public class TimeBasedOTPBrowserSetupMFAChecker
 
 			httpServletRequest.setAttribute(
 				MFATimeBasedOTPWebKeys.MFA_TIME_BASED_OTP_ALGORITHM,
-				PropsValues.FIPS_ENABLED ? "SHA256" : "SHA1");
+				StringUtil.removeSubstring(
+					MFATimeBasedOTPUtil.getAlgorithm(), "Hmac"));
 			httpServletRequest.setAttribute(
 				MFATimeBasedOTPWebKeys.
 					MFA_TIME_BASED_OTP_CHECKER_DISPLAY_CONTEXT,
@@ -214,13 +214,15 @@ public class TimeBasedOTPBrowserSetupMFAChecker
 			httpServletRequest, "mfaTimeBasedOTP");
 
 		try {
+			String algorithm = MFATimeBasedOTPUtil.getAlgorithm();
+
 			if (MFATimeBasedOTPUtil.verifyTimeBasedOTP(
-					_mfaTimeBasedOTPConfiguration.clockSkew(),
+					algorithm, _mfaTimeBasedOTPConfiguration.clockSkew(),
 					mfaTimeBasedOTPSharedSecret, mfaTimeBasedOTP)) {
 
 				MFATimeBasedOTPEntry timeBasedOTPEntry =
 					_mfaTimeBasedOTPEntryLocalService.addTimeBasedOTPEntry(
-						userId, mfaTimeBasedOTPSharedSecret);
+						userId, algorithm, mfaTimeBasedOTPSharedSecret);
 
 				if (timeBasedOTPEntry != null) {
 					_mfaTimeBasedOTPAuditMessageBuilder.routeAuditMessage(
@@ -520,18 +522,37 @@ public class TimeBasedOTPBrowserSetupMFAChecker
 
 		String lastValidTOTP = mfaTimeBasedOTPEntry.getLastValidTOTP();
 
-		if (!MessageDigest.isEqual(
+		if (MessageDigest.isEqual(
 				mfaTimeBasedOTP.getBytes(StandardCharsets.UTF_8),
 				lastValidTOTP.getBytes(StandardCharsets.UTF_8))) {
 
-			return MFATimeBasedOTPUtil.verifyTimeBasedOTP(
-				_mfaTimeBasedOTPConfiguration.clockSkew(),
-				_mfaTimeBasedOTPEntryLocalService.getPlaintextSharedSecret(
-					mfaTimeBasedOTPEntry),
-				mfaTimeBasedOTP);
+			_sendEmail(user, user.getEmailAddress(), httpServletRequest);
+
+			return false;
 		}
 
-		_sendEmail(user, user.getEmailAddress(), httpServletRequest);
+		String plaintextSharedSecret =
+			_mfaTimeBasedOTPEntryLocalService.getPlaintextSharedSecret(
+				mfaTimeBasedOTPEntry);
+
+		if (Validator.isNotNull(mfaTimeBasedOTPEntry.getAlgorithm())) {
+			return MFATimeBasedOTPUtil.verifyTimeBasedOTP(
+				mfaTimeBasedOTPEntry.getAlgorithm(),
+				_mfaTimeBasedOTPConfiguration.clockSkew(),
+				plaintextSharedSecret, mfaTimeBasedOTP);
+		}
+
+		for (String algorithm : MFATimeBasedOTPUtil.getAlgorithms()) {
+			if (MFATimeBasedOTPUtil.verifyTimeBasedOTP(
+					algorithm, _mfaTimeBasedOTPConfiguration.clockSkew(),
+					plaintextSharedSecret, mfaTimeBasedOTP)) {
+
+				_mfaTimeBasedOTPEntryLocalService.updateAlgorithm(
+					user.getUserId(), algorithm);
+
+				return true;
+			}
+		}
 
 		return false;
 	}
@@ -694,14 +715,6 @@ public class TimeBasedOTPBrowserSetupMFAChecker
 
 		private void _setVerificationResult(
 			AuditMessage auditMessage, String outcome) {
-
-			long companyId = auditMessage.getCompanyId();
-
-			if ((companyId == CompanyConstants.SYSTEM) ||
-				!FeatureFlagManagerUtil.isEnabled(companyId, "LPD-6417")) {
-
-				return;
-			}
 
 			JSONObject additionalInfoJSONObject =
 				auditMessage.getAdditionalInfo();

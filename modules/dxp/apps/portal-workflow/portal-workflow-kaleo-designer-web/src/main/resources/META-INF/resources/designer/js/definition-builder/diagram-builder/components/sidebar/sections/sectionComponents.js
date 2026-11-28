@@ -8,6 +8,7 @@ import NodeInformation from './NodeInformation';
 import Actions from './actions/Actions';
 import ActionsSummary from './actions/ActionsSummary';
 import AIHubAgentDefinition from './ai-hub-agent/AIHubAgentDefinition';
+import Question from './ask-a-human/Question';
 import Assignments from './assignments/Assignments';
 import AssignmentsSummary from './assignments/AssignmentsSummary';
 import SourceCode from './assignments/SourceCode';
@@ -16,8 +17,10 @@ import ConnectionTimeout from './http-request/ConnectionTimeout';
 import HTTPEndpoint from './http-request/HTTPEndpoint';
 import Payload from './http-request/Payload';
 import Variables from './http-request/Variables';
+import ModelSummary from './model/ModelSummary';
 import Notifications from './notifications/Notifications';
 import NotificationsSummary from './notifications/NotificationsSummary';
+import ParametersSummary from './parameters/ParametersSummary';
 import PromptSummary from './prompt/PromptSummary';
 import RAGSummary from './rag/RAGSummary';
 import ServiceConfiguration from './service/ServiceConfiguration';
@@ -36,11 +39,14 @@ const sectionComponents = {
 	connectionTimeout: ConnectionTimeout,
 	edgeInformation: EdgeInformation,
 	httpEndpoint: HTTPEndpoint,
+	modelSummary: ModelSummary,
 	nodeInformation: NodeInformation,
 	notifications: Notifications,
 	notificationsSummary: NotificationsSummary,
+	parametersSummary: ParametersSummary,
 	payload: Payload,
 	promptSummary: PromptSummary,
+	question: Question,
 	ragSummary: RAGSummary,
 	serviceConfiguration: ServiceConfiguration,
 	sourceCode: SourceCode,

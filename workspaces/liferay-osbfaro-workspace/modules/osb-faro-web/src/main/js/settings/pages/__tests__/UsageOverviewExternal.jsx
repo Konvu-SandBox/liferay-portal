@@ -10,8 +10,6 @@ import {MemoryRouter} from 'react-router';
 import {SubscriptionNames} from 'shared/util/subscriptions';
 import {useCurrentUser} from 'shared/hooks/useCurrentUser';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/hooks/useTimeZone', () => ({
 	useTimeZone: () => ({timeZoneId: 'UTC'})
 }));
@@ -66,7 +64,7 @@ describe('UsageOverviewExternal', () => {
 	it('should render the "Usage Overview" page for SaaS title', () => {
 		const {getByText} = render(<WrappedComponent {...defaultProps} />);
 
-		expect(getByText('View Your SaaS Project Metrics')).toBeInTheDocument();
+		expect(getByText(/^view your saas project metrics$/i)).toBeInTheDocument();
 	});
 
 	it('should render the "Go to Customer Portal" button for admin user', () => {
@@ -74,7 +72,7 @@ describe('UsageOverviewExternal', () => {
 
 		const {queryByText} = render(<WrappedComponent {...defaultProps} />);
 
-		expect(queryByText('Go to Customer Portal')).toBeInTheDocument();
+		expect(queryByText(/^go to customer portal$/i)).toBeInTheDocument();
 	});
 
 	it('should not render the "Go to Customer Portal" button for member user', () => {
@@ -82,14 +80,14 @@ describe('UsageOverviewExternal', () => {
 
 		const {queryByText} = render(<WrappedComponent {...defaultProps} />);
 
-		expect(queryByText('Go to Customer Portal')).toBeNull();
+		expect(queryByText(/^go to customer portal$/i)).toBeNull();
 	});
 
 	it('should render the "Sites and Users" and "Resource Usage" sections', () => {
 		const {getByText} = render(<WrappedComponent {...defaultProps} />);
 
-		expect(getByText('Sites and Users')).toBeInTheDocument();
-		expect(getByText('Resource Usage')).toBeInTheDocument();
+		expect(getByText(/^sites and users$/i)).toBeInTheDocument();
+		expect(getByText(/^resource usage$/i)).toBeInTheDocument();
 	});
 });
 
@@ -99,7 +97,7 @@ describe('UsageOverviewExternal when the subscription is LDP', () => {
 			<WrappedComponent {...defaultProps} store={mockStore(mockStoreDataLDP)} />
 		);
 
-		expect(getByText('View Your Workspace Metrics')).toBeInTheDocument();
+		expect(getByText(/^view your workspace metrics$/i)).toBeInTheDocument();
 	});
 
 	it('should render the "Go to Liferay One" button for admin user', () => {
@@ -109,7 +107,7 @@ describe('UsageOverviewExternal when the subscription is LDP', () => {
 			<WrappedComponent {...defaultProps} store={mockStore(mockStoreDataLDP)} />
 		);
 
-		expect(getByText('Go to Liferay One')).toBeInTheDocument();
+		expect(getByText(/^go to liferay one$/i)).toBeInTheDocument();
 	});
 
 	it('should not render the "SaaS plan usage" description', () => {
@@ -118,7 +116,7 @@ describe('UsageOverviewExternal when the subscription is LDP', () => {
 		);
 
 		expect(
-			queryByText('SaaS plan usage is determined by MALUs and APVs.')
+			queryByText(/^saas plan usage is determined by malus and apvs\.$/i)
 		).toBeNull();
 	});
 
@@ -128,7 +126,7 @@ describe('UsageOverviewExternal when the subscription is LDP', () => {
 		);
 
 		expect(
-			queryByRole('heading', {level: 3, name: 'Number of Sites'})
+			queryByRole('heading', {level: 3, name: /^number of sites$/i})
 		).toBeNull();
 		expect(
 			container.querySelectorAll('.card-title-rectangle')
