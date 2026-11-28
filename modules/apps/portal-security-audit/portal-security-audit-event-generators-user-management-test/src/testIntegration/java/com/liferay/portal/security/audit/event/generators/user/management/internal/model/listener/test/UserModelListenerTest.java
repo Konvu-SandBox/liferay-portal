@@ -72,7 +72,6 @@ public class UserModelListenerTest extends BaseModelListenerTestCase {
 		_deleteWorkflowDefinitionLink();
 	}
 
-	@FeatureFlag("LPD-6417")
 	@Test
 	public void testOnBeforeCreate() throws Exception {
 		_user = UserTestUtil.addUser();
@@ -85,7 +84,6 @@ public class UserModelListenerTest extends BaseModelListenerTestCase {
 		Assert.assertEquals("user", auditMessage.getResourceType());
 	}
 
-	@FeatureFlag("LPD-6417")
 	@Test
 	public void testOnBeforeRemove() throws Exception {
 		User user = UserTestUtil.addUser();

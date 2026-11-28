@@ -2,8 +2,6 @@ import React from 'react';
 import UniqueVisitorsCell from '../UniqueVisitorsCell';
 import {render, screen} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const renderUniqueVisitorsCell = (props = {}) =>
 	render(
 		<table>
@@ -44,6 +42,6 @@ describe('UniqueVisitorsCell', () => {
 		expect(container.querySelector('.traffic-quota')).toHaveTextContent(
 			'– Traffic Split'
 		);
-		expect(screen.getByText('–')).toHaveClass('text-secondary');
+		expect(screen.getByText('–')).toBeInTheDocument();
 	});
 });

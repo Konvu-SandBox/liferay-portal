@@ -8,8 +8,6 @@ import {
 import {Property} from 'shared/util/records';
 import {PropertyTypes} from '../../utils/constants';
 
-jest.unmock('react-dom');
-
 const mockValue = createCustomValueMap([
 	{key: 'criterionGroup', value: [{operatorName: 'eq', value: ''}]}
 ]);
@@ -118,9 +116,9 @@ describe('CustomStringInput', () => {
 				queryByTestId('attribute-value-string-input')
 			).toBeNull();
 
-			fireEvent.click(getByText('Direct'));
+			fireEvent.click(getByText(/^direct$/i));
 
-			expect(getByText('Organic')).toBeTruthy();
+			expect(getByText(/^organic$/i)).toBeTruthy();
 		});
 	});
 });

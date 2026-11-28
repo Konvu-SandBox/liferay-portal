@@ -11,8 +11,6 @@ import {
 	Routes as RouterRoutes,
 } from 'react-router-dom';
 
-jest.unmock('react-dom');
-
 const renderAt = (path: string) =>
 	render(
 		<MemoryRouter initialEntries={[path]}>
@@ -112,7 +110,7 @@ describe('SegmentLinkRedirect', () => {
 
 		renderAt('/workspace/23/contacts/segments/456');
 
-		fireEvent.click(screen.getByText('Sites'));
+		fireEvent.click(screen.getByText(/^sites$/i));
 
 		await act(async () => {
 			resolveSegment({channelId: '123', id: '456'});
