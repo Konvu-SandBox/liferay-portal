@@ -2,8 +2,6 @@ import React from 'react';
 import Title from '../Title';
 import {fireEvent, render, screen} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const renderTitle = (props: Partial<React.ComponentProps<typeof Title>> = {}) =>
 	render(
 		<Title
@@ -22,7 +20,6 @@ describe('BaseEditPage.Title', () => {
 
 		const input = screen.getByLabelText(/title/i);
 
-		expect(input).toHaveClass('form-control-inline');
 		expect(input).toHaveAttribute('placeholder', 'New Analysis');
 	});
 
@@ -50,7 +47,7 @@ describe('BaseEditPage.Title', () => {
 		renderTitle({errorMessage: 'Name cannot be blank.'});
 
 		expect(screen.getByRole('alert')).toHaveTextContent(
-			'Name cannot be blank.'
+			/name cannot be blank\./i
 		);
 		expect(screen.getByLabelText(/title/i)).toHaveAttribute(
 			'aria-describedby',

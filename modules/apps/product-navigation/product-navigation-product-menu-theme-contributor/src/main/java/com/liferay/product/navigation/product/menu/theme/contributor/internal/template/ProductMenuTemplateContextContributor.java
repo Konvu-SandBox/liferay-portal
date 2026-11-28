@@ -5,6 +5,7 @@
 
 package com.liferay.product.navigation.product.menu.theme.contributor.internal.template;
 
+import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.template.TemplateContextContributor;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.GetterUtil;
@@ -49,9 +50,14 @@ public class ProductMenuTemplateContextContributor
 		String cssClass = GetterUtil.getString(
 			contextObjects.get("bodyCssClass"));
 
+		if (FeatureFlagManagerUtil.isEnabled(
+				themeDisplay.getCompanyId(), "LPD-88120")) {
+
+			cssClass += " product-menu-unified-sidebar";
+		}
+
 		String productMenuState = SessionClicks.get(
-			httpServletRequest,
-			"com.liferay.product.navigation.product.menu.web_productMenuState",
+			httpServletRequest, "com.liferay.application.list_sidebarState",
 			"closed");
 
 		if (Objects.equals(productMenuState, "open")) {

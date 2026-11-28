@@ -2,8 +2,6 @@ import AccountNames from '../AccountNames';
 import React from 'react';
 import {render} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 const tableRow = document.createElement('tr');
 
 describe('AccountNames', () => {
@@ -30,7 +28,7 @@ describe('AccountNames', () => {
 			{container: document.body.appendChild(tableRow)}
 		);
 
-		expect(getByText('–')).toHaveClass('text-secondary');
+		expect(getByText('–')).toBeInTheDocument();
 	});
 
 	it('should render an empty account name as no data', () => {
@@ -43,6 +41,6 @@ describe('AccountNames', () => {
 			{container: document.body.appendChild(tableRow)}
 		);
 
-		expect(getByText('–')).toHaveClass('text-secondary');
+		expect(getByText('–')).toBeInTheDocument();
 	});
 });

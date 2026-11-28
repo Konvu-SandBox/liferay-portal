@@ -7,32 +7,54 @@ package com.liferay.osb.faro.web.internal.fragment.renderer;
 
 import com.liferay.fragment.renderer.FragmentRenderer;
 import com.liferay.fragment.renderer.FragmentRendererContext;
-import com.liferay.osb.faro.constants.FaroChannelConstants;
-import com.liferay.osb.faro.engine.client.constants.LCPProjectConstants;
-import com.liferay.osb.faro.provisioning.client.constants.FaroSubscriptionConstants;
-import com.liferay.osb.faro.util.FaroPropsValues;
-import com.liferay.osb.faro.web.internal.constants.FaroPaginationConstants;
+import com.liferay.frontend.taglib.clay.servlet.taglib.util.NavigationItemList;
+import com.liferay.frontend.taglib.react.servlet.taglib.ComponentTag;
+import com.liferay.osb.faro.engine.client.util.OrderByField;
+import com.liferay.osb.faro.model.FaroProject;
+import com.liferay.osb.faro.model.FaroUser;
+import com.liferay.osb.faro.service.FaroChannelLocalService;
+import com.liferay.osb.faro.service.FaroProjectLocalService;
+import com.liferay.osb.faro.service.FaroUserLocalService;
+import com.liferay.osb.faro.web.internal.display.context.ChannelSelectorDisplayContext;
+import com.liferay.osb.faro.web.internal.helper.ProjectHelper;
+import com.liferay.osb.faro.web.internal.model.display.asah.FaroChannelDisplay;
+import com.liferay.osb.faro.web.internal.model.display.contacts.FaroUserDisplay;
+import com.liferay.osb.faro.web.internal.util.FaroFragmentRendererUtil;
+import com.liferay.osb.faro.web.internal.util.FaroNavigationUtil;
 import com.liferay.osb.faro.web.internal.util.JSONUtil;
-import com.liferay.petra.reflect.ReflectionUtil;
+import com.liferay.osb.faro.web.internal.util.comparator.FaroChannelComparator;
+import com.liferay.petra.function.transform.TransformUtil;
 import com.liferay.petra.string.StringBundler;
+import com.liferay.portal.kernel.dao.orm.QueryUtil;
+import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.feature.flag.FeatureFlagManagerUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.model.Group;
+import com.liferay.portal.kernel.model.GroupConstants;
+import com.liferay.portal.kernel.model.Layout;
+import com.liferay.portal.kernel.service.GroupLocalService;
+import com.liferay.portal.kernel.service.LayoutLocalService;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
+import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
-import com.liferay.portal.kernel.util.HtmlUtil;
-import com.liferay.portal.kernel.util.PortalUtil;
-import com.liferay.portal.kernel.util.URLCodec;
+import com.liferay.portal.kernel.util.ParamUtil;
+import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.SessionClicks;
 import com.liferay.portal.kernel.util.WebKeys;
-import com.liferay.taglib.aui.LinkTag;
-import com.liferay.taglib.aui.ScriptTag;
+import com.liferay.taglib.servlet.PageContextFactoryUtil;
 
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.jsp.JspException;
+import jakarta.servlet.jsp.JspWriter;
+import jakarta.servlet.jsp.PageContext;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.Writer;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.osgi.service.component.annotations.Reference;
 
 /**
  * @author Eudaldo Alonso
@@ -46,52 +68,136 @@ public abstract class BaseFragmentRenderer implements FragmentRenderer {
 		HttpServletResponse httpServletResponse) {
 
 		try {
+			FaroFragmentRendererUtil.renderLinkTag(
+				httpServletRequest, httpServletResponse,
+				"/o/osb-faro-web/dist/main.css");
+
+			if (!FeatureFlagManagerUtil.isEnabled(
+					portal.getCompanyId(httpServletRequest), "LPD-114293")) {
+
+				FaroFragmentRendererUtil.renderScriptTag(
+					httpServletRequest, httpServletResponse, null,
+					StringBundler.concat(
+						"document.addEventListener('DOMContentLoaded', () => {",
+						"for (const id of ['liferayAUICSS', ",
+						"'liferayThemeCSS']) {",
+						"const element = document.getElementById(id);",
+						"if (element) {element.disabled = true;}}});"),
+					null, null);
+			}
+
+			PageContext pageContext = PageContextFactoryUtil.create(
+				httpServletRequest, httpServletResponse);
+
+			JspWriter jspWriter = pageContext.getOut();
+
+			jspWriter.write("<div>");
+
 			ThemeDisplay themeDisplay =
 				(ThemeDisplay)httpServletRequest.getAttribute(
 					WebKeys.THEME_DISPLAY);
 
-			if (!themeDisplay.isSignedIn()) {
-				_renderScriptTag(
-					httpServletRequest, httpServletResponse, null,
-					StringBundler.concat(
-						"window.location.href = '",
-						HtmlUtil.escapeJS(
-							StringBundler.concat(
-								themeDisplay.getURLSignIn(), "?redirect=",
-								URLCodec.encodeURL(
-									PortalUtil.getCurrentURL(
-										httpServletRequest)))),
-						"';"),
-					null, null);
+			ComponentTag componentTag = new ComponentTag();
 
-				return;
-			}
+			componentTag.setModule(getModule(httpServletRequest));
+			componentTag.setPageContext(pageContext);
+			componentTag.setProps(
+				HashMapBuilder.<String, Object>put(
+					"channelId",
+					() -> {
+						ChannelSelectorDisplayContext
+							channelSelectorDisplayContext =
+								new ChannelSelectorDisplayContext(
+									httpServletRequest);
 
-			_renderLinkTag(
-				httpServletRequest, httpServletResponse,
-				"/o/osb-faro-web/dist/main.css");
+						return channelSelectorDisplayContext.getFaroChannelId();
+					}
+				).put(
+					"channels",
+					() -> TransformUtil.transform(
+						faroChannelLocalService.search(
+							themeDisplay.getScopeGroupId(), null,
+							QueryUtil.ALL_POS, QueryUtil.ALL_POS,
+							new FaroChannelComparator(
+								Collections.singletonList(
+									new OrderByField("name", "asc")))),
+						faroChannel -> JSONUtil.convertValue(
+							new FaroChannelDisplay(faroChannel), Map.class))
+				).put(
+					"currentUser",
+					() -> {
+						FaroUser faroUser = faroUserLocalService.fetchFaroUser(
+							themeDisplay.getScopeGroupId(),
+							themeDisplay.getUserId());
 
-			PrintWriter printWriter = httpServletResponse.getWriter();
+						if (faroUser == null) {
+							return JSONUtil.convertValue(
+								new FaroUserDisplay(themeDisplay.getUser()),
+								Map.class);
+						}
 
-			printWriter.write("<div id=\"faroApp\"></div>");
+						return JSONUtil.convertValue(
+							new FaroUserDisplay(faroUser), Map.class);
+					}
+				).put(
+					"dismissedAlerts",
+					_getDismissedAlerts(
+						themeDisplay.getScopeGroupId(), httpServletRequest)
+				).put(
+					"friendlyURL",
+					() -> {
+						Layout layout = themeDisplay.getLayout();
 
-			_renderScriptTag(
-				httpServletRequest, httpServletResponse, "inline",
-				"window.faroConstants = " + _getFaroConstants() + ";", null,
-				null);
-			_renderScriptTag(
-				httpServletRequest, httpServletResponse, null, null,
-				_getStaticResourceURL(
-					httpServletRequest, "/o/osb-faro-web/dist/main.js"),
-				"module");
-			_renderScriptTag(
-				httpServletRequest, httpServletResponse, null,
-				StringBundler.concat(
-					"document.addEventListener('DOMContentLoaded', () => {",
-					"for (const id of ['liferayAUICSS', 'liferayThemeCSS']) {",
-					"const element = document.getElementById(id);",
-					"if (element) {element.disabled = true;}}});"),
-				null, null);
+						return layout.getFriendlyURL();
+					}
+				).put(
+					"groupId", String.valueOf(themeDisplay.getScopeGroupId())
+				).put(
+					"ldpEnabled",
+					FaroNavigationUtil.isLDPEnabled(
+						themeDisplay.getScopeGroupId())
+				).put(
+					"navigationItems",
+					() -> getNavigationItems(httpServletRequest)
+				).put(
+					"pageURLs",
+					() -> {
+						Group group = groupLocalService.getGroup(
+							themeDisplay.getCompanyId(), GroupConstants.GUEST);
+
+						return HashMapBuilder.putAll(
+							_getPageURLs(group.getGroupId(), themeDisplay)
+						).putAll(
+							_getPageURLs(
+								themeDisplay.getScopeGroupId(), themeDisplay)
+						).build();
+					}
+				).put(
+					"params", _getParams(httpServletRequest)
+				).put(
+					"project",
+					() -> {
+						FaroProject faroProject =
+							faroProjectLocalService.fetchFaroProjectByGroupId(
+								themeDisplay.getScopeGroupId());
+
+						if (faroProject == null) {
+							return null;
+						}
+
+						return JSONUtil.convertValue(
+							projectHelper.getProjectDisplay(faroProject),
+							Map.class);
+					}
+				).put(
+					"signOutURL", themeDisplay.getURLSignOut()
+				).build());
+			componentTag.setServletContext(servletContext);
+
+			componentTag.doStartTag();
+			componentTag.doEndTag();
+
+			jspWriter.write("</div>");
 		}
 		catch (Exception exception) {
 			_log.error(exception);
@@ -100,72 +206,85 @@ public abstract class BaseFragmentRenderer implements FragmentRenderer {
 		}
 	}
 
-	private String _getFaroConstants() throws Exception {
-		return JSONUtil.writeValueAsString(
-			HashMapBuilder.<String, Object>put(
-				"channelPermissionTypes",
-				FaroChannelConstants.getPermissionTypes()
-			).put(
-				"faroURL", FaroPropsValues.FARO_URL
-			).put(
-				"pagination", FaroPaginationConstants.getConstants()
-			).put(
-				"projectLocations", LCPProjectConstants.getLocations()
-			).put(
-				"subscriptionPlans",
-				FaroSubscriptionConstants.getFaroSubscriptionPlans()
-			).build());
+	protected abstract String getModule(HttpServletRequest httpServletRequest)
+		throws Exception;
+
+	protected NavigationItemList getNavigationItems(
+			HttpServletRequest httpServletRequest)
+		throws Exception {
+
+		return null;
 	}
 
-	private String _getStaticResourceURL(
-		HttpServletRequest httpServletRequest, String uri) {
+	@Reference
+	protected FaroChannelLocalService faroChannelLocalService;
 
-		return HtmlUtil.escapeAttribute(
-			PortalUtil.getStaticResourceURL(httpServletRequest, uri));
+	@Reference
+	protected FaroProjectLocalService faroProjectLocalService;
+
+	@Reference
+	protected FaroUserLocalService faroUserLocalService;
+
+	@Reference
+	protected GroupLocalService groupLocalService;
+
+	@Reference
+	protected LayoutLocalService layoutLocalService;
+
+	@Reference
+	protected Portal portal;
+
+	@Reference
+	protected ProjectHelper projectHelper;
+
+	@Reference(target = "(osgi.web.symbolicname=com.liferay.osb.faro.web)")
+	protected ServletContext servletContext;
+
+	private Map<String, Object> _getDismissedAlerts(
+		long groupId, HttpServletRequest httpServletRequest) {
+
+		return HashMapBuilder.<String, Object>put(
+			"maintenanceDate",
+			SessionClicks.get(
+				httpServletRequest,
+				"osb-faro-web_dismissedAlerts_maintenanceDate_" + groupId, null)
+		).put(
+			"unassignedSegments",
+			GetterUtil.getBoolean(
+				SessionClicks.get(
+					httpServletRequest.getSession(),
+					"osb-faro-web_dismissedAlerts_unassignedSegments", null))
+		).build();
 	}
 
-	private void _renderLinkTag(
-			HttpServletRequest httpServletRequest,
-			HttpServletResponse httpServletResponse, String uri)
-		throws JspException {
+	private Map<String, String> _getPageURLs(
+			long groupId, ThemeDisplay themeDisplay)
+		throws PortalException {
 
-		LinkTag linkTag = new LinkTag();
+		Map<String, String> pageURLs = new HashMap<>();
 
-		linkTag.setHref(_getStaticResourceURL(httpServletRequest, uri));
-		linkTag.setRel("stylesheet");
-		linkTag.setType("text/css");
+		for (Layout layout : layoutLocalService.getLayouts(groupId, false)) {
+			pageURLs.put(
+				layout.getFriendlyURL(),
+				portal.getLayoutFullURL(layout, themeDisplay));
+		}
 
-		linkTag.doTag(httpServletRequest, httpServletResponse);
+		return pageURLs;
 	}
 
-	private void _renderScriptTag(
-			HttpServletRequest httpServletRequest,
-			HttpServletResponse httpServletResponse, String position,
-			String script, String src, String type)
-		throws JspException {
+	private Map<String, String> _getParams(
+		HttpServletRequest httpServletRequest) {
 
-		ScriptTag scriptTag = new ScriptTag();
+		Map<String, String> params = new HashMap<>();
 
-		scriptTag.setPosition(position);
-		scriptTag.setSrc(src);
-		scriptTag.setType(type);
+		Map<String, String[]> parameterMap =
+			httpServletRequest.getParameterMap();
 
-		scriptTag.doBodyTag(
-			httpServletRequest, httpServletResponse,
-			pageContext -> {
-				if (script == null) {
-					return;
-				}
+		for (String name : parameterMap.keySet()) {
+			params.put(name, ParamUtil.getString(httpServletRequest, name));
+		}
 
-				try {
-					Writer writer = pageContext.getOut();
-
-					writer.write(script);
-				}
-				catch (IOException ioException) {
-					ReflectionUtil.throwException(ioException);
-				}
-			});
+		return params;
 	}
 
 	private static final Log _log = LogFactoryUtil.getLog(

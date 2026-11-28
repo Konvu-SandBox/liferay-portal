@@ -6,7 +6,7 @@
 import {AssetLibrary, Site} from './exportImportPreview';
 import {PortletDataHandler} from './portletDataHandler';
 
-export type ExportImportProcess = 'export' | 'import' | 'publish';
+export type ExportImportProcess = 'export' | 'import' | 'publish' | 'sync';
 
 export type DateFilter =
 	| {endDate?: string; startDate?: string; type: 'DateRange'}
@@ -64,6 +64,7 @@ export interface ImportProcessRequest {
 	comments?: boolean;
 	dataStrategy?: DataStrategy;
 	deletions?: boolean;
+	importPreviewId?: number;
 	name?: string;
 	permissions?: boolean;
 	portletDataHandlers?: PortletDataHandler[];
@@ -92,6 +93,15 @@ export interface PublishProcessRequest {
 	permissions?: boolean;
 	portletDataHandlers?: PortletDataHandler[];
 	ratings?: boolean;
+	remoteConnection?: RemoteConnection;
+}
+
+export interface RemoteConnection {
+	address?: string;
+	pathContext?: string;
+	port?: number;
+	secureConnection?: boolean;
+	siteId?: number;
 }
 
 export interface ScheduledPublishProcess {
@@ -110,4 +120,10 @@ export interface ScheduledPublishProcessRequest {
 	scheduleEndDate?: string;
 	scheduleStartDate?: string;
 	timeZoneId?: string;
+}
+
+export interface SyncProcessRequest {
+	comments?: boolean;
+	portletDataHandlers: PortletDataHandler[];
+	ratings?: boolean;
 }

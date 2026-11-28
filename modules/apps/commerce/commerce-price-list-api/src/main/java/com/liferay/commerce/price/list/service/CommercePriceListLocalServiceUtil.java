@@ -487,14 +487,6 @@ public class CommercePriceListLocalServiceUtil {
 			groupIds, companyId, start, end);
 	}
 
-	public static List<CommercePriceList> getCommercePriceLists(
-		long[] groupIds, long companyId, int status, int start, int end,
-		OrderByComparator<CommercePriceList> orderByComparator) {
-
-		return getService().getCommercePriceLists(
-			groupIds, companyId, status, start, end, orderByComparator);
-	}
-
 	public static List<CommercePriceList>
 		getCommercePriceListsByAccountAndChannelAndOrderTypeId(
 			long groupId, long commerceAccountId, long commerceChannelId,
@@ -649,13 +641,6 @@ public class CommercePriceListLocalServiceUtil {
 		return getService().getCommercePriceListsCount();
 	}
 
-	public static int getCommercePriceListsCount(
-		long[] groupIds, long companyId, int status) {
-
-		return getService().getCommercePriceListsCount(
-			groupIds, companyId, status);
-	}
-
 	public static com.liferay.portal.kernel.dao.orm.ExportActionableDynamicQuery
 		getExportActionableDynamicQuery(
 			com.liferay.exportimport.kernel.lar.PortletDataContext
@@ -696,12 +681,6 @@ public class CommercePriceListLocalServiceUtil {
 		throws PortalException {
 
 		return getService().getPersistedModel(primaryKeyObj);
-	}
-
-	public static com.liferay.portal.kernel.search.Hits search(
-		com.liferay.portal.kernel.search.SearchContext searchContext) {
-
-		return getService().search(searchContext);
 	}
 
 	public static com.liferay.portal.kernel.search.BaseModelSearchResult
@@ -803,4 +782,4 @@ public class CommercePriceListLocalServiceUtil {
 			CommercePriceListLocalService.class);
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1198261678
+// LIFERAY-SERVICE-BUILDER-HASH:-1227070807

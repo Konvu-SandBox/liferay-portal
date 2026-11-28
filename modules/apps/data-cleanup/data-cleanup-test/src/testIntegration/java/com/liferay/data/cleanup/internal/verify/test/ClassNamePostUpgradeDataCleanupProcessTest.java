@@ -8,6 +8,7 @@ package com.liferay.data.cleanup.internal.verify.test;
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
 import com.liferay.blogs.model.BlogsEntry;
 import com.liferay.dynamic.data.mapping.kernel.DDMStructure;
+import com.liferay.headless.delivery.dto.v1_0.BlogPosting;
 import com.liferay.journal.model.JournalArticle;
 import com.liferay.message.boards.util.MBUtil;
 import com.liferay.object.constants.ObjectDefinitionConstants;
@@ -20,11 +21,11 @@ import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.model.ClassName;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.module.util.BundleUtil;
-import com.liferay.portal.kernel.module.util.SystemBundleUtil;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.ClassNameLocalService;
 import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
+import com.liferay.portal.kernel.test.util.BundleContextTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.test.log.LogCapture;
 import com.liferay.portal.test.rule.Inject;
@@ -57,7 +58,8 @@ public class ClassNamePostUpgradeDataCleanupProcessTest
 		Assume.assumeFalse(CompanyThreadLocal.isDefaultCompany());
 
 		Bundle bundle = BundleUtil.getBundle(
-			SystemBundleUtil.getBundleContext(),
+			BundleContextTestUtil.getBundleContext(
+				ClassNamePostUpgradeDataCleanupProcessTest.class),
 			"com.liferay.data.cleanup.impl");
 
 		DCLSingleton<Map<String, List<Bundle>>> dclSingleton =
@@ -157,6 +159,42 @@ public class ClassNamePostUpgradeDataCleanupProcessTest
 
 				Assert.assertEquals(
 					objectDefinition.getClassName(), className.getValue());
+			});
+	}
+
+	@Test
+	public void testFoundLiferayClassNameWithUnderscoreInPackageIsNotDeleted()
+		throws Exception {
+
+		AtomicReference<ClassName> classNameAtomicReference =
+			new AtomicReference<>();
+		String classNameValue = BlogPosting.class.getName();
+
+		test(
+			logCapture -> {
+				List<String> messages = logCapture.getMessages();
+
+				Assert.assertTrue(messages.toString(), messages.isEmpty());
+
+				ClassName className = _classNameLocalService.fetchClassName(
+					classNameValue);
+
+				Assert.assertEquals(classNameValue, className.getValue());
+			},
+			() -> {
+				if (classNameAtomicReference.get() != null) {
+					_classNameLocalService.deleteClassName(
+						classNameAtomicReference.get());
+				}
+			},
+			() -> {
+				ClassName className = _classNameLocalService.fetchClassName(
+					classNameValue);
+
+				if (className.getClassNameId() == 0) {
+					classNameAtomicReference.set(
+						_classNameLocalService.addClassName(classNameValue));
+				}
 			});
 	}
 
@@ -527,12 +565,16 @@ public class ClassNamePostUpgradeDataCleanupProcessTest
 				Bundle bundle = bundleAtomicReference.get();
 
 				if (bundle != null) {
-					installBundle(bundle, SystemBundleUtil.getBundleContext());
+					installBundle(
+						bundle,
+						BundleContextTestUtil.getBundleContext(
+							ClassNamePostUpgradeDataCleanupProcessTest.class));
 				}
 			},
 			() -> bundleAtomicReference.set(
 				uninstallBundle(
-					SystemBundleUtil.getBundleContext(),
+					BundleContextTestUtil.getBundleContext(
+						ClassNamePostUpgradeDataCleanupProcessTest.class),
 					"com.liferay.dynamic.data.mapping.service")));
 	}
 

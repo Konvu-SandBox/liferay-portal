@@ -17,7 +17,6 @@ import com.liferay.portal.kernel.search.SearchException;
 import com.liferay.portal.kernel.search.SearchResultPermissionFilter;
 import com.liferay.portal.kernel.search.SearchResultPermissionFilterFactory;
 import com.liferay.portal.kernel.search.SearchResultPermissionFilterSearcher;
-import com.liferay.portal.kernel.search.facet.FacetPostProcessor;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.security.permission.resource.ModelResourcePermission;
 import com.liferay.portal.search.configuration.DefaultSearchResultPermissionFilterConfiguration;
@@ -48,23 +47,16 @@ public class SearchResultPermissionFilterFactoryImpl
 		PermissionChecker permissionChecker) {
 
 		return new DefaultSearchResultPermissionFilter(
-			_defaultSearchResultPermissionFilterConfiguration,
-			facetPostProcessor, indexerRegistry, permissionChecker,
-			relatedEntryIndexerRegistry,
+			_defaultSearchResultPermissionFilterConfiguration, indexerRegistry,
+			permissionChecker, relatedEntryIndexerRegistry,
 			searchContext -> _search(
 				searchResultPermissionFilterSearcher, searchContext),
 			_serviceTrackerMap);
 	}
 
 	@Activate
-	@Modified
 	protected void activate(
 		BundleContext bundleContext, Map<String, Object> properties) {
-
-		_defaultSearchResultPermissionFilterConfiguration =
-			ConfigurableUtil.createConfigurable(
-				DefaultSearchResultPermissionFilterConfiguration.class,
-				properties);
 
 		_serviceTrackerMap = ServiceTrackerMapFactory.openSingleValueMap(
 			bundleContext,
@@ -73,6 +65,8 @@ public class SearchResultPermissionFilterFactoryImpl
 			"(permissions.view.dynamic.inheritance.checking=true)",
 			(serviceReference, emitter) -> emitter.emit(
 				(String)serviceReference.getProperty("model.class.name")));
+
+		modified(properties);
 	}
 
 	@Deactivate
@@ -80,8 +74,13 @@ public class SearchResultPermissionFilterFactoryImpl
 		_serviceTrackerMap.close();
 	}
 
-	@Reference
-	protected FacetPostProcessor facetPostProcessor;
+	@Modified
+	protected void modified(Map<String, Object> properties) {
+		_defaultSearchResultPermissionFilterConfiguration =
+			ConfigurableUtil.createConfigurable(
+				DefaultSearchResultPermissionFilterConfiguration.class,
+				properties);
+	}
 
 	@Reference
 	protected IndexerRegistry indexerRegistry;

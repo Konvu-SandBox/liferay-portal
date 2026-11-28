@@ -9,19 +9,29 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.liferay.arquillian.extension.junit.bridge.junit.Arquillian;
+import com.liferay.fragment.constants.FragmentConstants;
+import com.liferay.fragment.model.FragmentCollection;
+import com.liferay.fragment.model.FragmentEntry;
+import com.liferay.fragment.service.FragmentCollectionLocalService;
+import com.liferay.fragment.service.FragmentEntryLocalService;
 import com.liferay.layout.page.template.model.LayoutPageTemplateStructure;
 import com.liferay.layout.page.template.service.LayoutPageTemplateStructureLocalService;
 import com.liferay.layout.page.template.service.LayoutPageTemplateStructureLocalServiceUtil;
 import com.liferay.layout.test.util.LayoutTestUtil;
+import com.liferay.layout.util.structure.DropZoneLayoutStructureItem;
 import com.liferay.layout.util.structure.LayoutStructure;
 import com.liferay.layout.util.structure.LayoutStructureItem;
+import com.liferay.petra.string.StringPool;
+import com.liferay.portal.kernel.json.JSONArray;
 import com.liferay.portal.kernel.json.JSONObject;
+import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.portlet.bridges.mvc.MVCActionCommand;
 import com.liferay.portal.kernel.security.permission.PermissionThreadLocal;
 import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
+import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.portlet.MockActionRequest;
 import com.liferay.portal.kernel.test.portlet.MockLiferayPortletActionRequest;
 import com.liferay.portal.kernel.test.portlet.MockLiferayPortletActionResponse;
@@ -29,10 +39,13 @@ import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
 import com.liferay.portal.kernel.test.rule.Sync;
 import com.liferay.portal.kernel.test.util.GroupTestUtil;
+import com.liferay.portal.kernel.test.util.RandomTestUtil;
+import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.WebKeys;
+import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
@@ -78,6 +91,13 @@ public class UpdateItemConfigMVCActionCommandTest {
 	}
 
 	@Test
+	@TestInfo("LPD-73215")
+	public void testUpdateCollectionItemConfig() throws Exception {
+		_testUpdateCollectionItemConfigResponsive();
+		_testUpdateCollectionItemConfigResponsivePartial();
+	}
+
+	@Test
 	public void testUpdateColumnItemConfigResponsive() throws Exception {
 		_testUpdateColumnItemConfigResponsive(
 			"column_item_config_responsive.json");
@@ -95,6 +115,62 @@ public class UpdateItemConfigMVCActionCommandTest {
 
 		_testUpdateColumnItemConfigResponsive(
 			"column_item_config_responsive_incomplete.json");
+	}
+
+	@Test
+	@TestInfo("LPD-108786")
+	public void testUpdateDropZoneItemConfigNormalizesFragmentEntryKeys()
+		throws Exception {
+
+		LayoutStructure layoutStructure = _getLayoutStructure();
+
+		DropZoneLayoutStructureItem dropZoneLayoutStructureItem =
+			(DropZoneLayoutStructureItem)
+				layoutStructure.addDropZoneLayoutStructureItem(
+					layoutStructure.getMainItemId(), 0);
+
+		_layoutPageTemplateStructureLocalService.
+			updateLayoutPageTemplateStructureData(
+				TestPropsValues.getUserId(), _layout.getGroupId(),
+				_layout.getPlid(), layoutStructure.toString());
+
+		FragmentEntry fragmentEntry = _addFragmentEntry();
+
+		MockActionRequest mockActionRequest = _getMockActionRequest();
+
+		mockActionRequest.setParameter(
+			"itemConfig",
+			JSONUtil.put(
+				"allowNewFragmentEntries", true
+			).put(
+				"fragmentEntryKeys",
+				JSONUtil.putAll(fragmentEntry.getFragmentEntryKey())
+			).toString());
+		mockActionRequest.setParameter(
+			"itemId", dropZoneLayoutStructureItem.getItemId());
+
+		ReflectionTestUtil.invoke(
+			_mvcActionCommand, "doProcessAction",
+			new Class<?>[] {ActionRequest.class, ActionResponse.class},
+			mockActionRequest, new MockLiferayPortletActionResponse());
+
+		layoutStructure = _getLayoutStructure();
+
+		dropZoneLayoutStructureItem =
+			(DropZoneLayoutStructureItem)layoutStructure.getLayoutStructureItem(
+				dropZoneLayoutStructureItem.getItemId());
+
+		JSONArray fragmentEntriesJSONArray =
+			dropZoneLayoutStructureItem.getFragmentEntriesJSONArray();
+
+		Assert.assertEquals(1, fragmentEntriesJSONArray.length());
+
+		JSONObject fragmentJSONObject = fragmentEntriesJSONArray.getJSONObject(
+			0);
+
+		Assert.assertEquals(
+			fragmentEntry.getExternalReferenceCode(),
+			fragmentJSONObject.getString("fragmentEntryERC"));
 	}
 
 	@Test
@@ -176,6 +252,25 @@ public class UpdateItemConfigMVCActionCommandTest {
 			"row_item_config_responsive_incomplete.json");
 	}
 
+	private FragmentEntry _addFragmentEntry() throws Exception {
+		FragmentCollection fragmentCollection =
+			_fragmentCollectionLocalService.addFragmentCollection(
+				null, TestPropsValues.getUserId(), _group.getGroupId(),
+				RandomTestUtil.randomString(), StringPool.BLANK,
+				ServiceContextTestUtil.getServiceContext(_group.getGroupId()));
+
+		return _fragmentEntryLocalService.addFragmentEntry(
+			null, TestPropsValues.getUserId(), fragmentCollection.getGroupId(),
+			fragmentCollection.getFragmentCollectionId(), StringPool.BLANK,
+			RandomTestUtil.randomString(), StringPool.BLANK,
+			RandomTestUtil.randomString(), StringPool.BLANK, false,
+			StringPool.BLANK, null, 0, false, false,
+			FragmentConstants.TYPE_COMPONENT, null,
+			WorkflowConstants.STATUS_APPROVED,
+			ServiceContextTestUtil.getServiceContext(
+				fragmentCollection.getGroupId()));
+	}
+
 	private LayoutStructure _getLayoutStructure() throws Exception {
 		LayoutPageTemplateStructure layoutPageTemplateStructure =
 			LayoutPageTemplateStructureLocalServiceUtil.
@@ -225,6 +320,89 @@ public class UpdateItemConfigMVCActionCommandTest {
 			"dependencies/" + fileName);
 
 		return StringUtil.read(inputStream);
+	}
+
+	private void _testUpdateCollectionItemConfigResponsive() throws Exception {
+		LayoutStructure layoutStructure = _getLayoutStructure();
+
+		LayoutStructureItem layoutStructureItem =
+			layoutStructure.addCollectionStyledLayoutStructureItem(
+				layoutStructure.getMainItemId(), 0);
+
+		_layoutPageTemplateStructureLocalService.
+			updateLayoutPageTemplateStructureData(
+				TestPropsValues.getUserId(), _layout.getGroupId(),
+				_layout.getPlid(), layoutStructure.toString());
+
+		JSONObject jsonObject = layoutStructureItem.getItemConfigJSONObject();
+
+		Assert.assertEquals(
+			_objectMapper.readTree(_read("collection_item_config.json")),
+			_objectMapper.readTree(jsonObject.toString()));
+
+		MockActionRequest mockActionRequest = _getMockActionRequest();
+
+		mockActionRequest.setParameter(
+			"itemConfig", _read("collection_item_config_responsive.json"));
+		mockActionRequest.setParameter(
+			"itemId", layoutStructureItem.getItemId());
+
+		ReflectionTestUtil.invoke(
+			_mvcActionCommand, "doProcessAction",
+			new Class<?>[] {ActionRequest.class, ActionResponse.class},
+			mockActionRequest, new MockLiferayPortletActionResponse());
+
+		layoutStructure = _getLayoutStructure();
+
+		layoutStructureItem = layoutStructure.getLayoutStructureItem(
+			layoutStructureItem.getItemId());
+
+		jsonObject = layoutStructureItem.getItemConfigJSONObject();
+
+		Assert.assertEquals(
+			_objectMapper.readTree(
+				_read("collection_item_config_responsive.json")),
+			_objectMapper.readTree(jsonObject.toString()));
+	}
+
+	private void _testUpdateCollectionItemConfigResponsivePartial()
+		throws Exception {
+
+		LayoutStructure layoutStructure = _getLayoutStructure();
+
+		LayoutStructureItem layoutStructureItem =
+			layoutStructure.addCollectionStyledLayoutStructureItem(
+				layoutStructure.getMainItemId(), 0);
+
+		_layoutPageTemplateStructureLocalService.
+			updateLayoutPageTemplateStructureData(
+				TestPropsValues.getUserId(), _layout.getGroupId(),
+				_layout.getPlid(), layoutStructure.toString());
+
+		_updateItemConfig(
+			JSONUtil.put(
+				"tablet",
+				JSONUtil.put("flexWrap", RandomTestUtil.randomString())),
+			layoutStructureItem.getItemId());
+		_updateItemConfig(
+			JSONUtil.put("tablet", JSONUtil.put("align", "align-items-end")),
+			layoutStructureItem.getItemId());
+		_updateItemConfig(
+			JSONUtil.put("tablet", JSONUtil.put("flexWrap", "")),
+			layoutStructureItem.getItemId());
+
+		layoutStructure = _getLayoutStructure();
+
+		layoutStructureItem = layoutStructure.getLayoutStructureItem(
+			layoutStructureItem.getItemId());
+
+		JSONObject jsonObject = layoutStructureItem.getItemConfigJSONObject();
+
+		JSONObject tabletJSONObject = jsonObject.getJSONObject("tablet");
+
+		Assert.assertEquals(
+			"align-items-end", tabletJSONObject.getString("align"));
+		Assert.assertEquals("", tabletJSONObject.getString("flexWrap"));
 	}
 
 	private void _testUpdateColumnItemConfigResponsive(String itemConfigfile)
@@ -313,8 +491,30 @@ public class UpdateItemConfigMVCActionCommandTest {
 			_objectMapper.readTree(jsonObject.toString()));
 	}
 
+	private void _updateItemConfig(
+			JSONObject itemConfigJSONObject, String itemId)
+		throws Exception {
+
+		MockActionRequest mockActionRequest = _getMockActionRequest();
+
+		mockActionRequest.setParameter(
+			"itemConfig", itemConfigJSONObject.toString());
+		mockActionRequest.setParameter("itemId", itemId);
+
+		ReflectionTestUtil.invoke(
+			_mvcActionCommand, "doProcessAction",
+			new Class<?>[] {ActionRequest.class, ActionResponse.class},
+			mockActionRequest, new MockLiferayPortletActionResponse());
+	}
+
 	@Inject
 	private CompanyLocalService _companyLocalService;
+
+	@Inject
+	private FragmentCollectionLocalService _fragmentCollectionLocalService;
+
+	@Inject
+	private FragmentEntryLocalService _fragmentEntryLocalService;
 
 	@DeleteAfterTestRun
 	private Group _group;
