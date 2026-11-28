@@ -522,17 +522,6 @@ public class FriendlyURLEntryLocalServiceWrapper
 	@Override
 	public com.liferay.friendly.url.model.FriendlyURLEntryLocalization
 			getFriendlyURLEntryLocalization(
-				long groupId, long classNameId, String urlTitle)
-		throws com.liferay.friendly.url.exception.
-			NoSuchFriendlyURLEntryLocalizationException {
-
-		return _friendlyURLEntryLocalService.getFriendlyURLEntryLocalization(
-			groupId, classNameId, urlTitle);
-	}
-
-	@Override
-	public com.liferay.friendly.url.model.FriendlyURLEntryLocalization
-			getFriendlyURLEntryLocalization(
 				long groupId, long classNameId, String languageId,
 				String urlTitle)
 		throws com.liferay.friendly.url.exception.
@@ -591,6 +580,15 @@ public class FriendlyURLEntryLocalServiceWrapper
 
 		return _friendlyURLEntryLocalService.getMainFriendlyURLEntry(
 			classNameId, classPK);
+	}
+
+	@Override
+	public java.util.Map
+		<Long, com.liferay.friendly.url.model.FriendlyURLEntryTitles>
+			getMainFriendlyURLEntryTitles(long classNameId, long[] classPKs) {
+
+		return _friendlyURLEntryLocalService.getMainFriendlyURLEntryTitles(
+			classNameId, classPKs);
 	}
 
 	/**
@@ -685,17 +683,6 @@ public class FriendlyURLEntryLocalServiceWrapper
 	@Override
 	public FriendlyURLEntry updateFriendlyURLEntry(
 			long friendlyURLEntryId, long classNameId, long classPK,
-			String defaultLanguageId, java.util.Map<String, String> urlTitleMap)
-		throws com.liferay.portal.kernel.exception.PortalException {
-
-		return _friendlyURLEntryLocalService.updateFriendlyURLEntry(
-			friendlyURLEntryId, classNameId, classPK, defaultLanguageId,
-			urlTitleMap);
-	}
-
-	@Override
-	public FriendlyURLEntry updateFriendlyURLEntry(
-			long friendlyURLEntryId, long classNameId, long classPK,
 			String defaultLanguageId, java.util.Map<String, String> urlTitleMap,
 			com.liferay.portal.kernel.service.ServiceContext serviceContext)
 		throws com.liferay.portal.kernel.exception.PortalException {
@@ -736,16 +723,6 @@ public class FriendlyURLEntryLocalServiceWrapper
 
 		return _friendlyURLEntryLocalService.updateFriendlyURLLocalization(
 			friendlyURLEntryLocalization);
-	}
-
-	@Override
-	public com.liferay.friendly.url.model.FriendlyURLEntryLocalization
-			updateFriendlyURLLocalization(
-				long friendlyURLLocalizationId, String urlTitle)
-		throws com.liferay.portal.kernel.exception.PortalException {
-
-		return _friendlyURLEntryLocalService.updateFriendlyURLLocalization(
-			friendlyURLLocalizationId, urlTitle);
 	}
 
 	@Override
@@ -854,4 +831,4 @@ public class FriendlyURLEntryLocalServiceWrapper
 	private FriendlyURLEntryLocalService _friendlyURLEntryLocalService;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1842909151
+// LIFERAY-SERVICE-BUILDER-HASH:-1763579665

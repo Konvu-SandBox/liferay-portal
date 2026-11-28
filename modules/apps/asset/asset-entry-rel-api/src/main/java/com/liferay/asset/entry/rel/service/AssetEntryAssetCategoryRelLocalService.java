@@ -31,6 +31,7 @@ import com.liferay.portal.kernel.util.OrderByComparator;
 import java.io.Serializable;
 
 import java.util.List;
+import java.util.Map;
 
 import org.osgi.annotation.versioning.ProviderType;
 
@@ -222,10 +223,6 @@ public interface AssetEntryAssetCategoryRelLocalService
 		long assetEntryAssetCategoryRelId);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public AssetEntryAssetCategoryRel fetchAssetEntryAssetCategoryRel(
-		long assetEntryId, long assetCategoryId);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public ActionableDynamicQuery getActionableDynamicQuery();
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
@@ -264,29 +261,17 @@ public interface AssetEntryAssetCategoryRelLocalService
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public List<AssetEntryAssetCategoryRel>
-		getAssetEntryAssetCategoryRelsByAssetCategoryId(
-			long assetCategoryId, int start, int end);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public List<AssetEntryAssetCategoryRel>
-		getAssetEntryAssetCategoryRelsByAssetCategoryId(
-			long assetCategoryId, int start, int end,
-			OrderByComparator<AssetEntryAssetCategoryRel> orderByComparator);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public List<AssetEntryAssetCategoryRel>
 		getAssetEntryAssetCategoryRelsByAssetEntryId(long assetEntryId);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public List<AssetEntryAssetCategoryRel>
-		getAssetEntryAssetCategoryRelsByAssetEntryId(
-			long assetEntryId, int start, int end);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public List<AssetEntryAssetCategoryRel>
 		getAssetEntryAssetCategoryRelsByAssetEntryId(
 			long assetEntryId, int start, int end,
 			OrderByComparator<AssetEntryAssetCategoryRel> orderByComparator);
+
+	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
+	public Map<Long, List<AssetEntryAssetCategoryRel>>
+		getAssetEntryAssetCategoryRelsByAssetEntryIds(long[] assetEntryIds);
 
 	/**
 	 * Returns the number of asset entry asset category rels.
@@ -306,9 +291,6 @@ public interface AssetEntryAssetCategoryRelLocalService
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public int getAssetEntryAssetCategoryRelsCountByClassNameId(
 		long assetCategoryId, long classNameId);
-
-	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
-	public long[] getAssetEntryPrimaryKeys(long assetCategoryId);
 
 	@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 	public IndexableActionableDynamicQuery getIndexableActionableDynamicQuery();
@@ -358,4 +340,4 @@ public interface AssetEntryAssetCategoryRelLocalService
 		throws E;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1180767433
+// LIFERAY-SERVICE-BUILDER-HASH:177603434

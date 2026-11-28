@@ -10,8 +10,6 @@ import {Provider} from 'react-redux';
 import {render} from '@testing-library/react';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = ({
 	groupId = '23',
 	mocks = [
@@ -66,7 +64,7 @@ describe('AttributeList', () => {
 
 		await waitForLoadingToBeRemoved();
 
-		expect(getByText('String').closest('.label')).toHaveClass(
+		expect(getByText(/^string$/i).closest('.label')).toHaveClass(
 			'label-inverse-info'
 		);
 	});

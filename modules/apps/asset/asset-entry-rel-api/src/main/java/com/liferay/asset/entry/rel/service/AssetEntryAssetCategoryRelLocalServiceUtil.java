@@ -16,6 +16,7 @@ import com.liferay.portal.kernel.util.OrderByComparator;
 import java.io.Serializable;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Provides the local service utility for AssetEntryAssetCategoryRel. This utility wraps
@@ -256,13 +257,6 @@ public class AssetEntryAssetCategoryRelLocalServiceUtil {
 			assetEntryAssetCategoryRelId);
 	}
 
-	public static AssetEntryAssetCategoryRel fetchAssetEntryAssetCategoryRel(
-		long assetEntryId, long assetCategoryId) {
-
-		return getService().fetchAssetEntryAssetCategoryRel(
-			assetEntryId, assetCategoryId);
-	}
-
 	public static com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery
 		getActionableDynamicQuery() {
 
@@ -313,35 +307,10 @@ public class AssetEntryAssetCategoryRelLocalServiceUtil {
 	}
 
 	public static List<AssetEntryAssetCategoryRel>
-		getAssetEntryAssetCategoryRelsByAssetCategoryId(
-			long assetCategoryId, int start, int end) {
-
-		return getService().getAssetEntryAssetCategoryRelsByAssetCategoryId(
-			assetCategoryId, start, end);
-	}
-
-	public static List<AssetEntryAssetCategoryRel>
-		getAssetEntryAssetCategoryRelsByAssetCategoryId(
-			long assetCategoryId, int start, int end,
-			OrderByComparator<AssetEntryAssetCategoryRel> orderByComparator) {
-
-		return getService().getAssetEntryAssetCategoryRelsByAssetCategoryId(
-			assetCategoryId, start, end, orderByComparator);
-	}
-
-	public static List<AssetEntryAssetCategoryRel>
 		getAssetEntryAssetCategoryRelsByAssetEntryId(long assetEntryId) {
 
 		return getService().getAssetEntryAssetCategoryRelsByAssetEntryId(
 			assetEntryId);
-	}
-
-	public static List<AssetEntryAssetCategoryRel>
-		getAssetEntryAssetCategoryRelsByAssetEntryId(
-			long assetEntryId, int start, int end) {
-
-		return getService().getAssetEntryAssetCategoryRelsByAssetEntryId(
-			assetEntryId, start, end);
 	}
 
 	public static List<AssetEntryAssetCategoryRel>
@@ -351,6 +320,13 @@ public class AssetEntryAssetCategoryRelLocalServiceUtil {
 
 		return getService().getAssetEntryAssetCategoryRelsByAssetEntryId(
 			assetEntryId, start, end, orderByComparator);
+	}
+
+	public static Map<Long, List<AssetEntryAssetCategoryRel>>
+		getAssetEntryAssetCategoryRelsByAssetEntryIds(long[] assetEntryIds) {
+
+		return getService().getAssetEntryAssetCategoryRelsByAssetEntryIds(
+			assetEntryIds);
 	}
 
 	/**
@@ -379,10 +355,6 @@ public class AssetEntryAssetCategoryRelLocalServiceUtil {
 
 		return getService().getAssetEntryAssetCategoryRelsCountByClassNameId(
 			assetCategoryId, classNameId);
-	}
-
-	public static long[] getAssetEntryPrimaryKeys(long assetCategoryId) {
-		return getService().getAssetEntryPrimaryKeys(assetCategoryId);
 	}
 
 	public static
@@ -437,4 +409,4 @@ public class AssetEntryAssetCategoryRelLocalServiceUtil {
 			AssetEntryAssetCategoryRelLocalService.class);
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:245674036
+// LIFERAY-SERVICE-BUILDER-HASH:-1713924075

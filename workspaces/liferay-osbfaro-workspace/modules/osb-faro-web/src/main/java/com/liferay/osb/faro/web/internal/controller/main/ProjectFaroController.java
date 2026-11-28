@@ -86,6 +86,7 @@ import com.liferay.portal.kernel.util.Time;
 import com.liferay.portal.kernel.util.Tuple;
 import com.liferay.portal.kernel.util.Validator;
 
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 
 import jakarta.ws.rs.DELETE;
@@ -194,7 +195,7 @@ public class ProjectFaroController extends BaseFaroController {
 	@Path("/usage/backfill")
 	@POST
 	@RolesAllowed(RoleConstants.SITE_ADMINISTRATOR)
-	public void backfillProjectUsageMetrics(
+	public void backfillFaroProjectUsages(
 		@QueryParam("endDateString") String endDateString,
 		@QueryParam("startDateString") String startDateString) {
 
@@ -630,6 +631,7 @@ public class ProjectFaroController extends BaseFaroController {
 
 	@GET
 	@Path("/joinable")
+	@PermitAll
 	public List<JoinableProjectDisplay> getJoinableProjectDisplays()
 		throws PortalException {
 
@@ -711,6 +713,7 @@ public class ProjectFaroController extends BaseFaroController {
 
 	@GET
 	@Path("/corpProjectUuid/{corpProjectUuid}")
+	@PermitAll
 	public ProjectDisplay getProjectDisplay(
 			@PathParam("corpProjectUuid") String corpProjectUuid)
 		throws Exception {
@@ -733,6 +736,7 @@ public class ProjectFaroController extends BaseFaroController {
 	}
 
 	@GET
+	@PermitAll
 	public List<ProjectDisplay> getProjectDisplays() {
 		return TransformUtil.transform(
 			_faroUserLocalService.getFaroUsersByLiveUserId(
@@ -812,6 +816,7 @@ public class ProjectFaroController extends BaseFaroController {
 
 	@GET
 	@Path("/time_zones")
+	@PermitAll
 	public List<TimeZoneDisplay> getTimeZones() {
 		return TimeZoneUtil.getTimeZoneDisplays();
 	}
@@ -853,9 +858,9 @@ public class ProjectFaroController extends BaseFaroController {
 
 			_sendTimeZoneNotification(groupId);
 
-			cerebroEngineClient.updateTimeZone(faroProject);
-
 			faroProject.setTimeZoneId(timeZoneId);
+
+			cerebroEngineClient.updateTimeZone(faroProject);
 		}
 
 		faroProjectLocalService.updateFaroProject(faroProject);
@@ -1392,9 +1397,22 @@ public class ProjectFaroController extends BaseFaroController {
 			ownerEmailAddress = user.getEmailAddress();
 		}
 
-		_faroUserLocalService.addFaroUser(
-			user.getUserId(), faroProject.getGroupId(), 0, role.getRoleId(),
-			ownerEmailAddress, FaroUserConstants.STATUS_PENDING, false);
+		if (StringUtil.equalsIgnoreCase(
+				ownerEmailAddress, user.getEmailAddress())) {
+
+			_faroUserLocalService.addFaroUser(
+				user.getUserId(), faroProject.getGroupId(), user.getUserId(),
+				role.getRoleId(), ownerEmailAddress,
+				FaroUserConstants.STATUS_APPROVED, false);
+
+			_groupLocalService.addUserGroup(
+				user.getUserId(), faroProject.getGroupId());
+		}
+		else {
+			_faroUserLocalService.addFaroUser(
+				user.getUserId(), faroProject.getGroupId(), 0, role.getRoleId(),
+				ownerEmailAddress, FaroUserConstants.STATUS_PENDING, false);
+		}
 
 		faroProject.setWeDeployKey(
 			contactsEngineClient.addProject(faroProject) + ".lfr.cloud");
@@ -1841,15 +1859,13 @@ public class ProjectFaroController extends BaseFaroController {
 
 		long groupId = faroProject.getGroupId();
 
-		if (_initializingGroupIds.contains(groupId)) {
+		if (!_initializingGroupIds.add(groupId)) {
 			faroProject.setState(FaroProjectConstants.STATE_READY);
 
 			return faroProject;
 		}
 
 		try {
-			_initializingGroupIds.add(groupId);
-
 			cerebroEngineClient.updateTimeZone(faroProject);
 
 			_fieldMappingFaroController.addDefaultFieldMappings(groupId);

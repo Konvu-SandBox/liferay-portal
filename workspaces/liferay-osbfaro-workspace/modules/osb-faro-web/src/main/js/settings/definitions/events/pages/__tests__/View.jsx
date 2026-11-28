@@ -11,8 +11,6 @@ import {fireEvent, render, screen} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 import {waitForLoading} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useParams: () => ({
@@ -85,7 +83,7 @@ describe('Event View page', () => {
 
 		expect(screen.queryByRole('dialog')).toBeNull();
 
-		fireEvent.click(screen.getByText('Edit'));
+		fireEvent.click(screen.getByText(/^edit$/i));
 
 		expect(await screen.findByRole('dialog')).toBeInTheDocument();
 		expect(
