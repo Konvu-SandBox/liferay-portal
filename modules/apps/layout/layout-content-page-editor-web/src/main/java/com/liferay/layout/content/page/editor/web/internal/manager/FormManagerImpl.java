@@ -21,6 +21,7 @@ import com.liferay.info.item.InfoItemServiceRegistry;
 import com.liferay.info.item.provider.InfoItemFormProvider;
 import com.liferay.info.search.InfoSearchClassMapperRegistry;
 import com.liferay.layout.content.page.editor.web.internal.util.layout.structure.LayoutStructureUtil;
+import com.liferay.layout.helper.DropZoneAllowedFragmentEntriesHelper;
 import com.liferay.layout.manager.FormManager;
 import com.liferay.layout.util.structure.DropZoneLayoutStructureItem;
 import com.liferay.layout.util.structure.FormStyledLayoutStructureItem;
@@ -39,11 +40,9 @@ import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.util.ArrayUtil;
-import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.ScopeUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
-import com.liferay.segments.constants.SegmentsExperienceConstants;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -124,7 +123,7 @@ public class FormManagerImpl implements FormManager {
 		}
 
 		DropZoneLayoutStructureItem masterDropZoneLayoutStructureItem =
-			_getMasterDropZoneLayoutStructureItem(layout);
+			LayoutStructureUtil.getMasterDropZoneLayoutStructureItem(layout);
 		TreeSet<String> missingInputTypes = new TreeSet<>();
 
 		JSONObject defaultInputFragmentEntryKeysJSONObject =
@@ -151,8 +150,8 @@ public class FormManagerImpl implements FormManager {
 
 			if ((fragmentEntry == null) ||
 				!_isAllowedFragmentEntryKey(
-					fragmentEntry.getFragmentEntryKey(),
-					masterDropZoneLayoutStructureItem)) {
+					layout.getCompanyId(), fragmentEntry.getFragmentEntryKey(),
+					masterDropZoneLayoutStructureItem, layout.getGroupId())) {
 
 				missingInputTypes.add(infoFieldType.getLabel(locale));
 
@@ -174,8 +173,8 @@ public class FormManagerImpl implements FormManager {
 
 			if ((fragmentEntry == null) ||
 				!_isAllowedFragmentEntryKey(
-					fragmentEntry.getFragmentEntryKey(),
-					masterDropZoneLayoutStructureItem)) {
+					layout.getCompanyId(), fragmentEntry.getFragmentEntryKey(),
+					masterDropZoneLayoutStructureItem, layout.getGroupId())) {
 
 				missingInputTypes.add(_language.get(locale, "submit-button"));
 			}
@@ -225,15 +224,12 @@ public class FormManagerImpl implements FormManager {
 
 		FragmentEntryLink fragmentEntryLink =
 			_fragmentEntryLinkService.addFragmentEntryLink(
-				null, layout.getGroupId(), null,
+				null, layout.getGroupId(),
 				fragmentEntry.getExternalReferenceCode(),
 				ScopeUtil.getItemScopeExternalReferenceCode(
 					fragmentEntry.getGroupId(), layout.getGroupId()),
-				segmentsExperienceId, layout.getPlid(), fragmentEntry.getCss(),
-				fragmentEntry.getHtml(), fragmentEntry.getJs(),
-				fragmentEntry.getConfiguration(), null, StringPool.BLANK, 0,
-				fragmentEntry.getFragmentEntryKey(), fragmentEntry.getType(),
-				serviceContext);
+				segmentsExperienceId, layout.getPlid(), null,
+				fragmentEntry.getFragmentEntryKey(), serviceContext);
 
 		if (Validator.isNotNull(infoFieldUniqueId)) {
 			JSONObject editableValuesJSONObject = _jsonFactory.createJSONObject(
@@ -384,59 +380,14 @@ public class FormManagerImpl implements FormManager {
 		return infoForm.getAllInfoFields();
 	}
 
-	private DropZoneLayoutStructureItem _getMasterDropZoneLayoutStructureItem(
-		Layout layout) {
-
-		if (layout.getMasterLayoutPlid() <= 0) {
-			return null;
-		}
-
-		try {
-			LayoutStructure masterLayoutStructure =
-				LayoutStructureUtil.getLayoutStructure(
-					layout.getGroupId(), layout.getMasterLayoutPlid(),
-					SegmentsExperienceConstants.KEY_DEFAULT);
-
-			return (DropZoneLayoutStructureItem)
-				masterLayoutStructure.getDropZoneLayoutStructureItem();
-		}
-		catch (Exception exception) {
-			if (_log.isDebugEnabled()) {
-				_log.debug("Unable to get master layout structure", exception);
-			}
-		}
-
-		return null;
-	}
-
 	private boolean _isAllowedFragmentEntryKey(
-		String fragmentEntryKey,
-		DropZoneLayoutStructureItem masterDropZoneLayoutStructureItem) {
+		long companyId, String fragmentEntryKey,
+		DropZoneLayoutStructureItem masterDropZoneLayoutStructureItem,
+		long scopeGroupId) {
 
-		if (masterDropZoneLayoutStructureItem == null) {
-			return true;
-		}
-
-		List<String> fragmentEntryKeys =
-			masterDropZoneLayoutStructureItem.getFragmentEntryKeys();
-
-		if (masterDropZoneLayoutStructureItem.isAllowNewFragmentEntries()) {
-			if (ListUtil.isEmpty(fragmentEntryKeys) ||
-				!fragmentEntryKeys.contains(fragmentEntryKey)) {
-
-				return true;
-			}
-
-			return false;
-		}
-
-		if (ListUtil.isNotEmpty(fragmentEntryKeys) &&
-			fragmentEntryKeys.contains(fragmentEntryKey)) {
-
-			return true;
-		}
-
-		return false;
+		return _dropZoneAllowedFragmentEntriesHelper.isAllowedFragmentEntryKey(
+			companyId, masterDropZoneLayoutStructureItem, fragmentEntryKey,
+			scopeGroupId);
 	}
 
 	private static final Log _log = LogFactoryUtil.getLog(
@@ -445,6 +396,10 @@ public class FormManagerImpl implements FormManager {
 	@Reference
 	private DefaultInputFragmentEntryConfigurationProvider
 		_defaultInputFragmentEntryConfigurationProvider;
+
+	@Reference
+	private DropZoneAllowedFragmentEntriesHelper
+		_dropZoneAllowedFragmentEntriesHelper;
 
 	@Reference
 	private FormItemManager _formItemManager;

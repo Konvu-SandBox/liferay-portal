@@ -259,14 +259,6 @@ public class RedirectNotFoundEntryLocalServiceWrapper
 	}
 
 	@Override
-	public com.liferay.redirect.model.RedirectNotFoundEntry
-		fetchRedirectNotFoundEntry(long groupId, String url) {
-
-		return _redirectNotFoundEntryLocalService.fetchRedirectNotFoundEntry(
-			groupId, url);
-	}
-
-	@Override
 	public com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery
 		getActionableDynamicQuery() {
 
@@ -347,18 +339,6 @@ public class RedirectNotFoundEntryLocalServiceWrapper
 			groupId, minModifiedDate, start, end, orderByComparator);
 	}
 
-	@Override
-	public java.util.List<com.liferay.redirect.model.RedirectNotFoundEntry>
-		getRedirectNotFoundEntries(
-			long groupId, int start, int end,
-			com.liferay.portal.kernel.util.OrderByComparator
-				<com.liferay.redirect.model.RedirectNotFoundEntry>
-					orderByComparator) {
-
-		return _redirectNotFoundEntryLocalService.getRedirectNotFoundEntries(
-			groupId, start, end, orderByComparator);
-	}
-
 	/**
 	 * Returns the number of redirect not found entries.
 	 *
@@ -371,25 +351,11 @@ public class RedirectNotFoundEntryLocalServiceWrapper
 	}
 
 	@Override
-	public int getRedirectNotFoundEntriesCount(long groupId) {
-		return _redirectNotFoundEntryLocalService.
-			getRedirectNotFoundEntriesCount(groupId);
-	}
-
-	@Override
 	public int getRedirectNotFoundEntriesCount(
 		long groupId, Boolean ignored, java.util.Date minModifiedDate) {
 
 		return _redirectNotFoundEntryLocalService.
 			getRedirectNotFoundEntriesCount(groupId, ignored, minModifiedDate);
-	}
-
-	@Override
-	public int getRedirectNotFoundEntriesCount(
-		long groupId, java.util.Date minModifiedDate) {
-
-		return _redirectNotFoundEntryLocalService.
-			getRedirectNotFoundEntriesCount(groupId, minModifiedDate);
 	}
 
 	/**
@@ -459,4 +425,4 @@ public class RedirectNotFoundEntryLocalServiceWrapper
 		_redirectNotFoundEntryLocalService;
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1244827409
+// LIFERAY-SERVICE-BUILDER-HASH:-291263404

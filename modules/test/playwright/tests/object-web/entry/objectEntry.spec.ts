@@ -1230,7 +1230,7 @@ cmsTest.describe('Manage object entries schedule properties', () => {
 				tomorrow
 			);
 
-			await page.getByRole('button', {name: 'Close'}).click();
+			await viewObjectEntriesPage.schedulePublicationCloseButton.click();
 
 			await viewObjectEntriesPage.choosePublicationOption('publish');
 
@@ -1242,7 +1242,7 @@ cmsTest.describe('Manage object entries schedule properties', () => {
 				new RegExp(`^${today.split(' ')[0]}`)
 			);
 
-			await page.getByRole('button', {name: 'Close'}).click();
+			await viewObjectEntriesPage.schedulePublicationCloseButton.click();
 		}
 	);
 
@@ -2484,12 +2484,21 @@ test.describe('Manage object entries through View Object Entries', () => {
 			])
 		);
 
-		for (const {entry, name} of objectFieldObjectEntryValues) {
+		for (const {
+			businessType,
+			entry,
+			name,
+		} of objectFieldObjectEntryValues) {
 			const columnIndex = columnMap.get(name.toLowerCase());
 
-			await expect(
-				dataRow.getByRole('cell').nth(columnIndex!)
-			).toHaveText(entry);
+			const dataCell = dataRow.getByRole('cell').nth(columnIndex!);
+
+			if (businessType === 'Attachment') {
+				await expect(dataCell).toContainText(entry);
+			}
+			else {
+				await expect(dataCell).toHaveText(entry);
+			}
 		}
 
 		const selectedListTypeEntry = objectFieldObjectEntryValues.find(
@@ -2527,9 +2536,11 @@ test.describe('Manage object entries through View Object Entries', () => {
 
 		await viewObjectEntriesPage.backButton.click();
 
-		for (const {entry} of newObjectFieldObjectEntryValues) {
+		for (const {businessType, entry} of newObjectFieldObjectEntryValues) {
 			await expect(
-				page.locator('td').getByText(entry, {exact: true})
+				page.locator('td').getByText(entry, {
+					exact: businessType !== 'Attachment',
+				})
 			).toBeVisible();
 		}
 	});

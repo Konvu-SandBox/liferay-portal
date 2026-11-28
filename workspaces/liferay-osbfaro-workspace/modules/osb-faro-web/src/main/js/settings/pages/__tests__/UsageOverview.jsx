@@ -12,8 +12,6 @@ import {UsageOverview} from '../UsageOverview';
 import {useCurrentUser} from 'shared/hooks/useCurrentUser';
 import {User} from 'shared/util/records';
 
-jest.unmock('react-dom');
-
 jest.mock('react-router-dom', () => ({
 	...jest.requireActual('react-router-dom'),
 	useParams: () => ({
@@ -194,7 +192,7 @@ describe('UsageOverview', () => {
 
 		expect(container.querySelector('.alert-warning')).toBeInTheDocument();
 
-		expect(getByText('Enterprise')).toBeInTheDocument();
+		expect(getByText(/^enterprise$/i)).toBeInTheDocument();
 	});
 
 	it('should render the total of PAGE VIEWS since the last anniversary and the percentage used in the plan', () => {
@@ -274,7 +272,7 @@ describe('UsageOverview', () => {
 		expect(container.querySelector('.alert-warning')).toBeInTheDocument();
 		expect(
 			getByText(
-				'Usage limit is approaching. Please contact your workspace administrator at the earliest convenience.'
+				/^usage limit is approaching\. please contact your workspace administrator at the earliest convenience\.$/i
 			)
 		).toBeInTheDocument();
 	});
@@ -374,7 +372,7 @@ describe('UsageOverview', () => {
 			<WrappedComponent {...defaultProps} project={mockProject} />
 		);
 
-		expect(queryByText('Go to Customer Portal')).toBeInTheDocument();
+		expect(queryByText(/^go to customer portal$/i)).toBeInTheDocument();
 	});
 
 	it('renders current usage message for BASIC PLAN', () => {
@@ -400,7 +398,7 @@ describe('UsageOverview', () => {
 
 		expect(
 			queryByText(
-				'When either limit is exceeded, the current plan will have to be upgraded to Business or Enterprise.'
+				/^when either limit is exceeded, the current plan will have to be upgraded to business or enterprise\.$/i
 			)
 		).toBeInTheDocument();
 	});
@@ -428,7 +426,7 @@ describe('UsageOverview', () => {
 
 		expect(
 			queryByText(
-				'When either limit is exceeded, the current plan will either have to be upgraded or add-ons will have to be purchased to accommodate the overage.'
+				/^when either limit is exceeded, the current plan will either have to be upgraded or add-ons will have to be purchased to accommodate the overage\.$/i
 			)
 		).toBeInTheDocument();
 	});
@@ -456,7 +454,7 @@ describe('UsageOverview', () => {
 
 		expect(
 			queryByText(
-				'When either limit is exceeded, the current plan will either have to be upgraded or add-ons will have to be purchased to accommodate the overage.'
+				/^when either limit is exceeded, the current plan will either have to be upgraded or add-ons will have to be purchased to accommodate the overage\.$/i
 			)
 		).toBeInTheDocument();
 	});

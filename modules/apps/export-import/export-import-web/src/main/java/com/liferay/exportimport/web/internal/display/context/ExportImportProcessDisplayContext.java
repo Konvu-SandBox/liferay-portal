@@ -249,10 +249,6 @@ public class ExportImportProcessDisplayContext {
 		).put(
 			"pageSize", PropsValues.LAYOUT_MANAGE_PAGES_INITIAL_CHILDREN
 		).put(
-			"privateLayoutsAvailable",
-			!_staticSite && !liveGroup.isLayoutSetPrototype() &&
-			liveGroup.isPrivateLayoutsEnabled() && liveGroup.hasPrivateLayouts()
-		).put(
 			"siteExternalReferenceCode", liveGroup.getExternalReferenceCode()
 		).build();
 	}
@@ -262,7 +258,7 @@ public class ExportImportProcessDisplayContext {
 			return Scope.PORTLET;
 		}
 
-		if (ScopeUtil.isInstanceScoped(_group)) {
+		if (ScopeUtil.isCompanyScoped(_group)) {
 			return Scope.COMPANY;
 		}
 
@@ -291,7 +287,7 @@ public class ExportImportProcessDisplayContext {
 	public boolean isSpaceSelectionEnabled() {
 		if ((getScope() == Scope.COMPANY) &&
 			FeatureFlagManagerUtil.isEnabled(
-				_group.getCompanyId(), "LPD-41307")) {
+				_group.getCompanyId(), "LPD-57655")) {
 
 			return true;
 		}
@@ -338,7 +334,7 @@ public class ExportImportProcessDisplayContext {
 					portletId, layout.getExternalReferenceCode(), null);
 			}
 
-			if (ScopeUtil.isInstanceScoped(_group)) {
+			if (ScopeUtil.isCompanyScoped(_group)) {
 				return exportPreviewResource.getExportPreview(
 					null, null, null, portletId, null);
 			}

@@ -9,7 +9,11 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 
 import CategorizationSuggestionService from '../../../../src/main/resources/META-INF/resources/js/common/services/CategorizationSuggestionService';
+import VocabularyService from '../../../../src/main/resources/META-INF/resources/js/common/services/VocabularyService';
 import ContentEditorSidePanel from '../../../../src/main/resources/META-INF/resources/js/content_editor/components/ContentEditorSidePanel';
+import CommentService, {
+	Comment,
+} from '../../../../src/main/resources/META-INF/resources/js/content_editor/services/CommentService';
 import ObjectEntryService from '../../../../src/main/resources/META-INF/resources/js/main_view/info_panel/services/ObjectEntryService';
 import {mockFetch} from '../../__mocks__/frontend-js-web';
 
@@ -29,13 +33,29 @@ jest.mock('frontend-js-web', () => ({
 	},
 }));
 jest.mock(
+	'../../../../src/main/resources/META-INF/resources/js/content_editor/services/CommentService'
+);
+jest.mock(
 	'../../../../src/main/resources/META-INF/resources/js/main_view/info_panel/services/ObjectEntryService'
 );
 jest.mock(
 	'../../../../src/main/resources/META-INF/resources/js/common/services/CategorizationSuggestionService'
 );
+jest.mock(
+	'../../../../src/main/resources/META-INF/resources/js/common/services/VocabularyService'
+);
 
-const renderComponent = ({cmpEnabled = true, isSubscribed = false} = {}) => {
+const renderComponent = ({
+	cmpEnabled = true,
+	comments = [],
+	expirationDate = EXPIRATION_DATE,
+	isSubscribed = false,
+}: {
+	cmpEnabled?: boolean;
+	comments?: Comment[];
+	expirationDate?: string;
+	isSubscribed?: boolean;
+} = {}) => {
 	return render(
 		<ContentEditorSidePanel
 			addCommentURL="addCommentURL"
@@ -43,13 +63,13 @@ const renderComponent = ({cmpEnabled = true, isSubscribed = false} = {}) => {
 			assetType={30982}
 			cmpEnabled={cmpEnabled}
 			cmsGroupId="21000"
-			comments={[]}
+			comments={comments}
 			contentAPIURL="contentAPIURL"
 			deleteCommentURL="deleteCommentURL"
 			editCommentURL="editCommentURL"
 			editorConfig={{}}
 			entryClassName=""
-			expirationDate={EXPIRATION_DATE}
+			expirationDate={expirationDate}
 			getCommentsURL="getCommentsURL"
 			hasUpdatePermission={true}
 			id="contentId"
@@ -62,6 +82,40 @@ const renderComponent = ({cmpEnabled = true, isSubscribed = false} = {}) => {
 	);
 };
 
+const renderToPublish = async ({expirationDate}: {expirationDate: string}) => {
+	const listeners: Array<(payload: {event: Event}) => void> = [];
+
+	(global as any).Liferay.on = (
+		name: string,
+		listener: (payload: {event: Event}) => void
+	) => {
+		if (name === 'contentEditor:validateForm') {
+			listeners.push(listener);
+		}
+	};
+
+	(global as any).Liferay.detach = (
+		name: string,
+		listener: (payload: {event: Event}) => void
+	) => {
+		listeners.splice(listeners.indexOf(listener), 1);
+	};
+
+	await act(async () => {
+		renderComponent({expirationDate});
+	});
+
+	return () => {
+		const event = new MouseEvent('click', {cancelable: true});
+
+		act(() => {
+			listeners.forEach((listener) => listener({event}));
+		});
+
+		return event;
+	};
+};
+
 describe('ContentEditorSidePanel', () => {
 	beforeEach(() => {
 		global.Liferay.ThemeDisplay.getTimeZone = jest
@@ -70,6 +124,10 @@ describe('ContentEditorSidePanel', () => {
 		global.Liferay.ThemeDisplay.getSiteGroupId = jest
 			.fn()
 			.mockReturnValue('21000');
+
+		(
+			VocabularyService.getRequiredVocabularies as jest.Mock
+		).mockResolvedValue([]);
 
 		(ObjectEntryService.getObjectEntry as jest.Mock).mockResolvedValue({
 			data: {
@@ -273,6 +331,95 @@ describe('ContentEditorSidePanel', () => {
 		});
 	});
 
+	it('keeps a comment deleted when switching panels', async () => {
+		(CommentService.deleteComment as jest.Mock).mockResolvedValue({
+			data: {},
+		});
+
+		renderComponent({
+			comments: [
+				{
+					author: {
+						fullName: 'Test User',
+						portraitURL: '',
+						userId: '1',
+					},
+					body: 'Comment to delete',
+					children: [],
+					className: 'Z7P5',
+					commentId: '1',
+					dateDescription: '18 Seconds Ago',
+					edited: false,
+					hasDeletePermission: true,
+					hasUpdatePermission: true,
+					negativeVotes: 0,
+					positiveVotes: 0,
+					ratingsClassName:
+						'com.liferay.message.boards.model.MBDiscussion',
+					rootComment: true,
+					thumbDown: false,
+					thumbUp: false,
+				},
+			],
+		});
+
+		await userEvent.click(screen.getByLabelText('comments'));
+
+		expect(
+			await screen.findByText('Comment to delete')
+		).toBeInTheDocument();
+
+		await userEvent.click(screen.getByTitle('actions'));
+
+		await userEvent.click(screen.getByText('delete'));
+
+		await waitFor(() => {
+			expect(
+				screen.queryByText('Comment to delete')
+			).not.toBeInTheDocument();
+		});
+
+		await userEvent.click(screen.getByLabelText('general'));
+
+		await waitFor(() => {
+			expect(screen.getByText('general')).toBeInTheDocument();
+		});
+
+		await userEvent.click(screen.getByLabelText('comments'));
+
+		await waitFor(() => {
+			expect(screen.getByText('comments')).toBeInTheDocument();
+		});
+
+		expect(screen.queryByText('Comment to delete')).not.toBeInTheDocument();
+	});
+
+	it('keeps the subscription when switching panels', async () => {
+		renderComponent();
+
+		await userEvent.click(screen.getByLabelText('comments'));
+
+		await userEvent.click(await screen.findByLabelText('subscribe'));
+
+		await waitFor(() => {
+			expect(screen.getByLabelText('unsubscribe')).toBeInTheDocument();
+		});
+
+		await userEvent.click(screen.getByLabelText('general'));
+
+		await waitFor(() => {
+			expect(screen.getByText('general')).toBeInTheDocument();
+		});
+
+		await userEvent.click(screen.getByLabelText('comments'));
+
+		await waitFor(() => {
+			expect(screen.getByText('comments')).toBeInTheDocument();
+		});
+
+		expect(screen.getByLabelText('unsubscribe')).toBeInTheDocument();
+	});
+
 	it('persists a tag commit while the categorization panel is closed', async () => {
 		const handlers: Record<string, (payload: any) => void> = {};
 
@@ -350,6 +497,38 @@ describe('ContentEditorSidePanel', () => {
 				screen.getByRole('textbox', {name: 'expiration-date'})
 			).toHaveValue('08/14/2025 12:01 AM');
 		});
+	});
+
+	it('opens the schedule panel with an error when publishing with a past expiration date', async () => {
+		const publish = await renderToPublish({
+			expirationDate: '2020-01-01T00:00',
+		});
+
+		expect(
+			screen.queryByRole('textbox', {name: 'expiration-date'})
+		).not.toBeInTheDocument();
+
+		const event = publish();
+
+		expect(event.defaultPrevented).toBe(true);
+
+		await waitFor(() => {
+			expect(
+				screen.getByRole('textbox', {name: 'expiration-date'})
+			).toBeInTheDocument();
+		});
+
+		expect(
+			screen.getByText('the-date-entered-is-in-the-past')
+		).toBeInTheDocument();
+	});
+
+	it('publishes with a future expiration date', async () => {
+		const publish = await renderToPublish({
+			expirationDate: `${new Date().getFullYear() + 1}-01-01T00:00`,
+		});
+
+		expect(publish().defaultPrevented).toBe(false);
 	});
 
 	it('renders ContentEditorSidePanel', () => {

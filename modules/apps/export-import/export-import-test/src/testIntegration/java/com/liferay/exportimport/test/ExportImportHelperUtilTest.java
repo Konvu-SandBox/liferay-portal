@@ -69,9 +69,7 @@ import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.xml.Element;
 import com.liferay.portal.kernel.zip.ZipReader;
-import com.liferay.portal.kernel.zip.ZipReaderFactory;
 import com.liferay.portal.kernel.zip.ZipWriter;
-import com.liferay.portal.kernel.zip.ZipWriterFactory;
 import com.liferay.portal.model.impl.PortletImpl;
 import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.FeatureFlags;
@@ -580,10 +578,7 @@ public class ExportImportHelperUtilTest {
 	}
 
 	@FeatureFlags(
-		featureFlags = {
-			@FeatureFlag(value = "LPD-41307"), @FeatureFlag("LPD-57655"),
-			@FeatureFlag("LPD-85946")
-		}
+		featureFlags = {@FeatureFlag("LPD-57655"), @FeatureFlag("LPD-85946")}
 	)
 	@Test
 	public void testGetExportablePortletsWithDepotGroup() throws Exception {
@@ -1233,10 +1228,7 @@ public class ExportImportHelperUtilTest {
 	}
 
 	@FeatureFlags(
-		featureFlags = {
-			@FeatureFlag(value = "LPD-41307"), @FeatureFlag("LPD-57655"),
-			@FeatureFlag("LPD-85946")
-		}
+		featureFlags = {@FeatureFlag("LPD-57655"), @FeatureFlag("LPD-85946")}
 	)
 	@Test
 	public void testIsGroupSupported() throws Exception {
@@ -1266,10 +1258,7 @@ public class ExportImportHelperUtilTest {
 	}
 
 	@FeatureFlags(
-		featureFlags = {
-			@FeatureFlag(value = "LPD-41307"), @FeatureFlag("LPD-57655"),
-			@FeatureFlag("LPD-85946")
-		}
+		featureFlags = {@FeatureFlag("LPD-57655"), @FeatureFlag("LPD-85946")}
 	)
 	@Test
 	public void testIsGroupSupportedWhenFeatureFlagIsDisabled()
@@ -1283,12 +1272,10 @@ public class ExportImportHelperUtilTest {
 
 		try (SafeCloseable safeCloseable =
 				FeatureFlagTestUtil.setFeatureFlagsWithSafeCloseable(
-					false, "LPD-41307")) {
+					false, "LPD-57655")) {
 
 			Assert.assertFalse(
 				ExportImportHelperUtil.isGroupSupported(depotGroup));
-			Assert.assertTrue(
-				ExportImportHelperUtil.isGroupSupported(_liveGroup));
 		}
 
 		try (SafeCloseable safeCloseable =
@@ -1507,13 +1494,11 @@ public class ExportImportHelperUtilTest {
 		String xml = replaceParameters(
 			getContent("missing_references.txt"), getFileEntry());
 
-		ZipWriter zipWriter = _zipWriterFactory.getZipWriter();
+		ZipWriter zipWriter = new ZipWriter();
 
 		zipWriter.addEntry("/manifest.xml", xml);
 
-		try (ZipReader zipReader = _zipReaderFactory.getZipReader(
-				zipWriter.getFile())) {
-
+		try (ZipReader zipReader = new ZipReader(zipWriter.getFile())) {
 			PortletDataContext portletDataContextImport =
 				PortletDataContextFactoryUtil.createImportPortletDataContext(
 					_liveGroup.getCompanyId(), _liveGroup.getGroupId(),
@@ -1545,15 +1530,13 @@ public class ExportImportHelperUtilTest {
 	private void _testValidateMissingReferencesWithUnknownClassName()
 		throws Exception {
 
-		ZipWriter zipWriter = _zipWriterFactory.getZipWriter();
+		ZipWriter zipWriter = new ZipWriter();
 
 		zipWriter.addEntry(
 			"/manifest.xml",
 			getContent("unknown_class_name_missing_references.txt"));
 
-		try (ZipReader zipReader = _zipReaderFactory.getZipReader(
-				zipWriter.getFile())) {
-
+		try (ZipReader zipReader = new ZipReader(zipWriter.getFile())) {
 			PortletDataContext portletDataContextImport =
 				PortletDataContextFactoryUtil.createImportPortletDataContext(
 					_liveGroup.getCompanyId(), _liveGroup.getGroupId(),
@@ -1602,12 +1585,6 @@ public class ExportImportHelperUtilTest {
 
 	@Inject
 	private StagingGroupHelper _stagingGroupHelper;
-
-	@Inject
-	private ZipReaderFactory _zipReaderFactory;
-
-	@Inject
-	private ZipWriterFactory _zipWriterFactory;
 
 	private static class TestPortletDataHandler extends BasePortletDataHandler {
 

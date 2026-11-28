@@ -9,7 +9,9 @@ import {dataSetManagerApiHelpersTest} from '../../../fixtures/dataSetManagerApiH
 import {featureFlagsTest} from '../../../fixtures/featureFlagsTest';
 import {isolatedSiteTest} from '../../../fixtures/isolatedSiteTest';
 import {loginTest} from '../../../fixtures/loginTest';
+import {clickAndExpectToBeVisible} from '../../../utils/clickAndExpectToBeVisible';
 import getRandomString from '../../../utils/getRandomString';
+import {hoverAndExpectToBeVisible} from '../../../utils/hoverAndExpectToBeVisible';
 import {waitForAlert} from '../../../utils/waitForAlert';
 import {fdsSamplePageTest} from '../../frontend-data-set-web/main/fixtures/fdsSamplePageTest';
 import {actionsPageTest} from './fixtures/actionsPageTest';
@@ -32,6 +34,13 @@ export const test = mergeTests(
 	}),
 	loginTest()
 );
+
+const FDS_SAMPLE_PORTLET_KEY =
+	'com_liferay_frontend_data_set_sample_web_internal_portlet_FDSSamplePortlet';
+
+const ADVANCED_SAMPLE_ERC = `${FDS_SAMPLE_PORTLET_KEY}-advanced`;
+const CLASSIC_SAMPLE_ERC = `${FDS_SAMPLE_PORTLET_KEY}-classic`;
+const CUSTOM_INTERNAL_VIEW_SAMPLE_ERC = `${FDS_SAMPLE_PORTLET_KEY}-customInternalView`;
 
 const dataSetERCs: string[] = [];
 
@@ -58,7 +67,7 @@ async function findTextIndexInLocators(
 
 test(
 	'Import a system data set to customize',
-	{tag: ['@LPD-37531', '@LPD-40949', '@LPD-49128']},
+	{tag: ['@LPD-37531', '@LPD-40949', '@LPD-49128', '@LPD-111515']},
 	async ({
 		actionsPage,
 		fdsSamplePage,
@@ -166,11 +175,7 @@ test(
 
 			await expect(advancedSampleListItem).toHaveClass(/selected/);
 
-			dataSetERCs.push(
-
-				// eslint-disable-next-line @liferay/no-get-data-attribute
-				await advancedSampleListItem.getAttribute('data-erc')
-			);
+			dataSetERCs.push(ADVANCED_SAMPLE_ERC);
 
 			await creationModal.createButton.click();
 
@@ -182,11 +187,7 @@ test(
 
 			await expect(classicSampleListItem).toHaveClass(/selected/);
 
-			dataSetERCs.push(
-
-				// eslint-disable-next-line @liferay/no-get-data-attribute
-				await classicSampleListItem.getAttribute('data-erc')
-			);
+			dataSetERCs.push(CLASSIC_SAMPLE_ERC);
 
 			await creationModal.createButton.click();
 
@@ -200,11 +201,7 @@ test(
 				/selected/
 			);
 
-			dataSetERCs.push(
-
-				// eslint-disable-next-line @liferay/no-get-data-attribute
-				await customInternalViewSampleListItem.getAttribute('data-erc')
-			);
+			dataSetERCs.push(CUSTOM_INTERNAL_VIEW_SAMPLE_ERC);
 
 			await creationModal.createButton.click();
 
@@ -307,6 +304,30 @@ test(
 
 			await form.cancelButton.click();
 
+			for (const label of ['New Form', 'New Task', 'New Template']) {
+				await expect(
+					actionsPage.creationActionsTable
+						.locator('tr')
+						.filter({hasText: label})
+				).toHaveCount(1);
+			}
+
+			await actionsPage.creationActionsTable
+				.locator('tr')
+				.filter({hasText: 'New Template'})
+				.locator('.dropdown-toggle')
+				.click();
+
+			await actionsPage.page
+				.locator('.dropdown-menu.show')
+				.getByRole('menuitem', {name: 'Edit'})
+				.click();
+
+			await expect(form.labelInput).toHaveValue('New Template');
+			await expect(form.headlessActionKeyInput).toHaveValue('update');
+
+			await form.cancelButton.click();
+
 			await page.getByTitle('Back').click();
 		});
 
@@ -336,10 +357,13 @@ test(
 				.locator('tr')
 				.filter({hasText: 'System Action'});
 
-			await expect(creationActionRows).toHaveCount(1);
+			await expect(creationActionRows).toHaveCount(2);
 
 			await expect(
 				creationActionRows.getByText('Calendar', {exact: true})
+			).toBeVisible();
+			await expect(
+				creationActionRows.getByText('More', {exact: true})
 			).toBeVisible();
 
 			await page.getByTitle('Back').click();
@@ -490,7 +514,7 @@ test(
 					const assignedFieldLocator =
 						await visualizationModesPage.getAssignedFieldLocator({
 							container:
-								visualizationModesPage.cardsVisualizationModeContainer,
+								visualizationModesPage.listVisualizationModeContainer,
 							sectionLabel,
 						});
 					await expect(assignedFieldLocator).toHaveText(
@@ -604,6 +628,68 @@ test(
 
 			await page.getByTitle('Back').click();
 		});
+		await test.step('Imported creation actions keep their submenus and groups unless detached', async () => {
+			await fdsSamplePage.setupFDSSampleWidget({site});
+
+			const newButton = page.getByRole('button', {
+				exact: true,
+				name: 'New',
+			});
+
+			await fdsSamplePage.selectTab('Classic');
+
+			const moreMenuItem = page.getByRole('menuitem', {name: 'More'});
+
+			await clickAndExpectToBeVisible({
+				target: moreMenuItem,
+				trigger: newButton,
+			});
+
+			await hoverAndExpectToBeVisible({
+				target: page.getByRole('menuitem', {name: 'New Wiki Page'}),
+				trigger: moreMenuItem,
+			});
+
+			await page.keyboard.press('Escape');
+
+			await fdsSamplePage.selectTab('Advanced');
+
+			const newFormMenuItem = page.getByRole('menuitem', {
+				name: 'New Form',
+			});
+
+			await clickAndExpectToBeVisible({
+				target: newFormMenuItem,
+				trigger: newButton,
+			});
+
+			await expect(
+				page.getByRole('menuitem', {name: 'New Task'})
+			).toBeVisible();
+			await expect(page.getByRole('group', {name: 'Forms'})).toBeHidden();
+
+			await page.keyboard.press('Escape');
+
+			await fdsSamplePage.selectTab('Custom Internal View');
+
+			const dateAndTimeGroup = page.getByRole('group', {
+				name: 'Date and Time',
+			});
+
+			await clickAndExpectToBeVisible({
+				target: dateAndTimeGroup,
+				trigger: newButton,
+			});
+
+			await expect(
+				dateAndTimeGroup.getByRole('menuitem', {name: 'Date'})
+			).toBeVisible();
+
+			await page.keyboard.press('Escape');
+
+			await systemDataSetsPage.goto();
+		});
+
 		await test.step('Delete an imported system data set', async () => {
 			await advancedSampleRow.locator('.dropdown-toggle').click();
 
@@ -682,6 +768,8 @@ test(
 			await systemDataSetsPage.createButton.click();
 
 			await advancedSampleListItem.click();
+
+			dataSetERCs.push(ADVANCED_SAMPLE_ERC);
 
 			await creationModal.createButton.click();
 

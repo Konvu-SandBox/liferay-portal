@@ -9,7 +9,6 @@ import com.liferay.petra.io.unsync.UnsyncStringReader;
 import com.liferay.petra.string.CharPool;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
-import com.liferay.portal.cache.AggregatedPortalCacheManagerListener;
 import com.liferay.portal.cache.LowLevelCache;
 import com.liferay.portal.cache.MVCCPortalCache;
 import com.liferay.portal.cache.PortalCacheReplicator;
@@ -204,17 +203,15 @@ public abstract class BaseEhcachePortalCacheManager<K extends Serializable, V>
 						(LowLevelCache<K, MVCCModel>)value);
 				}
 
-				if (_transactionalPortalCacheEnabled) {
-					for (String namePattern : _transactionalPortalCacheNames) {
-						if (!StringUtil.wildcardMatches(
-								portalCacheName, namePattern, CharPool.QUESTION,
-								CharPool.STAR, CharPool.PERCENT, true)) {
+				for (String namePattern : _transactionalPortalCacheNames) {
+					if (!StringUtil.wildcardMatches(
+							portalCacheName, namePattern, CharPool.QUESTION,
+							CharPool.STAR, CharPool.PERCENT, true)) {
 
-							continue;
-						}
-
-						value = new TransactionalPortalCache<>(value, mvcc);
+						continue;
 					}
+
+					value = new TransactionalPortalCache<>(value, mvcc);
 				}
 
 				return value;
@@ -331,9 +328,6 @@ public abstract class BaseEhcachePortalCacheManager<K extends Serializable, V>
 			throw new IllegalArgumentException(
 				"Portal cache manager name is not specified");
 		}
-
-		_transactionalPortalCacheEnabled = GetterUtil.getBoolean(
-			PropsUtil.get(PropsKeys.TRANSACTIONAL_CACHE_ENABLED));
 
 		_transactionalPortalCacheNames = GetterUtil.getStringValues(
 			PropsUtil.getArray(PropsKeys.TRANSACTIONAL_CACHE_NAMES));
@@ -963,7 +957,6 @@ public abstract class BaseEhcachePortalCacheManager<K extends Serializable, V>
 	private String _portalCacheManagerName;
 	private final ConcurrentMap<String, PortalCache<K, V>> _portalCaches =
 		new ConcurrentHashMap<>();
-	private boolean _transactionalPortalCacheEnabled;
 	private String[] _transactionalPortalCacheNames = StringPool.EMPTY_ARRAY;
 
 }

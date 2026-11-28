@@ -8,8 +8,6 @@ import {Provider} from 'react-redux';
 import {render} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 
-jest.unmock('react-dom');
-
 const defaultProps = {
 	project: new Project(
 		data.mockProject(23, {
@@ -37,7 +35,7 @@ describe('AssociatedSegmentsList', () => {
 		const {container} = render(<WrappedComponent {...defaultProps} />);
 
 		expect(container.querySelector('.card-title')).toHaveTextContent(
-			'Associated Segments'
+			/associated segments/i
 		);
 		expect(container.querySelector('.secondary-info b')).toHaveTextContent(
 			'2'

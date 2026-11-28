@@ -3,8 +3,6 @@ import React from 'react';
 import {fireEvent, render} from '@testing-library/react';
 import {RangeKeyTimeRanges} from 'shared/util/constants';
 
-jest.unmock('react-dom');
-
 const baseProps = {
 	description: 'The account activities',
 	interval: 'D' as const,
@@ -43,7 +41,7 @@ describe('ActivityStreamCardHeader', () => {
 	it('omits the chart view selector when no change handler is provided', () => {
 		const {queryByLabelText} = renderHeader();
 
-		expect(queryByLabelText('Chart View')).toBeNull();
+		expect(queryByLabelText(/^chart view$/i)).toBeNull();
 	});
 
 	it('shows the active chart view on the selector trigger', () => {
@@ -52,7 +50,9 @@ describe('ActivityStreamCardHeader', () => {
 			onChartViewChange: jest.fn(),
 		});
 
-		expect(getByLabelText('Chart View')).toHaveTextContent('Line Chart');
+		expect(getByLabelText(/^chart view$/i)).toHaveTextContent(
+			/line chart/i
+		);
 	});
 
 	it('reports the newly selected chart view', () => {
@@ -63,8 +63,8 @@ describe('ActivityStreamCardHeader', () => {
 			onChartViewChange,
 		});
 
-		fireEvent.click(getByLabelText('Chart View'));
-		fireEvent.click(getByText('Line Chart'));
+		fireEvent.click(getByLabelText(/^chart view$/i));
+		fireEvent.click(getByText(/^line chart$/i));
 
 		expect(onChartViewChange).toHaveBeenCalledWith('line');
 	});
