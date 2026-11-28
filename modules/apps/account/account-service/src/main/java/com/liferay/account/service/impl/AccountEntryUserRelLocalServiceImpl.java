@@ -202,22 +202,14 @@ public class AccountEntryUserRelLocalServiceImpl
 			AccountEntry accountEntry =
 				_accountEntryPersistence.findByPrimaryKey(accountEntryId);
 
-			Group group = accountEntry.getAccountEntryGroup();
-
-			long[] groupIds = {group.getGroupId()};
-
-			if (serviceContext.getScopeGroupId() > 0) {
-				groupIds = ArrayUtil.append(
-					groupIds, serviceContext.getScopeGroupId());
-			}
-
 			user = _userLocalService.addUserWithWorkflow(
 				serviceContext.getUserId(), serviceContext.getCompanyId(), true,
 				StringPool.BLANK, StringPool.BLANK, true, StringPool.BLANK,
 				emailAddress, serviceContext.getLocale(), emailAddress,
 				StringPool.BLANK, emailAddress, 0, 0, true, 1, 1, 1970,
-				StringPool.BLANK, UserConstants.TYPE_REGULAR, groupIds, null,
-				null, null, true, serviceContext);
+				StringPool.BLANK, UserConstants.TYPE_REGULAR,
+				new long[] {accountEntry.getAccountEntryGroupId()}, null, null,
+				null, true, serviceContext);
 
 			user.setExternalReferenceCode(userExternalReferenceCode);
 
@@ -319,15 +311,6 @@ public class AccountEntryUserRelLocalServiceImpl
 	}
 
 	@Override
-	public void deleteAccountEntryUserRelsByAccountUserId(long accountUserId) {
-		for (AccountEntryUserRel accountEntryUserRel :
-				getAccountEntryUserRelsByAccountUserId(accountUserId)) {
-
-			deleteAccountEntryUserRel(accountEntryUserRel);
-		}
-	}
-
-	@Override
 	public AccountEntryUserRel fetchAccountEntryUserRel(
 		long accountEntryId, long accountUserId) {
 
@@ -411,15 +394,6 @@ public class AccountEntryUserRelLocalServiceImpl
 					serviceContext),
 				serviceContext);
 		}
-	}
-
-	@Override
-	public boolean isAccountEntryUser(long userId) {
-		if (accountEntryUserRelPersistence.countByAccountUserId(userId) > 0) {
-			return true;
-		}
-
-		return false;
 	}
 
 	@Override

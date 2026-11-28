@@ -11,7 +11,6 @@ import com.liferay.petra.string.StringPool;
 import com.liferay.portal.configuration.test.util.ConfigurationTestUtil;
 import com.liferay.portal.kernel.model.CompanyConstants;
 import com.liferay.portal.kernel.model.Group;
-import com.liferay.portal.kernel.module.util.SystemBundleUtil;
 import com.liferay.portal.kernel.portlet.bridges.mvc.MVCActionCommand;
 import com.liferay.portal.kernel.service.CompanyLocalService;
 import com.liferay.portal.kernel.service.GroupLocalService;
@@ -21,6 +20,7 @@ import com.liferay.portal.kernel.test.portlet.MockLiferayPortletActionRequest;
 import com.liferay.portal.kernel.test.portlet.MockLiferayPortletActionResponse;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
+import com.liferay.portal.kernel.test.util.BundleContextTestUtil;
 import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
@@ -74,7 +74,10 @@ public class SecretResolverTest {
 	public void setUp() throws Exception {
 		_group = GroupTestUtil.addGroup();
 
-		_secretProviderServiceRegistration = _bundleContext.registerService(
+		BundleContext bundleContext = BundleContextTestUtil.getBundleContext(
+			SecretResolverTest.class);
+
+		_secretProviderServiceRegistration = bundleContext.registerService(
 			SecretProvider.class, new TestSecretProvider(_SECRET_PROVIDER_ID),
 			HashMapDictionaryBuilder.<String, Object>put(
 				"secret.provider.id", _SECRET_PROVIDER_ID
@@ -85,7 +88,7 @@ public class SecretResolverTest {
 			HashMapDictionaryBuilder.<String, Object>put(
 				"companySecretProviderId", _SECRET_PROVIDER_ID
 			).put(
-				"systemSecretProviderId", _SECRET_PROVIDER_ID
+				"systemSecretProviderId", RandomTestUtil.randomString()
 			).build());
 	}
 
@@ -111,33 +114,8 @@ public class SecretResolverTest {
 
 	@Test
 	public void testResolve() throws Exception {
-		long companyId = TestPropsValues.getCompanyId();
-		String identifier = RandomTestUtil.randomString();
-		String value = RandomTestUtil.randomString();
-
-		KeyReference keyReference = _putSecret(companyId, identifier, value);
-
-		Assert.assertEquals(_SECRET_PROVIDER_ID, keyReference.getProviderId());
-		Assert.assertEquals(identifier, keyReference.getIdentifier());
-		Assert.assertEquals(KeyReference.Type.SECRET, keyReference.getType());
-		Assert.assertEquals(
-			value,
-			_secretResolver.resolve(
-				companyId,
-				KeyReferenceUtil.toKeyReferenceString(keyReference)));
-	}
-
-	@Test
-	public void testResolveUnderAnotherCompany() throws Exception {
-		KeyReference keyReference = _putSecret(
-			TestPropsValues.getCompanyId(), RandomTestUtil.randomString(),
-			RandomTestUtil.randomString());
-
-		Assert.assertThrows(
-			SecretException.class,
-			() -> _secretResolver.resolve(
-				CompanyConstants.SYSTEM,
-				KeyReferenceUtil.toKeyReferenceString(keyReference)));
+		_testResolve();
+		_testResolveUnderAnotherCompany();
 	}
 
 	@Test
@@ -154,6 +132,7 @@ public class SecretResolverTest {
 			_testStoreGroupTypeSettings(_GOOGLE_MAPS_API_KEY);
 			_testStoreGroupTypeSettingsInheritedFromCompany();
 			_testStoreIsIdempotent();
+			_testStoreWhenSecretProviderIsNotConfigured();
 		}
 	}
 
@@ -223,6 +202,35 @@ public class SecretResolverTest {
 
 			return _secretManager.putSecret(companyId, secret);
 		}
+	}
+
+	private void _testResolve() throws Exception {
+		long companyId = TestPropsValues.getCompanyId();
+		String identifier = RandomTestUtil.randomString();
+		String value = RandomTestUtil.randomString();
+
+		KeyReference keyReference = _putSecret(companyId, identifier, value);
+
+		Assert.assertEquals(_SECRET_PROVIDER_ID, keyReference.getProviderId());
+		Assert.assertEquals(identifier, keyReference.getIdentifier());
+		Assert.assertEquals(KeyReference.Type.SECRET, keyReference.getType());
+		Assert.assertEquals(
+			value,
+			_secretResolver.resolve(
+				companyId,
+				KeyReferenceUtil.toKeyReferenceString(keyReference)));
+	}
+
+	private void _testResolveUnderAnotherCompany() throws Exception {
+		KeyReference keyReference = _putSecret(
+			TestPropsValues.getCompanyId(), RandomTestUtil.randomString(),
+			RandomTestUtil.randomString());
+
+		Assert.assertThrows(
+			SecretException.class,
+			() -> _secretResolver.resolve(
+				CompanyConstants.SYSTEM,
+				KeyReferenceUtil.toKeyReferenceString(keyReference)));
 	}
 
 	private void _testStoreCompanyPreference(String key) throws Exception {
@@ -299,6 +307,23 @@ public class SecretResolverTest {
 				companyId, GooglePlacesWebKeys.GOOGLE_PLACES_API_KEY));
 	}
 
+	private void _testStoreWhenSecretProviderIsNotConfigured()
+		throws Exception {
+
+		ConfigurationTestUtil.deleteConfiguration(
+			_KEY_MANAGER_CUSTOM_PROFILE_CONFIGURATION_PID);
+
+		String value = RandomTestUtil.randomString();
+
+		_editCompany(GooglePlacesWebKeys.GOOGLE_PLACES_API_KEY, value);
+
+		Assert.assertEquals(
+			value,
+			PrefsPropsUtil.getString(
+				TestPropsValues.getCompanyId(),
+				GooglePlacesWebKeys.GOOGLE_PLACES_API_KEY));
+	}
+
 	private static final String _GOOGLE_MAPS_API_KEY = "googleMapsAPIKey";
 
 	private static final String _KEY_MANAGER_CUSTOM_PROFILE_CONFIGURATION_PID =
@@ -307,9 +332,6 @@ public class SecretResolverTest {
 
 	private static final String _SECRET_PROVIDER_ID =
 		RandomTestUtil.randomString();
-
-	private static final BundleContext _bundleContext =
-		SystemBundleUtil.getBundleContext();
 
 	@Inject
 	private CompanyLocalService _companyLocalService;

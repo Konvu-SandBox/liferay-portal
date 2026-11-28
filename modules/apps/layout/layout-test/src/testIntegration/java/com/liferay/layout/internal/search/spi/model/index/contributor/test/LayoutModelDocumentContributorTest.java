@@ -52,6 +52,7 @@ import com.liferay.portal.kernel.service.LayoutLocalService;
 import com.liferay.portal.kernel.service.LayoutSetLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.servlet.HttpMethods;
 import com.liferay.portal.kernel.test.TestInfo;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
@@ -59,11 +60,13 @@ import com.liferay.portal.kernel.test.util.GroupTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.ServiceContextTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
+import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.ScopeUtil;
 import com.liferay.portal.kernel.util.TreeMapBuilder;
+import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.search.test.util.IndexerFixture;
 import com.liferay.portal.test.log.LogCapture;
@@ -78,6 +81,10 @@ import com.liferay.template.test.util.TemplateTestUtil;
 
 import jakarta.portlet.PortletPreferences;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -90,6 +97,9 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
  * @author Lourdes Fernández Besada
@@ -218,8 +228,13 @@ public class LayoutModelDocumentContributorTest {
 	}
 
 	@Test
+	@TestInfo({"LPD-22568", "LPD-115999"})
 	public void testReindexPublishedLayout() throws Exception {
-		_assertReindexPublishedLayout(null);
+		_testReindexPublishedLayout(null);
+		_testReindexPublishedLayoutWithCaptcha();
+		_testReindexPublishedLayoutWithLayoutSetThemeNotAvailable();
+		_testReindexPublishedLayoutWithSpecificThemeAndLayoutSetThemeNotAvailable();
+		_testReindexPublishedLayoutWithThemeNotAvailable();
 	}
 
 	@Test
@@ -365,56 +380,6 @@ public class LayoutModelDocumentContributorTest {
 	}
 
 	@Test
-	@TestInfo("LPD-22568")
-	public void testReindexPublishedLayoutLayoutSetThemeNotAvailable()
-		throws Exception {
-
-		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
-				_CLASS_NAME_THEME_LOCAL_SERVICE_IMPL, LoggerTestUtil.INFO)) {
-
-			LayoutSet layoutSet = _group.getPublicLayoutSet();
-
-			_layoutSetLocalService.updateLookAndFeel(
-				layoutSet.getGroupId(), layoutSet.isPrivateLayout(),
-				"not_available_theme_id", layoutSet.getColorSchemeId(),
-				layoutSet.getCss());
-
-			_assertReindexPublishedLayout(null);
-		}
-	}
-
-	@Test
-	@TestInfo("LPD-22568")
-	public void testReindexPublishedLayoutSpecificThemeAndLayoutSetThemeNotAvailable()
-		throws Exception {
-
-		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
-				_CLASS_NAME_THEME_LOCAL_SERVICE_IMPL, LoggerTestUtil.INFO)) {
-
-			LayoutSet layoutSet = _group.getPublicLayoutSet();
-
-			_layoutSetLocalService.updateLookAndFeel(
-				layoutSet.getGroupId(), layoutSet.isPrivateLayout(),
-				"not_available_theme_id", layoutSet.getColorSchemeId(),
-				layoutSet.getCss());
-
-			_assertReindexPublishedLayout(
-				ThemeFactoryUtil.getDefaultRegularThemeId(
-					TestPropsValues.getCompanyId()));
-		}
-	}
-
-	@Test
-	@TestInfo("LPD-22568")
-	public void testReindexPublishedLayoutThemeNotAvailable() throws Exception {
-		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
-				_CLASS_NAME_THEME_LOCAL_SERVICE_IMPL, LoggerTestUtil.INFO)) {
-
-			_assertReindexPublishedLayout("not_available_theme_id");
-		}
-	}
-
-	@Test
 	public void testReindexPublishedLayoutWithFragmentEntryLinkTypePortlet()
 		throws Exception {
 
@@ -544,6 +509,67 @@ public class LayoutModelDocumentContributorTest {
 		_assertPortletPreferences(journalArticle, _layout, portletId);
 
 		_assertReindex("\"lat\":" + lat, "\"lng\":" + lng);
+	}
+
+	@Test
+	@TestInfo("LPD-117934")
+	public void testReindexPublishedLayoutWithRequest() throws Exception {
+		String portletId = _addJournalContentPortletToDraftLayout();
+
+		String content = RandomTestUtil.randomString();
+
+		DDMFormField ddmFormField = _createDDMFormField(
+			DDMFormFieldTypeConstants.TEXT);
+
+		JournalArticle journalArticle = JournalTestUtil.addJournalArticle(
+			_dataDefinitionResourceFactory, ddmFormField,
+			_ddmFormValuesToFieldsConverter, content, _group.getGroupId(),
+			_journalConverter);
+
+		_setUpPortletPreferences(journalArticle, portletId);
+
+		ContentLayoutTestUtil.publishLayout(_draftLayout, _layout);
+
+		HttpServletResponse httpServletResponse = new MockHttpServletResponse();
+		ThemeDisplay themeDisplay = new ThemeDisplay();
+
+		themeDisplay.setResponse(httpServletResponse);
+
+		HttpServletRequest httpServletRequest = new MockHttpServletRequest(
+			HttpMethods.GET, StringPool.SLASH + RandomTestUtil.randomString());
+
+		httpServletRequest.setAttribute(WebKeys.THEME_DISPLAY, themeDisplay);
+
+		List<String> attributeNames = Collections.list(
+			httpServletRequest.getAttributeNames());
+
+		ServiceContext serviceContext = (ServiceContext)_serviceContext.clone();
+
+		serviceContext.setRequest(httpServletRequest);
+
+		ServiceContextThreadLocal.pushServiceContext(serviceContext);
+
+		try {
+			List<LogEntry> logEntries = _reindexLogEntries(_layout);
+
+			Assert.assertEquals(logEntries.toString(), 0, logEntries.size());
+		}
+		finally {
+			ServiceContextThreadLocal.popServiceContext();
+		}
+
+		Assert.assertEquals(
+			attributeNames,
+			Collections.list(httpServletRequest.getAttributeNames()));
+		Assert.assertNull(httpServletRequest.getSession(false));
+
+		Collection<String> headerNames = httpServletResponse.getHeaderNames();
+
+		Assert.assertEquals(headerNames.toString(), 0, headerNames.size());
+
+		Assert.assertFalse(httpServletResponse.isCommitted());
+
+		_assertSearch(content, _locale);
 	}
 
 	@Test
@@ -716,20 +742,6 @@ public class LayoutModelDocumentContributorTest {
 		_layoutIndexerFixture.searchNoOne(keywords);
 	}
 
-	private void _assertReindexPublishedLayout(String themeId)
-		throws Exception {
-
-		String elementText = RandomTestUtil.randomString();
-
-		_setUpLayout(elementText, true, themeId);
-
-		List<LogEntry> logEntries = _reindexLogEntries(_layout);
-
-		Assert.assertEquals(logEntries.toString(), 0, logEntries.size());
-
-		_assertSearch(elementText, _locale);
-	}
-
 	private void _assertReindexPublishedLayoutFragmentEntryLinkWithPortlet()
 		throws Exception {
 
@@ -865,6 +877,107 @@ public class LayoutModelDocumentContributorTest {
 		portletPreferences.store();
 
 		_assertPortletPreferences(journalArticle, _draftLayout, portletId);
+	}
+
+	private void _testReindexPublishedLayout(String themeId) throws Exception {
+		_layout = LayoutTestUtil.addTypeContentLayout(_group);
+
+		_draftLayout = _layout.fetchDraftLayout();
+
+		String elementText = RandomTestUtil.randomString();
+
+		_setUpLayout(elementText, true, themeId);
+
+		List<LogEntry> logEntries = _reindexLogEntries(_layout);
+
+		Assert.assertEquals(logEntries.toString(), 0, logEntries.size());
+
+		_assertSearch(elementText, _locale);
+	}
+
+	private void _testReindexPublishedLayoutWithCaptcha() throws Exception {
+		Layout layout = LayoutTestUtil.addTypeContentLayout(_group);
+
+		Layout draftLayout = layout.fetchDraftLayout();
+
+		String elementText = RandomTestUtil.randomString();
+
+		_addFragmentEntryLinkToLayout(
+			"{}", elementText + "[@liferay_captcha[\"captcha\"] /]",
+			draftLayout);
+
+		ContentLayoutTestUtil.publishLayout(draftLayout, layout);
+
+		List<LogEntry> logEntries = _reindexLayoutsLogEntries();
+
+		Assert.assertEquals(logEntries.toString(), 0, logEntries.size());
+
+		Document document = _layoutIndexerFixture.searchOnlyOne(
+			elementText, _locale);
+
+		Assert.assertEquals(
+			elementText,
+			document.get(Field.getLocalizedName(_locale, Field.CONTENT)));
+	}
+
+	private void _testReindexPublishedLayoutWithLayoutSetThemeNotAvailable()
+		throws Exception {
+
+		LayoutSet layoutSet = _group.getPublicLayoutSet();
+
+		String themeId = layoutSet.getThemeId();
+
+		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
+				_CLASS_NAME_THEME_LOCAL_SERVICE_IMPL, LoggerTestUtil.INFO)) {
+
+			_layoutSetLocalService.updateLookAndFeel(
+				layoutSet.getGroupId(), layoutSet.isPrivateLayout(),
+				"not_available_theme_id", layoutSet.getColorSchemeId(),
+				layoutSet.getCss());
+
+			_testReindexPublishedLayout(null);
+		}
+		finally {
+			_layoutSetLocalService.updateLookAndFeel(
+				layoutSet.getGroupId(), layoutSet.isPrivateLayout(), themeId,
+				layoutSet.getColorSchemeId(), layoutSet.getCss());
+		}
+	}
+
+	private void _testReindexPublishedLayoutWithSpecificThemeAndLayoutSetThemeNotAvailable()
+		throws Exception {
+
+		LayoutSet layoutSet = _group.getPublicLayoutSet();
+
+		String themeId = layoutSet.getThemeId();
+
+		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
+				_CLASS_NAME_THEME_LOCAL_SERVICE_IMPL, LoggerTestUtil.INFO)) {
+
+			_layoutSetLocalService.updateLookAndFeel(
+				layoutSet.getGroupId(), layoutSet.isPrivateLayout(),
+				"not_available_theme_id", layoutSet.getColorSchemeId(),
+				layoutSet.getCss());
+
+			_testReindexPublishedLayout(
+				ThemeFactoryUtil.getDefaultRegularThemeId(
+					TestPropsValues.getCompanyId()));
+		}
+		finally {
+			_layoutSetLocalService.updateLookAndFeel(
+				layoutSet.getGroupId(), layoutSet.isPrivateLayout(), themeId,
+				layoutSet.getColorSchemeId(), layoutSet.getCss());
+		}
+	}
+
+	private void _testReindexPublishedLayoutWithThemeNotAvailable()
+		throws Exception {
+
+		try (LogCapture logCapture = LoggerTestUtil.configureLog4JLogger(
+				_CLASS_NAME_THEME_LOCAL_SERVICE_IMPL, LoggerTestUtil.INFO)) {
+
+			_testReindexPublishedLayout("not_available_theme_id");
+		}
 	}
 
 	private static final String _CLASS_NAME_INCLUDE_TAG =

@@ -5,17 +5,16 @@
 
 package com.liferay.osb.faro.rest.internal.jaxrs.container.request.filter;
 
+import com.liferay.osb.faro.rest.internal.jaxrs.util.ProblemUtil;
 import com.liferay.osb.faro.rest.internal.resource.v1_0.Interval;
 import com.liferay.osb.faro.rest.internal.resource.v1_0.TimeRange;
 import com.liferay.petra.string.CharPool;
 import com.liferay.petra.string.StringBundler;
-import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
-import com.liferay.portal.vulcan.jaxrs.exception.mapper.Problem;
 
 import jakarta.annotation.Priority;
 
@@ -25,7 +24,6 @@ import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.container.ResourceInfo;
 import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
@@ -34,8 +32,10 @@ import java.lang.reflect.Method;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -66,13 +66,9 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 		}
 		catch (BadRequestException badRequestException) {
 			containerRequestContext.abortWith(
-				Response.status(
-					Response.Status.BAD_REQUEST
-				).entity(
-					new Problem(badRequestException)
-				).type(
-					MediaType.APPLICATION_JSON
-				).build());
+				ProblemUtil.toResponse(
+					Response.Status.BAD_REQUEST,
+					badRequestException.getMessage()));
 		}
 	}
 
@@ -119,28 +115,53 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 		MultivaluedMap<String, String> pathParameters,
 		MultivaluedMap<String, String> queryParameters) {
 
-		for (String name : new String[] {"individualSegmentId", "segmentId"}) {
-			_validateId(name, pathParameters.getFirst(name));
-			_validateId(name, queryParameters.getFirst(name));
-		}
-
-		for (Map.Entry<String, String[]> entry : _validValues.entrySet()) {
-			_validateValue(
-				entry.getKey(), entry.getValue(),
-				queryParameters.getFirst(entry.getKey()));
-		}
-
+		_validateBoolean("blocked", queryParameters.getFirst("blocked"));
+		_validateBoolean("hidden", queryParameters.getFirst("hidden"));
+		_validateId("accountLifecycleId", pathParameters, queryParameters);
+		_validateId("eventDefinitionId", pathParameters, queryParameters);
+		_validateId("individualSegmentId", pathParameters, queryParameters);
+		_validateId("segmentId", pathParameters, queryParameters);
 		_validateInteger(
 			Integer.MAX_VALUE, "page", queryParameters.getFirst("page"));
-		_validateInteger(500, "pageSize", queryParameters.getFirst("pageSize"));
+		_validateInteger(100, "pageSize", queryParameters.getFirst("pageSize"));
 		_validateRange(
 			queryParameters.getFirst("rangeEnd"),
 			queryParameters.getFirst("rangeStart"));
 		_validateSort(queryParameters.getFirst("sort"));
+
+		for (Map.Entry<String, String[]> entry : _validValues.entrySet()) {
+			List<String> values = queryParameters.get(entry.getKey());
+
+			if (values == null) {
+				continue;
+			}
+
+			for (String value : values) {
+				_validateValue(entry.getKey(), entry.getValue(), value);
+			}
+		}
 	}
 
-	private void _validateId(String name, String value) {
-		if ((value != null) && !Validator.isNumber(value)) {
+	private void _validateBoolean(String name, String value) {
+		if ((value != null) && !StringUtil.equalsIgnoreCase(value, "false") &&
+			!StringUtil.equalsIgnoreCase(value, "true")) {
+
+			throw new BadRequestException(
+				StringBundler.concat(
+					"\"", name, "\" must be one of \"false\", \"true\""));
+		}
+	}
+
+	private void _validateId(
+		String name, MultivaluedMap<String, String> pathParameters,
+		MultivaluedMap<String, String> queryParameters) {
+
+		String pathParameter = pathParameters.getFirst(name);
+		String queryParameter = queryParameters.getFirst(name);
+
+		if (((pathParameter != null) && !Validator.isNumber(pathParameter)) ||
+			((queryParameter != null) && !Validator.isNumber(queryParameter))) {
+
 			throw new BadRequestException(
 				StringBundler.concat("\"", name, "\" must be a numeric ID"));
 		}
@@ -171,6 +192,16 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 	}
 
 	private void _validateRange(String rangeEnd, String rangeStart) {
+		if (((rangeEnd != null) || (rangeStart != null)) &&
+			Objects.equals(
+				_getResourceMethodName(),
+				"getWorkspaceGroupChannelVisitorMetric")) {
+
+			throw new BadRequestException(
+				"\"rangeEnd\" and \"rangeStart\" are not supported by this " +
+					"endpoint");
+		}
+
 		LocalDate rangeEndLocalDate = _toLocalDate("rangeEnd", rangeEnd);
 		LocalDate rangeStartLocalDate = _toLocalDate("rangeStart", rangeStart);
 
@@ -179,11 +210,20 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 				"\"rangeEnd\" and \"rangeStart\" must be set together");
 		}
 
-		if ((rangeEndLocalDate != null) &&
-			rangeStartLocalDate.isAfter(rangeEndLocalDate)) {
+		if (rangeEndLocalDate == null) {
+			return;
+		}
 
+		if (rangeStartLocalDate.isAfter(rangeEndLocalDate)) {
 			throw new BadRequestException(
 				"\"rangeStart\" must not be after \"rangeEnd\"");
+		}
+
+		if (ChronoUnit.DAYS.between(rangeStartLocalDate, rangeEndLocalDate) >=
+				_DATE_RANGE_LIMIT) {
+
+			throw new BadRequestException(
+				"Date range must be at most " + _DATE_RANGE_LIMIT + " days");
 		}
 	}
 
@@ -199,7 +239,7 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 
 		if ((sortableFieldNames != null) && (sortableFieldNames.length == 0)) {
 			throw new BadRequestException(
-				"\"sort\" is not supported by this tool");
+				"\"sort\" is not supported by this endpoint");
 		}
 
 		String[] sortStrings = StringUtil.split(sort);
@@ -210,7 +250,7 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 				"getWorkspaceGroupChannelIndividualsPage")) {
 
 			throw new BadRequestException(
-				"\"sort\" accepts only one column on this tool");
+				"\"sort\" accepts only one column on this endpoint");
 		}
 
 		for (String sortString : sortStrings) {
@@ -232,10 +272,9 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 
 				throw new BadRequestException(
 					StringBundler.concat(
-						"\"", fieldName, "\" is not a sortable column. ",
-						"Sortable columns: ",
-						StringUtil.merge(
-							sortableFieldNames, StringPool.COMMA_AND_SPACE)));
+						"\"", fieldName, "\" is not a sortable column. The ",
+						"sortable columns are \"",
+						StringUtil.merge(sortableFieldNames, "\", \""), "\"."));
 			}
 		}
 	}
@@ -246,10 +285,12 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 		if ((value != null) && !ArrayUtil.contains(validValues, value)) {
 			throw new BadRequestException(
 				StringBundler.concat(
-					"\"", name, "\" must be one of ",
-					StringUtil.merge(validValues, StringPool.COMMA_AND_SPACE)));
+					"\"", name, "\" must be one of \"",
+					StringUtil.merge(validValues, "\", \""), "\""));
 		}
 	}
+
+	private static final int _DATE_RANGE_LIMIT = 180;
 
 	private static final Map<String, String[]> _sortableFieldNames =
 		HashMapBuilder.put(
@@ -258,6 +299,9 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 				"accountId", "accountName", "fromAccountLifecycleStageId",
 				"toAccountLifecycleStageId", "transitionDate"
 			}
+		).put(
+			"getWorkspaceGroupChannelAccountLifecyclesPage",
+			new String[] {"dateModified", "id", "name"}
 		).put(
 			"getWorkspaceGroupChannelAccountsPage",
 			new String[] {
@@ -271,6 +315,20 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 			new String[] {
 				"downloadsMetric", "impressionsMetric", "readsMetric",
 				"viewsMetric"
+			}
+		).put(
+			"getWorkspaceGroupChannelCampaignAccountsPage",
+			new String[] {
+				"accountName", "accountType", "activitiesCount",
+				"annualRevenue", "country", "createDate", "firstActivityDate",
+				"industry", "lastActivityDate", "modifiedDate",
+				"numberOfEmployees", "state", "yearStarted"
+			}
+		).put(
+			"getWorkspaceGroupChannelCampaignsPage",
+			new String[] {
+				"accountsTouched", "campaignType", "individualsTouched", "name",
+				"origin", "status"
 			}
 		).put(
 			"getWorkspaceGroupChannelIndividualsPage",
@@ -289,11 +347,21 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 				"viewsMetric", "visitorsMetric"
 			}
 		).put(
+			"getWorkspaceGroupEventAttributeDefinitionsPage",
+			new String[] {"name"}
+		).put(
+			"getWorkspaceGroupEventDefinitionsPage",
+			new String[] {"displayName", "name"}
+		).put(
 			"getWorkspaceGroupIndividualSegmentMembershipsPage", new String[0]
 		).build();
 	private static final Map<String, String[]> _validValues =
 		HashMapBuilder.put(
 			"activityStatus", new String[] {"ACTIVE", "INACTIVE"}
+		).put(
+			"attributeType", new String[] {"ALL", "GLOBAL", "LOCAL"}
+		).put(
+			"eventType", new String[] {"ALL", "CUSTOM", "DEFAULT"}
 		).put(
 			"interval", _getNames(Interval.values())
 		).put(
@@ -301,7 +369,15 @@ public class ParameterContainerRequestFilter implements ContainerRequestFilter {
 		).put(
 			"rangeKey", _getNames(TimeRange.values())
 		).put(
+			"selectedMetrics",
+			new String[] {
+				"accountsTouched", "campaignCount", "closedWonAmount",
+				"openPipelineAmount"
+			}
+		).put(
 			"status", new String[] {"ACTIVE", "INACTIVE"}
+		).put(
+			"type", new String[] {"CHANNEL", "REFERRER", "SOURCE_MEDIUM"}
 		).build();
 
 	@Context
