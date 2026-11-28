@@ -16,6 +16,7 @@ import co.elastic.clients.elasticsearch.indices.GetMappingResponse;
 import co.elastic.clients.elasticsearch.indices.IndexSettings;
 import co.elastic.clients.elasticsearch.indices.IndexState;
 import co.elastic.clients.elasticsearch.indices.OpenRequest;
+import co.elastic.clients.elasticsearch.indices.PutAliasRequest;
 import co.elastic.clients.elasticsearch.indices.PutIndicesSettingsRequest;
 import co.elastic.clients.elasticsearch.indices.PutMappingRequest;
 import co.elastic.clients.elasticsearch.indices.get_mapping.IndexMappingRecord;
@@ -23,13 +24,16 @@ import co.elastic.clients.json.JsonpMapper;
 import co.elastic.clients.transport.endpoints.BooleanResponse;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 
+import com.liferay.petra.io.unsync.UnsyncStringReader;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
+import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
+import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.search.elasticsearch8.internal.connection.ElasticsearchClientResolver;
 import com.liferay.portal.search.elasticsearch8.internal.connection.ElasticsearchConnection;
@@ -68,17 +72,14 @@ import com.liferay.portal.test.rule.LiferayUnitTestRule;
 
 import jakarta.json.spi.JsonProvider;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-
-import java.nio.charset.StandardCharsets;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.http.util.EntityUtils;
 
@@ -430,6 +431,48 @@ public class ElasticsearchSearchEngineAdapterIndexRequestTest {
 	}
 
 	@Test
+	public void testExecuteGetIndexIndexRequestWithAlias() throws Exception {
+		_putAlias();
+
+		GetIndexIndexResponse getIndexIndexResponse =
+			_searchEngineAdapter.execute(
+				new GetIndexIndexRequest(_INDEX_ALIAS_NAME));
+
+		Assert.assertArrayEquals(
+			new String[] {_INDEX_NAME}, getIndexIndexResponse.getIndexNames());
+
+		_assertGetIndexIndexResponseKeys(
+			getIndexIndexResponse, Collections.singleton(_INDEX_ALIAS_NAME));
+	}
+
+	@Test
+	public void testExecuteGetIndexIndexRequestWithIndexName()
+		throws Exception {
+
+		_putAlias();
+
+		_assertGetIndexIndexResponseKeys(
+			_searchEngineAdapter.execute(new GetIndexIndexRequest(_INDEX_NAME)),
+			Collections.singleton(_INDEX_NAME));
+	}
+
+	@Test
+	public void testExecuteGetIndexIndexRequestWithWildcard() throws Exception {
+		_putAlias();
+
+		GetIndexIndexResponse getIndexIndexResponse =
+			_searchEngineAdapter.execute(
+				new GetIndexIndexRequest(StringPool.STAR));
+
+		String[] indexNames = getIndexIndexResponse.getIndexNames();
+
+		Assert.assertTrue(ArrayUtil.contains(indexNames, _INDEX_NAME));
+
+		_assertGetIndexIndexResponseKeys(
+			getIndexIndexResponse, SetUtil.fromArray(indexNames));
+	}
+
+	@Test
 	public void testExecuteGetMappingIndexRequest() {
 		String mappingSource = JSONUtil.put(
 			"properties",
@@ -620,6 +663,19 @@ public class ElasticsearchSearchEngineAdapterIndexRequestTest {
 			expectedTokens);
 	}
 
+	private void _assertGetIndexIndexResponseKeys(
+		GetIndexIndexResponse getIndexIndexResponse, Set<String> keys) {
+
+		Map<String, String> indexMappings =
+			getIndexIndexResponse.getIndexMappings();
+
+		Assert.assertEquals(keys, indexMappings.keySet());
+
+		Map<String, String> settings = getIndexIndexResponse.getSettings();
+
+		Assert.assertEquals(keys, settings.keySet());
+	}
+
 	private void _assertIndexMetadataState(
 		String indexName, String indexMetadataState) {
 
@@ -742,10 +798,18 @@ public class ElasticsearchSearchEngineAdapterIndexRequestTest {
 		}
 	}
 
-	private void _putMapping(String mappingSource) {
-		try (InputStream inputStream = new ByteArrayInputStream(
-				mappingSource.getBytes(StandardCharsets.UTF_8))) {
+	private void _putAlias() throws Exception {
+		_elasticsearchIndicesClient.putAlias(
+			PutAliasRequest.of(
+				putAliasRequest -> putAliasRequest.index(
+					_INDEX_NAME
+				).name(
+					_INDEX_ALIAS_NAME
+				)));
+	}
 
+	private void _putMapping(String mappingSource) {
+		try {
 			JsonpMapper jsonpMapper = _elasticsearchFixture.getJsonpMapper(
 				null);
 
@@ -755,7 +819,9 @@ public class ElasticsearchSearchEngineAdapterIndexRequestTest {
 			).index(
 				_INDEX_NAME
 			).withJson(
-				jsonProvider.createParser(inputStream), jsonpMapper
+				jsonProvider.createParser(
+					new UnsyncStringReader(mappingSource)),
+				jsonpMapper
 			);
 
 			_elasticsearchIndicesClient.putMapping(builder.build());
@@ -772,9 +838,7 @@ public class ElasticsearchSearchEngineAdapterIndexRequestTest {
 
 		JsonProvider jsonProvider = jsonpMapper.jsonProvider();
 
-		try (InputStream inputStream = new ByteArrayInputStream(
-				settingsSource.getBytes(StandardCharsets.UTF_8))) {
-
+		try {
 			_elasticsearchIndicesClient.putSettings(
 				PutIndicesSettingsRequest.of(
 					putIndicesSettingsRequest ->
@@ -782,7 +846,8 @@ public class ElasticsearchSearchEngineAdapterIndexRequestTest {
 							_INDEX_NAME
 						).settings(
 							IndexSettings._DESERIALIZER.deserialize(
-								jsonProvider.createParser(inputStream),
+								jsonProvider.createParser(
+									new UnsyncStringReader(settingsSource)),
 								jsonpMapper)
 						)));
 		}
@@ -792,6 +857,8 @@ public class ElasticsearchSearchEngineAdapterIndexRequestTest {
 
 		_openIndex(_INDEX_NAME);
 	}
+
+	private static final String _INDEX_ALIAS_NAME = "test_request_alias";
 
 	private static final String _INDEX_NAME = "test_request_index";
 

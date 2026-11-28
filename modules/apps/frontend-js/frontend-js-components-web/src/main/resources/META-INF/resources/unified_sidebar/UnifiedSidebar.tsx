@@ -31,6 +31,7 @@ export interface UnifiedSidebarProps {
 	headerMessages?: HeaderMessages;
 	label: string;
 	navigationId?: string;
+	onBack?: () => void;
 	onOpenChange?: (open: boolean) => void;
 	open?: boolean;
 	testId?: string;
@@ -53,6 +54,7 @@ export default function UnifiedSidebar({
 	headerMessages,
 	label,
 	navigationId,
+	onBack,
 	onOpenChange,
 	open = false,
 	testId = 'unified-sidebar',
@@ -77,6 +79,7 @@ export default function UnifiedSidebar({
 	return (
 		<SidePanel
 			aria-label={sub(Liferay.Language.get('x-menu'), label)}
+			as="aside"
 			backdrop={backdrop}
 			backdropContainerProps={backdropContainerProps}
 			className="unified-sidebar"
@@ -98,6 +101,7 @@ export default function UnifiedSidebar({
 				closeButtonProps={closeButtonProps}
 				data-qa-id="unifiedSidebarHeader"
 				messages={mergedHeaderMessages}
+				onBack={onBack}
 			>
 				<SidePanel.Title className="align-items-center c-my-0 d-flex">
 					<ClaySticker
@@ -119,9 +123,9 @@ export default function UnifiedSidebar({
 
 					{headerActions}
 
-					{Liferay.FeatureFlags['LPD-57922'] && (
+					{Liferay.FeatureFlags['LPD-57922'] && !onBack && (
 						<UnifiedSidebarColorSchemeButton
-							className="c-ml-2"
+							className={headerActions ? 'c-ml-2' : 'c-ml-auto'}
 							colorScheme={colorScheme}
 							colorSchemeSessionKey={colorSchemeSessionKey}
 						/>

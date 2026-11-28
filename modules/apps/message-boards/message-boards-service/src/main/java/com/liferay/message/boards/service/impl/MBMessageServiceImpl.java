@@ -9,6 +9,7 @@ import com.liferay.message.boards.constants.MBCategoryConstants;
 import com.liferay.message.boards.constants.MBMessageConstants;
 import com.liferay.message.boards.constants.MBThreadConstants;
 import com.liferay.message.boards.exception.LockedThreadException;
+import com.liferay.message.boards.exception.NoSuchThreadException;
 import com.liferay.message.boards.internal.util.MBUtil;
 import com.liferay.message.boards.model.MBCategory;
 import com.liferay.message.boards.model.MBMessage;
@@ -25,6 +26,7 @@ import com.liferay.petra.string.StringPool;
 import com.liferay.portal.aop.AopService;
 import com.liferay.portal.kernel.comment.DiscussionPermission;
 import com.liferay.portal.kernel.dao.orm.QueryDefinition;
+import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.lock.LockManager;
@@ -493,6 +495,9 @@ public class MBMessageServiceImpl extends MBMessageServiceBaseImpl {
 			QueryDefinition<MBMessage> queryDefinition)
 		throws PortalException {
 
+		_checkPermissionAndRestrictQueryDefinition(
+			parentMessageId, queryDefinition);
+
 		if (queryDefinition.isIncludeOwner() &&
 			(queryDefinition.getOwnerUserId() != 0)) {
 
@@ -508,6 +513,9 @@ public class MBMessageServiceImpl extends MBMessageServiceBaseImpl {
 			long parentMessageId, boolean flatten,
 			QueryDefinition<MBMessage> queryDefinition)
 		throws PortalException {
+
+		_checkPermissionAndRestrictQueryDefinition(
+			parentMessageId, queryDefinition);
 
 		if (queryDefinition.isIncludeOwner() &&
 			(queryDefinition.getOwnerUserId() != 0)) {
@@ -749,29 +757,47 @@ public class MBMessageServiceImpl extends MBMessageServiceBaseImpl {
 
 	@Override
 	public List<MBMessage> getThreadMessages(
-		long groupId, long categoryId, long threadId, int status, int start,
-		int end) {
+			long groupId, long categoryId, long threadId, int status, int start,
+			int end)
+		throws PortalException {
 
-		if (status == WorkflowConstants.STATUS_ANY) {
-			return mbMessagePersistence.filterFindByG_C_T(
-				groupId, categoryId, threadId, start, end);
+		MBThread thread = _mbThreadPersistence.findByPrimaryKey(threadId);
+
+		if ((thread.getGroupId() != groupId) ||
+			(thread.getCategoryId() != categoryId)) {
+
+			throw new NoSuchThreadException("{threadId=" + threadId + "}");
 		}
 
-		return mbMessagePersistence.filterFindByG_C_T_S(
-			groupId, categoryId, threadId, status, start, end);
+		QueryDefinition<MBMessage> queryDefinition = new QueryDefinition<>(
+			status, false, start, end, null);
+
+		_checkPermissionAndRestrictQueryDefinition(
+			thread.getRootMessageId(), queryDefinition);
+
+		return mbMessageFinder.findByThreadId(threadId, queryDefinition);
 	}
 
 	@Override
 	public int getThreadMessagesCount(
-		long groupId, long categoryId, long threadId, int status) {
+			long groupId, long categoryId, long threadId, int status)
+		throws PortalException {
 
-		if (status == WorkflowConstants.STATUS_ANY) {
-			return mbMessagePersistence.filterCountByG_C_T(
-				groupId, categoryId, threadId);
+		MBThread thread = _mbThreadPersistence.findByPrimaryKey(threadId);
+
+		if ((thread.getGroupId() != groupId) ||
+			(thread.getCategoryId() != categoryId)) {
+
+			throw new NoSuchThreadException("{threadId=" + threadId + "}");
 		}
 
-		return mbMessagePersistence.filterCountByG_C_T_S(
-			groupId, categoryId, threadId, status);
+		QueryDefinition<MBMessage> queryDefinition = new QueryDefinition<>(
+			status, false, QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
+
+		_checkPermissionAndRestrictQueryDefinition(
+			thread.getRootMessageId(), queryDefinition);
+
+		return mbMessageFinder.countByThreadId(threadId, queryDefinition);
 	}
 
 	@Override
@@ -953,6 +979,28 @@ public class MBMessageServiceImpl extends MBMessageServiceBaseImpl {
 		return mbMessageLocalService.updateMessage(
 			getGuestOrUserId(), messageId, subject, body, inputStreamOVPs,
 			priority, allowPingbacks, serviceContext);
+	}
+
+	private void _checkPermissionAndRestrictQueryDefinition(
+			long parentMessageId, QueryDefinition<MBMessage> queryDefinition)
+		throws PortalException {
+
+		MBMessage parentMessage = mbMessagePersistence.findByPrimaryKey(
+			parentMessageId);
+		PermissionChecker permissionChecker = getPermissionChecker();
+
+		_messageModelResourcePermission.check(
+			permissionChecker, parentMessage, ActionKeys.VIEW);
+
+		if (permissionChecker.isContentReviewer(
+				permissionChecker.getCompanyId(), parentMessage.getGroupId())) {
+
+			return;
+		}
+
+		queryDefinition.setIncludeOwner(true);
+		queryDefinition.setOwnerUserId(getUserId());
+		queryDefinition.setStatus(WorkflowConstants.STATUS_APPROVED, false);
 	}
 
 	private void _checkReplyToPermission(

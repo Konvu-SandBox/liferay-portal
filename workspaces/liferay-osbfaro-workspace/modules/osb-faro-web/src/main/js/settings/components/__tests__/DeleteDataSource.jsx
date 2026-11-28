@@ -17,8 +17,6 @@ import {fromJS} from 'immutable';
 import {MemoryRouter} from 'react-router-dom';
 import {Provider} from 'react-redux';
 
-jest.unmock('react-dom');
-
 let mockEntitiesModalProps;
 
 jest.mock('shared/components/modals/SearchableEntitiesTableModal', () => ({
@@ -98,7 +96,7 @@ describe('DeleteDataSource', () => {
 		render(<DefaultComponent />);
 
 		const deleteButton = screen
-			.getByText('Delete Data Source')
+			.getByText(/^delete data source$/i)
 			.closest('button');
 		const confirmationInput = screen.getByTestId('confirmation-input');
 
@@ -113,7 +111,7 @@ describe('DeleteDataSource', () => {
 		render(<DefaultComponent />);
 
 		const deleteButton = screen
-			.getByText('Delete Data Source')
+			.getByText(/^delete data source$/i)
 			.closest('button');
 		const confirmationInput = screen.getByTestId('confirmation-input');
 
@@ -137,7 +135,7 @@ describe('DeleteDataSource', () => {
 		});
 
 		const deleteButton = screen
-			.getByText('Delete Data Source')
+			.getByText(/^delete data source$/i)
 			.closest('button');
 
 		await waitFor(() => expect(deleteButton).not.toBeDisabled());
@@ -153,7 +151,7 @@ describe('DeleteDataSource', () => {
 		expect(actionRequestFn).not.toHaveBeenCalled();
 
 		fireEvent.click(
-			within(dialog).getByText('Delete Data Source', {selector: 'button'})
+			within(dialog).getByText(/^delete data source$/i, {selector: 'button'})
 		);
 
 		expect(actionRequestFn).toHaveBeenCalledTimes(1);

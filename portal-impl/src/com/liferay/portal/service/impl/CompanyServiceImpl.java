@@ -358,6 +358,14 @@ public class CompanyServiceImpl extends CompanyServiceBaseImpl {
 					virtualHostname);
 		}
 
+		PermissionChecker permissionChecker = getPermissionChecker();
+
+		if (!permissionChecker.isOmniadmin() &&
+			(virtualHost.getCompanyId() != permissionChecker.getCompanyId())) {
+
+			throw new PrincipalException();
+		}
+
 		if (virtualHost.getLayoutSetId() != 0) {
 			throw new CompanyVirtualHostException(
 				"Virtual host is associated with layout set " +
@@ -375,7 +383,17 @@ public class CompanyServiceImpl extends CompanyServiceBaseImpl {
 	 */
 	@Override
 	public Company getCompanyByWebId(String webId) throws PortalException {
-		return companyPersistence.findByWebId(webId);
+		Company company = companyPersistence.findByWebId(webId);
+
+		PermissionChecker permissionChecker = getPermissionChecker();
+
+		if (!permissionChecker.isOmniadmin() &&
+			(company.getCompanyId() != permissionChecker.getCompanyId())) {
+
+			throw new PrincipalException();
+		}
+
+		return company;
 	}
 
 	/**
@@ -625,13 +643,21 @@ public class CompanyServiceImpl extends CompanyServiceBaseImpl {
 			long companyId, UnicodeProperties unicodeProperties)
 		throws PortalException {
 
-		if (!(_roleLocalService.hasUserRole(
-				getUserId(), companyId, RoleConstants.ADMINISTRATOR, true) ||
-			  _roleLocalService.hasUserRole(
-				  getUserId(), companyId, RoleConstants.ANALYTICS_ADMINISTRATOR,
-				  true))) {
+		if (!_roleLocalService.hasUserRole(
+				getUserId(), companyId, RoleConstants.ADMINISTRATOR, true)) {
 
-			throw new PrincipalException();
+			if (!_roleLocalService.hasUserRole(
+					getUserId(), companyId,
+					RoleConstants.ANALYTICS_ADMINISTRATOR, true)) {
+
+				throw new PrincipalException();
+			}
+
+			for (String key : unicodeProperties.keySet()) {
+				if (!key.startsWith("liferayAnalytics")) {
+					throw new PrincipalException();
+				}
+			}
 		}
 
 		companyLocalService.updatePreferences(companyId, unicodeProperties);
