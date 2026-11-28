@@ -8,8 +8,6 @@ import {mockChannelContext} from 'test/mock-channel-context';
 import {Provider} from 'react-redux';
 import {render, waitFor} from '@testing-library/react';
 
-jest.unmock('react-dom');
-
 let params: Record<string, string> = {};
 
 jest.mock('react-router-dom', () => ({
@@ -43,6 +41,11 @@ jest.mock('shared/components/dropdown-range-key/DropdownRangeKey', () => ({
 jest.mock('../../components/MembershipsCard', () => ({
 	__esModule: true,
 	default: () => <div data-testid="memberships-card" />,
+}));
+
+jest.mock('../../components/CampaignUtmParameters', () => ({
+	__esModule: true,
+	default: () => <div data-testid="campaign-utm-parameters" />,
 }));
 
 const fetchCampaign = API.campaigns.fetchCampaign as jest.Mock;

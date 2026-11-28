@@ -6,6 +6,7 @@
 package com.liferay.content.marketing.platform.web.internal.display.context;
 
 import com.liferay.asset.kernel.service.AssetTagLocalService;
+import com.liferay.content.marketing.platform.web.internal.frontend.data.set.filter.SpaceSelectionFDSFilter;
 import com.liferay.content.marketing.platform.web.internal.frontend.data.set.filter.TaskTypeSelectionFDSFilter;
 import com.liferay.depot.service.DepotEntryLocalService;
 import com.liferay.frontend.data.set.filter.FDSFilter;
@@ -25,6 +26,7 @@ import com.liferay.portal.kernel.service.RoleService;
 import com.liferay.portal.kernel.util.HtmlUtil;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.workflow.kaleo.model.KaleoTaskInstanceToken;
+import com.liferay.site.cms.site.initializer.users.provider.CMSUsersProvider;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -41,6 +43,7 @@ public class ViewAllTasksSectionDisplayContext
 		ClassNameLocalService classNameLocalService,
 		ObjectDefinition cmpProjectObjectDefinition,
 		ObjectDefinition cmpTaskObjectDefinition,
+		CMSUsersProvider cmsUsersProvider,
 		DepotEntryLocalService depotEntryLocalService,
 		HttpServletRequest httpServletRequest,
 		ListTypeEntryLocalService listTypeEntryLocalService,
@@ -53,7 +56,7 @@ public class ViewAllTasksSectionDisplayContext
 		super(
 			assetTagLocalService, classNameLocalService,
 			cmpProjectObjectDefinition, cmpTaskObjectDefinition,
-			depotEntryLocalService, httpServletRequest,
+			cmsUsersProvider, depotEntryLocalService, httpServletRequest,
 			listTypeEntryLocalService, objectEntryService,
 			objectFieldLocalService, objectStateFlowLocalService,
 			objectStateLocalService, roleService);
@@ -61,12 +64,16 @@ public class ViewAllTasksSectionDisplayContext
 
 	@Override
 	public String getAPIURL() {
-		StringBundler sb = new StringBundler(5);
+		StringBundler sb = new StringBundler(9);
 
 		sb.append("/o/search/v1.0/search?emptySearch=true&entryClassNames=");
 		sb.append(HtmlUtil.escapeURL(objectDefinition.getClassName()));
 		sb.append(StringPool.COMMA);
 		sb.append(KaleoTaskInstanceToken.class.getName());
+		sb.append("&filter=(cmpProjectTask eq true or cmsTask eq true or ");
+		sb.append("objectDefinitionId eq ");
+		sb.append(objectDefinition.getObjectDefinitionId());
+		sb.append(")");
 		sb.append(getNestedFieldsAPIURLParameters("cmpProjectToCMPTasks"));
 
 		return sb.toString();
@@ -94,6 +101,7 @@ public class ViewAllTasksSectionDisplayContext
 	public List<FDSFilter> getFDSFilters() {
 		List<FDSFilter> fdsFilters = super.getFDSFilters();
 
+		fdsFilters.add(new SpaceSelectionFDSFilter());
 		fdsFilters.add(
 			new TaskTypeSelectionFDSFilter(
 				classNameLocalService, objectDefinition));

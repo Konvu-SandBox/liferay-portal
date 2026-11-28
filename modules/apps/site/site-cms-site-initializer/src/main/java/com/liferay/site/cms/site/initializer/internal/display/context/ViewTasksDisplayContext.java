@@ -14,9 +14,11 @@ import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.portlet.url.builder.PortletURLBuilder;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
+import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PortletKeys;
+import com.liferay.portal.kernel.util.SessionClicks;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.workflow.kaleo.model.KaleoTaskInstanceToken;
 
@@ -43,6 +45,7 @@ public class ViewTasksDisplayContext {
 		return StringBundler.concat(
 			"/o/search/v1.0/search?emptySearch=true&entryClassNames=",
 			KaleoTaskInstanceToken.class.getName(),
+			"&filter=(cmpProjectTask eq true or cmsTask eq true)",
 			"&nestedFields=embedded,embedded.objectReviewed",
 			"&nestedFieldsDepth=2");
 	}
@@ -60,6 +63,12 @@ public class ViewTasksDisplayContext {
 				))
 		).put(
 			"hideSpace", true
+		).build();
+	}
+
+	public Map<String, Object> getCMPMarketplaceBannerProps() {
+		return HashMapBuilder.<String, Object>put(
+			"sessionClicksKey", _CMP_MARKETPLACE_BANNER_DISMISSED_KEY
 		).build();
 	}
 
@@ -148,6 +157,19 @@ public class ViewTasksDisplayContext {
 			));
 	}
 
+	public Map<String, Object> getTasksQuickFiltersProps() {
+		return HashMapBuilder.<String, Object>put(
+			"apiURL", getAPIURL()
+		).build();
+	}
+
+	public boolean isCMPMarketplaceBannerVisible() {
+		return !GetterUtil.getBoolean(
+			SessionClicks.get(
+				_httpServletRequest, _CMP_MARKETPLACE_BANNER_DISMISSED_KEY,
+				null));
+	}
+
 	private String _getLayoutName() {
 		Layout layout = _themeDisplay.getLayout();
 
@@ -157,6 +179,9 @@ public class ViewTasksDisplayContext {
 
 		return layout.getName(_themeDisplay.getLocale(), true);
 	}
+
+	private static final String _CMP_MARKETPLACE_BANNER_DISMISSED_KEY =
+		"com_liferay_site_cms_site_initializer_cmpMarketplaceBannerDismissed";
 
 	private final HttpServletRequest _httpServletRequest;
 	private final ThemeDisplay _themeDisplay;

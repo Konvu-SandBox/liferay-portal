@@ -5,7 +5,8 @@ import {
 	FrontendDataSet,
 	pagination,
 } from 'shared/components/FrontendDataSet';
-import {Routes, setUriQueryValues} from 'shared/util/router';
+import {setUriQueryValues} from 'shared/util/url';
+import {Routes} from 'shared/util/router';
 import {useParams} from 'react-router-dom';
 import {useRangeQueryValues} from 'shared/hooks/useRangeQueryValues';
 
@@ -14,16 +15,6 @@ const FDS_ID = 'account-individuals-dataset';
 const PREVIEW_FDS_ID = 'most-engaged-individuals-dataset';
 
 const PREVIEW_DELTA = 5;
-
-const SORTS = [
-	{
-		active: true,
-		default: true,
-		direction: 'desc' as const,
-		key: 'activitiesCount',
-		label: Liferay.Language.get('total-events'),
-	},
-];
 
 interface IIndividualItemData {
 	id: string | number;
@@ -126,6 +117,7 @@ const IndividualsDataSet: React.FC<IIndividualsDataSetProps> = ({
 					/>
 				),
 			}}
+			defaultSort={{key: 'activitiesCount'}}
 			emptyState={{
 				description: Liferay.Language.get(
 					'no-activities-were-found-on-the-selected-period'
@@ -137,7 +129,6 @@ const IndividualsDataSet: React.FC<IIndividualsDataSetProps> = ({
 			showManagementBar={!preview}
 			showPagination={!preview}
 			showSearch={!preview}
-			sorts={SORTS}
 			views={[
 				{
 					contentRenderer: 'table',

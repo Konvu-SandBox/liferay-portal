@@ -2,8 +2,6 @@ import React from 'react';
 import {fireEvent, render, waitFor} from '@testing-library/react';
 import {GeomapCard} from '../GeomapCard';
 
-jest.unmock('react-dom');
-
 const countries = [
 	{
 		group: 'United States',
@@ -142,7 +140,7 @@ describe('GeoMapCard', () => {
 			expect(tooltip.style.display).toBe('');
 		});
 
-		expect(tooltip).toHaveTextContent('Brazil');
+		expect(tooltip).toHaveTextContent(/brazil/i);
 		expect(tooltip).toHaveTextContent('6274');
 		expect(tooltip).toHaveTextContent('sessions');
 		expect(tooltip).toHaveTextContent('34.3%');

@@ -41,7 +41,8 @@ import {get} from 'lodash';
 import {LIMIT_REACHED_ALERT_ID} from './constants';
 import {NotificationSubtypes} from 'shared/util/records/Notification';
 import {OrderedMap} from 'immutable';
-import {Routes, setUriQueryValues, toRoute} from 'shared/util/router';
+import {setUriQueryValues} from 'shared/util/url';
+import {Routes, toRoute} from 'shared/util/router';
 import {Sizes} from 'shared/util/constants';
 import {sub} from 'shared/util/lang';
 import {useCurrentUser} from 'shared/hooks/useCurrentUser';
@@ -297,7 +298,7 @@ const CustomEventList: React.FC<ICustomEventListProps> = ({
 								symbol: 'ac_satellite',
 							}}
 							title={Liferay.Language.get(
-								'no-custom-events-found'
+								'no-custom-events-were-found'
 							)}
 						/>
 					}
