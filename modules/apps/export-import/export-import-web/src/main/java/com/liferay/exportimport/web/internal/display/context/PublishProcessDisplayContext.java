@@ -7,8 +7,10 @@ package com.liferay.exportimport.web.internal.display.context;
 
 import com.liferay.exportimport.kernel.staging.StagingUtil;
 import com.liferay.exportimport.util.ScopeUtil;
+import com.liferay.exportimport.web.internal.util.ExportImportAPIURLUtil;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.portal.kernel.json.JSONArray;
+import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.log.Log;
@@ -22,12 +24,14 @@ import com.liferay.portal.kernel.scheduler.StorageType;
 import com.liferay.portal.kernel.scheduler.messaging.SchedulerResponse;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
+import com.liferay.portal.kernel.util.PortalUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.kernel.util.PropsValues;
 import com.liferay.portal.kernel.util.Time;
 import com.liferay.portal.kernel.util.TimeZoneComparator;
 import com.liferay.portal.kernel.util.TimeZoneUtil;
+import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.kernel.util.Validator;
 
 import java.util.Date;
@@ -43,10 +47,13 @@ import java.util.TreeSet;
 public class PublishProcessDisplayContext {
 
 	public PublishProcessDisplayContext(
-		Group liveGroup, Locale locale, Group publishSourceGroup) {
+		Group liveGroup, Locale locale, long plid, String portletId,
+		Group publishSourceGroup) {
 
 		_liveGroup = liveGroup;
 		_locale = locale;
+		_plid = plid;
+		_portletId = portletId;
 		_publishSourceGroup = publishSourceGroup;
 	}
 
@@ -56,24 +63,57 @@ public class PublishProcessDisplayContext {
 		).put(
 			"pageSize", PropsValues.LAYOUT_MANAGE_PAGES_INITIAL_CHILDREN
 		).put(
-			"privateLayoutsAvailable",
-			_publishSourceGroup.isPrivateLayoutsEnabled() &&
-			_publishSourceGroup.hasPrivateLayouts()
-		).put(
 			"siteExternalReferenceCode",
 			_publishSourceGroup.getExternalReferenceCode()
 		).build();
 	}
 
 	public String getPublishPreviewAPIURL() {
-		return ScopeUtil.getAPIURL(_liveGroup, "/publish-preview");
+		return ExportImportAPIURLUtil.getPublishAPIURL(
+			"/publish-preview", _liveGroup, _plid, _portletId);
 	}
 
 	public String getPublishProcessAPIURL() {
-		return ScopeUtil.getAPIURL(_liveGroup, "/publish-processes");
+		return ExportImportAPIURLUtil.getPublishAPIURL(
+			"/publish-processes", _liveGroup, _plid, _portletId);
+	}
+
+	public JSONObject getRemoteConnectionJSONObject() {
+		if (!_liveGroup.isStagedRemotely() || !Validator.isBlank(_portletId)) {
+			return null;
+		}
+
+		UnicodeProperties typeSettingsUnicodeProperties =
+			_liveGroup.getTypeSettingsProperties();
+
+		return JSONUtil.put(
+			"address",
+			GetterUtil.getString(
+				typeSettingsUnicodeProperties.getProperty("remoteAddress"))
+		).put(
+			"pathContext",
+			GetterUtil.getString(
+				typeSettingsUnicodeProperties.getProperty("remotePathContext"))
+		).put(
+			"port",
+			GetterUtil.getInteger(
+				typeSettingsUnicodeProperties.getProperty("remotePort"))
+		).put(
+			"secureConnection",
+			GetterUtil.getBoolean(
+				typeSettingsUnicodeProperties.getProperty("secureConnection"))
+		).put(
+			"siteId",
+			GetterUtil.getLong(
+				typeSettingsUnicodeProperties.getProperty("remoteGroupId"))
+		);
 	}
 
 	public String getScheduledPublishProcessAPIURL() {
+		if (!Validator.isBlank(_portletId)) {
+			return null;
+		}
+
 		return ScopeUtil.getAPIURL(_liveGroup, "/scheduled-publish-processes");
 	}
 
@@ -95,16 +135,27 @@ public class PublishProcessDisplayContext {
 	}
 
 	public String getTitle(long scheduledPublishProcessId) {
+		if (!Validator.isBlank(_portletId)) {
+			return StringBundler.concat(
+				LanguageUtil.get(_locale, "new-publish-process"), " - ",
+				PortalUtil.getPortletTitle(_portletId, _locale));
+		}
+
 		if (scheduledPublishProcessId <= 0) {
 			return LanguageUtil.get(_locale, "new-publish-process");
 		}
 
 		try {
+			String destinationName = DestinationNames.LAYOUTS_LOCAL_PUBLISHER;
+
+			if (_liveGroup.isStagedRemotely()) {
+				destinationName = DestinationNames.LAYOUTS_REMOTE_PUBLISHER;
+			}
+
 			for (SchedulerResponse schedulerResponse :
 					SchedulerEngineHelperUtil.getScheduledJobs(
 						StagingUtil.getSchedulerGroupName(
-							DestinationNames.LAYOUTS_LOCAL_PUBLISHER,
-							_liveGroup.getGroupId()),
+							destinationName, _liveGroup.getGroupId()),
 						StorageType.PERSISTED)) {
 
 				Message message = schedulerResponse.getMessage();
@@ -174,6 +225,8 @@ public class PublishProcessDisplayContext {
 
 	private final Group _liveGroup;
 	private final Locale _locale;
+	private final long _plid;
+	private final String _portletId;
 	private final Group _publishSourceGroup;
 
 }

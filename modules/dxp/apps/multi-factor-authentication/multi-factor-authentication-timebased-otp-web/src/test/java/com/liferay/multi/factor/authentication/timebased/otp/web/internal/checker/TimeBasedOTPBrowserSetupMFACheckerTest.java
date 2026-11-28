@@ -10,7 +10,6 @@ import com.liferay.multi.factor.authentication.timebased.otp.service.MFATimeBase
 import com.liferay.multi.factor.authentication.timebased.otp.web.internal.configuration.MFATimeBasedOTPConfiguration;
 import com.liferay.multi.factor.authentication.timebased.otp.web.internal.constants.MFATimeBasedOTPEventTypes;
 import com.liferay.multi.factor.authentication.timebased.otp.web.internal.util.MFATimeBasedOTPUtil;
-import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.StringPool;
 import com.liferay.portal.json.JSONFactoryImpl;
 import com.liferay.portal.kernel.audit.AuditMessage;
@@ -22,12 +21,12 @@ import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.module.util.SystemBundleUtil;
 import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
+import com.liferay.portal.kernel.service.UserLocalService;
+import com.liferay.portal.kernel.service.UserLocalServiceUtil;
 import com.liferay.portal.kernel.test.ReflectionTestUtil;
-import com.liferay.portal.kernel.test.util.FeatureFlagTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.PortalUtil;
-import com.liferay.portal.test.rule.FeatureFlag;
 import com.liferay.portal.test.rule.LiferayUnitTestRule;
 
 import org.junit.After;
@@ -45,6 +44,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
  * @author Regisson Aguiar
@@ -98,6 +98,9 @@ public class TimeBasedOTPBrowserSetupMFACheckerTest {
 			_mfaTimeBasedOTPEntryLocalService);
 		ReflectionTestUtil.setFieldValue(
 			_timeBasedOTPBrowserSetupMFAChecker, "_portal", _portal);
+		ReflectionTestUtil.setFieldValue(
+			_timeBasedOTPBrowserSetupMFAChecker, "_userLocalService",
+			_userLocalService);
 	}
 
 	@After
@@ -109,7 +112,6 @@ public class TimeBasedOTPBrowserSetupMFACheckerTest {
 		_serviceRegistration.unregister();
 	}
 
-	@FeatureFlag("LPD-6417")
 	@Test
 	public void testBuildAuditMessages() throws Exception {
 		PrincipalThreadLocal.setName(_REAL_USER_ID);
@@ -131,39 +133,37 @@ public class TimeBasedOTPBrowserSetupMFACheckerTest {
 			_buildAuditMessage(
 				"buildNotVerifiedAuditMessage",
 				new Class<?>[] {User.class, String.class, String.class},
-				_getUser(), RandomTestUtil.randomString(),
+				Mockito.mock(User.class), RandomTestUtil.randomString(),
 				RandomTestUtil.randomString()),
 			"verify_failure", "not_verified");
 		_assertAuditMessage(
 			_buildAuditMessage(
 				"buildUnconfiguredUserVerificationFailureAuditMessage",
 				new Class<?>[] {long.class, User.class, String.class},
-				RandomTestUtil.randomLong(), _getUser(),
+				RandomTestUtil.randomLong(), Mockito.mock(User.class),
 				RandomTestUtil.randomString()),
 			"verify_failure", "verification_failure");
 		_assertAuditMessage(
 			_buildAuditMessage(
 				"buildVerificationFailureAuditMessage",
 				new Class<?>[] {User.class, String.class, String.class},
-				_getUser(), RandomTestUtil.randomString(),
+				Mockito.mock(User.class), RandomTestUtil.randomString(),
 				RandomTestUtil.randomString()),
 			"verify_failure", "verification_failure");
 		_assertAuditMessage(
 			_buildAuditMessage(
 				"buildVerificationSuccessAuditMessage",
-				new Class<?>[] {User.class, String.class}, _getUser(),
-				RandomTestUtil.randomString()),
+				new Class<?>[] {User.class, String.class},
+				Mockito.mock(User.class), RandomTestUtil.randomString()),
 			"verify", "verification_success");
 		_assertAuditMessage(
 			_buildAuditMessage(
 				"buildVerifiedAuditMessage",
-				new Class<?>[] {User.class, String.class}, _getUser(),
-				RandomTestUtil.randomString()),
+				new Class<?>[] {User.class, String.class},
+				Mockito.mock(User.class), RandomTestUtil.randomString()),
 			"verify", "verified");
 		_assertAuditMessage(
 			auditMessage, "verify_failure", "verification_failure");
-
-		_testBuildNotVerifiedAuditMessageWhenFeatureFlagIsDisabled();
 	}
 
 	@Test
@@ -190,7 +190,7 @@ public class TimeBasedOTPBrowserSetupMFACheckerTest {
 		_timeBasedOTPBrowserSetupMFAChecker.removeExistingSetup(selectedUserId);
 
 		_assertAuditMessage(
-			null, MFATimeBasedOTPEventTypes.MFA_TIMEBASED_OTP_SETUP_REMOVED,
+			MFATimeBasedOTPEventTypes.MFA_TIMEBASED_OTP_SETUP_REMOVED, 0,
 			selectedUserId);
 	}
 
@@ -201,7 +201,16 @@ public class TimeBasedOTPBrowserSetupMFACheckerTest {
 		PrincipalThreadLocal.setName(selectedUserId);
 
 		try (MockedStatic<MFATimeBasedOTPUtil> mfaTimeBasedOTPUtilMockedStatic =
-				Mockito.mockStatic(MFATimeBasedOTPUtil.class)) {
+				Mockito.mockStatic(MFATimeBasedOTPUtil.class);
+			MockedStatic<UserLocalServiceUtil>
+				userLocalServiceUtilMockedStatic = Mockito.mockStatic(
+					UserLocalServiceUtil.class)) {
+
+			userLocalServiceUtilMockedStatic.when(
+				() -> UserLocalServiceUtil.fetchUser(selectedUserId)
+			).thenReturn(
+				Mockito.mock(User.class)
+			);
 
 			Assert.assertFalse(
 				_timeBasedOTPBrowserSetupMFAChecker.setUp(
@@ -213,16 +222,26 @@ public class TimeBasedOTPBrowserSetupMFACheckerTest {
 				Mockito.any()
 			);
 
+			String algorithm = RandomTestUtil.randomString();
+
+			mfaTimeBasedOTPUtilMockedStatic.when(
+				MFATimeBasedOTPUtil::getAlgorithm
+			).thenReturn(
+				algorithm
+			);
+
 			mfaTimeBasedOTPUtilMockedStatic.when(
 				() -> MFATimeBasedOTPUtil.verifyTimeBasedOTP(
-					Mockito.anyLong(), Mockito.any(), Mockito.any())
+					Mockito.eq(algorithm), Mockito.anyLong(), Mockito.any(),
+					Mockito.any())
 			).thenReturn(
 				true
 			);
 
 			Mockito.when(
 				_mfaTimeBasedOTPEntryLocalService.addTimeBasedOTPEntry(
-					Mockito.eq(selectedUserId), Mockito.any())
+					Mockito.eq(selectedUserId), Mockito.eq(algorithm),
+					Mockito.any())
 			).thenReturn(
 				Mockito.mock(MFATimeBasedOTPEntry.class)
 			);
@@ -233,9 +252,16 @@ public class TimeBasedOTPBrowserSetupMFACheckerTest {
 		}
 
 		_assertAuditMessage(
-			String.valueOf(selectedUserId),
 			MFATimeBasedOTPEventTypes.MFA_TIMEBASED_OTP_SETUP_ADDED,
-			selectedUserId);
+			selectedUserId, selectedUserId);
+	}
+
+	@Test
+	public void testVerifyBrowserRequest() throws Exception {
+		PrincipalThreadLocal.setName(_REAL_USER_ID);
+
+		_testVerifyBrowserRequest();
+		_testVerifyBrowserRequestWhenAlgorithmIsNull();
 	}
 
 	private void _assertAuditMessage(
@@ -251,7 +277,7 @@ public class TimeBasedOTPBrowserSetupMFACheckerTest {
 	}
 
 	private void _assertAuditMessage(
-			String doAsUserId, String eventType, long selectedUserId)
+			String eventType, long impersonatedUserId, long selectedUserId)
 		throws Exception {
 
 		ArgumentCaptor<AuditMessage> argumentCaptor = ArgumentCaptor.forClass(
@@ -265,15 +291,12 @@ public class TimeBasedOTPBrowserSetupMFACheckerTest {
 
 		AuditMessage auditMessage = argumentCaptor.getValue();
 
-		JSONObject additionalInfoJSONObject = auditMessage.getAdditionalInfo();
-
-		Assert.assertEquals(
-			doAsUserId, additionalInfoJSONObject.getString("doAsUserId", null));
-
 		Assert.assertEquals(User.class.getName(), auditMessage.getClassName());
 		Assert.assertEquals(
 			String.valueOf(selectedUserId), auditMessage.getClassPK());
 		Assert.assertEquals(eventType, auditMessage.getEventType());
+		Assert.assertEquals(
+			impersonatedUserId, auditMessage.getImpersonatedUserId());
 		Assert.assertEquals(_REAL_USER_ID, auditMessage.getUserId());
 		Assert.assertEquals(_REAL_USER_NAME, auditMessage.getUserName());
 	}
@@ -291,39 +314,194 @@ public class TimeBasedOTPBrowserSetupMFACheckerTest {
 			arguments);
 	}
 
-	private User _getUser() {
+	private void _testVerifyBrowserRequest() throws Exception {
 		User user = Mockito.mock(User.class);
+		long userId = RandomTestUtil.randomLong();
 
 		Mockito.when(
-			user.getCompanyId()
+			user.getUserId()
 		).thenReturn(
-			RandomTestUtil.randomLong()
+			userId
 		);
 
-		return user;
+		Mockito.when(
+			_userLocalService.fetchUser(userId)
+		).thenReturn(
+			user
+		);
+
+		MFATimeBasedOTPEntry mfaTimeBasedOTPEntry = Mockito.mock(
+			MFATimeBasedOTPEntry.class);
+
+		Mockito.when(
+			mfaTimeBasedOTPEntry.getLastValidTOTP()
+		).thenReturn(
+			RandomTestUtil.randomString()
+		);
+
+		String algorithm = RandomTestUtil.randomString();
+
+		Mockito.when(
+			mfaTimeBasedOTPEntry.getAlgorithm()
+		).thenReturn(
+			algorithm
+		);
+
+		Mockito.when(
+			_mfaTimeBasedOTPEntryLocalService.fetchMFATimeBasedOTPEntryByUserId(
+				userId)
+		).thenReturn(
+			mfaTimeBasedOTPEntry
+		);
+
+		MockHttpServletRequest mockHttpServletRequest =
+			new MockHttpServletRequest();
+
+		mockHttpServletRequest.setParameter(
+			"mfaTimeBasedOTP", RandomTestUtil.randomString());
+
+		try (MockedStatic<MFATimeBasedOTPUtil> mfaTimeBasedOTPUtilMockedStatic =
+				Mockito.mockStatic(MFATimeBasedOTPUtil.class)) {
+
+			mfaTimeBasedOTPUtilMockedStatic.when(
+				MFATimeBasedOTPUtil::getAlgorithms
+			).thenReturn(
+				new String[] {RandomTestUtil.randomString()}
+			);
+
+			mfaTimeBasedOTPUtilMockedStatic.when(
+				() -> MFATimeBasedOTPUtil.verifyTimeBasedOTP(
+					Mockito.argThat(
+						verifiedAlgorithm -> !algorithm.equals(
+							verifiedAlgorithm)),
+					Mockito.anyLong(), Mockito.any(), Mockito.any())
+			).thenReturn(
+				true
+			);
+
+			Assert.assertFalse(
+				_timeBasedOTPBrowserSetupMFAChecker.verifyBrowserRequest(
+					mockHttpServletRequest, new MockHttpServletResponse(),
+					userId));
+
+			mfaTimeBasedOTPUtilMockedStatic.when(
+				() -> MFATimeBasedOTPUtil.verifyTimeBasedOTP(
+					Mockito.eq(algorithm), Mockito.anyLong(), Mockito.any(),
+					Mockito.any())
+			).thenReturn(
+				true
+			);
+
+			Assert.assertTrue(
+				_timeBasedOTPBrowserSetupMFAChecker.verifyBrowserRequest(
+					mockHttpServletRequest, new MockHttpServletResponse(),
+					userId));
+
+			Mockito.verify(
+				_mfaTimeBasedOTPEntryLocalService, Mockito.never()
+			).updateAlgorithm(
+				Mockito.anyLong(), Mockito.anyString()
+			);
+		}
 	}
 
-	private void _testBuildNotVerifiedAuditMessageWhenFeatureFlagIsDisabled()
+	private void _testVerifyBrowserRequestWhenAlgorithmIsNull()
 		throws Exception {
 
-		try (SafeCloseable safeCloseable =
-				FeatureFlagTestUtil.setFeatureFlagsWithSafeCloseable(
-					false, "LPD-6417")) {
+		User user = Mockito.mock(User.class);
+		long userId = RandomTestUtil.randomLong();
 
-			String reason = RandomTestUtil.randomString();
+		Mockito.when(
+			user.getUserId()
+		).thenReturn(
+			userId
+		);
 
-			AuditMessage auditMessage = _buildAuditMessage(
-				"buildNotVerifiedAuditMessage",
-				new Class<?>[] {User.class, String.class, String.class},
-				_getUser(), RandomTestUtil.randomString(), reason);
+		Mockito.when(
+			_userLocalService.fetchUser(userId)
+		).thenReturn(
+			user
+		);
 
-			JSONObject additionalInfoJSONObject =
-				auditMessage.getAdditionalInfo();
+		MFATimeBasedOTPEntry mfaTimeBasedOTPEntry = Mockito.mock(
+			MFATimeBasedOTPEntry.class);
 
-			Assert.assertFalse(additionalInfoJSONObject.has("factor"));
-			Assert.assertFalse(additionalInfoJSONObject.has("outcome"));
-			Assert.assertEquals(
-				reason, additionalInfoJSONObject.getString("reason"));
+		Mockito.when(
+			mfaTimeBasedOTPEntry.getLastValidTOTP()
+		).thenReturn(
+			RandomTestUtil.randomString()
+		);
+
+		Mockito.when(
+			_mfaTimeBasedOTPEntryLocalService.fetchMFATimeBasedOTPEntryByUserId(
+				userId)
+		).thenReturn(
+			mfaTimeBasedOTPEntry
+		);
+
+		MockHttpServletRequest mockHttpServletRequest =
+			new MockHttpServletRequest();
+
+		mockHttpServletRequest.setParameter(
+			"mfaTimeBasedOTP", RandomTestUtil.randomString());
+
+		try (MockedStatic<MFATimeBasedOTPUtil> mfaTimeBasedOTPUtilMockedStatic =
+				Mockito.mockStatic(MFATimeBasedOTPUtil.class)) {
+
+			mfaTimeBasedOTPUtilMockedStatic.when(
+				MFATimeBasedOTPUtil::getAlgorithms
+			).thenReturn(
+				new String[] {"HmacSHA256", "HmacSHA1"}
+			);
+
+			Assert.assertFalse(
+				_timeBasedOTPBrowserSetupMFAChecker.verifyBrowserRequest(
+					mockHttpServletRequest, new MockHttpServletResponse(),
+					userId));
+
+			Mockito.verify(
+				_mfaTimeBasedOTPEntryLocalService, Mockito.never()
+			).updateAlgorithm(
+				Mockito.anyLong(), Mockito.anyString()
+			);
+
+			mfaTimeBasedOTPUtilMockedStatic.when(
+				() -> MFATimeBasedOTPUtil.verifyTimeBasedOTP(
+					Mockito.eq("HmacSHA1"), Mockito.anyLong(), Mockito.any(),
+					Mockito.any())
+			).thenReturn(
+				true
+			);
+
+			Assert.assertTrue(
+				_timeBasedOTPBrowserSetupMFAChecker.verifyBrowserRequest(
+					mockHttpServletRequest, new MockHttpServletResponse(),
+					userId));
+
+			Mockito.verify(
+				_mfaTimeBasedOTPEntryLocalService
+			).updateAlgorithm(
+				userId, "HmacSHA1"
+			);
+
+			mfaTimeBasedOTPUtilMockedStatic.when(
+				() -> MFATimeBasedOTPUtil.verifyTimeBasedOTP(
+					Mockito.eq("HmacSHA256"), Mockito.anyLong(), Mockito.any(),
+					Mockito.any())
+			).thenReturn(
+				true
+			);
+
+			Assert.assertTrue(
+				_timeBasedOTPBrowserSetupMFAChecker.verifyBrowserRequest(
+					mockHttpServletRequest, new MockHttpServletResponse(),
+					userId));
+
+			Mockito.verify(
+				_mfaTimeBasedOTPEntryLocalService
+			).updateAlgorithm(
+				userId, "HmacSHA256"
+			);
 		}
 	}
 
@@ -340,5 +518,7 @@ public class TimeBasedOTPBrowserSetupMFACheckerTest {
 	private final TimeBasedOTPBrowserSetupMFAChecker
 		_timeBasedOTPBrowserSetupMFAChecker =
 			new TimeBasedOTPBrowserSetupMFAChecker();
+	private final UserLocalService _userLocalService = Mockito.mock(
+		UserLocalService.class);
 
 }

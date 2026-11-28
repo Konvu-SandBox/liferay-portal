@@ -13,6 +13,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,6 +46,25 @@ public class BaseBuildTest extends com.liferay.jenkins.results.parser.Test {
 	}
 
 	@Test
+	public void testGetArchiveCallables() {
+		BaseBuild baseBuild = _mockCachedBaseBuild();
+
+		Mockito.doCallRealMethod(
+		).when(
+			baseBuild
+		).getArchiveCallables();
+
+		List<Callable<Object>> archiveCallables =
+			baseBuild.getArchiveCallables();
+
+		Assert.assertTrue(archiveCallables.isEmpty());
+
+		Mockito.verify(
+			baseBuild, Mockito.never()
+		).getJenkinsMaster();
+	}
+
+	@Test
 	public void testGetBadBuildURLs() {
 		BaseBuild baseBuild = Mockito.mock(BaseBuild.class);
 
@@ -68,6 +91,92 @@ public class BaseBuildTest extends com.liferay.jenkins.results.parser.Test {
 
 		Assert.assertEquals(
 			Arrays.asList(firstBuildURL), baseBuild.getBadBuildURLs());
+	}
+
+	@Test
+	public void testGetBuildJSONObject() {
+		BaseBuild baseBuild = _mockCachedBaseBuild();
+
+		ReflectionTestUtil.setFieldValue(baseBuild, "_duration", 12345L);
+		ReflectionTestUtil.setFieldValue(baseBuild, "_result", "UNSTABLE");
+		ReflectionTestUtil.setFieldValue(baseBuild, "startTime", 1000L);
+
+		Map<String, String> parameters = new HashMap<>();
+
+		parameters.put(
+			RandomTestUtil.randomString(), RandomTestUtil.randomString());
+		parameters.put(
+			RandomTestUtil.randomString(), RandomTestUtil.randomString());
+
+		Mockito.doCallRealMethod(
+		).when(
+			baseBuild
+		).getBuildJSONObject();
+
+		Mockito.doCallRealMethod(
+		).when(
+			baseBuild
+		).getBuildJSONObject(
+			Mockito.anyString()
+		);
+
+		Mockito.doReturn(
+			"https://test-1-1.liferay.com/job/test/1"
+		).when(
+			baseBuild
+		).getBuildURL();
+
+		Mockito.doReturn(
+			parameters
+		).when(
+			baseBuild
+		).getParameters();
+
+		JSONObject buildJSONObject = baseBuild.getBuildJSONObject();
+
+		Assert.assertEquals(12345, buildJSONObject.getLong("duration"));
+		Assert.assertEquals("UNSTABLE", buildJSONObject.getString("result"));
+		Assert.assertEquals(1000, buildJSONObject.getLong("timestamp"));
+		Assert.assertEquals(
+			"https://test-1-1.liferay.com/job/test/1",
+			buildJSONObject.getString("url"));
+
+		JSONArray actionsJSONArray = buildJSONObject.getJSONArray("actions");
+
+		JSONObject queuingDurationJSONObject = actionsJSONArray.getJSONObject(
+			1);
+
+		Assert.assertEquals(
+			0, queuingDurationJSONObject.getLong("queuingDurationMillis"));
+
+		JSONObject parametersActionJSONObject = actionsJSONArray.getJSONObject(
+			0);
+
+		JSONArray parametersJSONArray = parametersActionJSONObject.getJSONArray(
+			"parameters");
+
+		Map<String, String> actualParameters = new HashMap<>();
+
+		for (int i = 0; i < parametersJSONArray.length(); i++) {
+			JSONObject parameterJSONObject = parametersJSONArray.getJSONObject(
+				i);
+
+			actualParameters.put(
+				parameterJSONObject.getString("name"),
+				parameterJSONObject.getString("value"));
+		}
+
+		Assert.assertEquals(parameters, actualParameters);
+
+		Assert.assertSame(buildJSONObject, baseBuild.getBuildJSONObject());
+		Assert.assertSame(
+			buildJSONObject, baseBuild.getBuildJSONObject("result"));
+
+		Mockito.verify(
+			baseBuild, Mockito.never()
+		).getArchiveFileContent(
+			Mockito.anyString()
+		);
 	}
 
 	@Test
@@ -115,6 +224,13 @@ public class BaseBuildTest extends com.liferay.jenkins.results.parser.Test {
 				"https://", masterName,
 				".liferay.com/job/test%20portal(master)"),
 			baseBuild.getJobURL());
+	}
+
+	@Test
+	public void testGetResult() {
+		_testGetResult("completed", "SUCCESS");
+		_testGetResult("reporting", "UNSTABLE");
+		_testGetResult("running", null);
 	}
 
 	@Test
@@ -226,6 +342,16 @@ public class BaseBuildTest extends com.liferay.jenkins.results.parser.Test {
 		return ReflectionTestUtil.getFieldValue(baseBuild, "_parameters");
 	}
 
+	private BaseBuild _mockCachedBaseBuild() {
+		BaseBuild baseBuild = Mockito.mock(BaseBuild.class);
+
+		ReflectionTestUtil.setFieldValue(
+			baseBuild, "_cachedDownstreamBuildReport",
+			Mockito.mock(DownstreamBuildReport.class));
+
+		return baseBuild;
+	}
+
 	private BaseDownstreamBuild _mockDownstreamBuild(String jobName) {
 		BaseDownstreamBuild baseDownstreamBuild = Mockito.mock(
 			BaseDownstreamBuild.class);
@@ -297,6 +423,34 @@ public class BaseBuildTest extends com.liferay.jenkins.results.parser.Test {
 		Assert.assertEquals(
 			parameters,
 			ReflectionTestUtil.getFieldValue(baseBuild, "_parameters"));
+	}
+
+	private void _testGetResult(String status, String expectedResult) {
+		BaseBuild baseBuild = Mockito.mock(BaseBuild.class);
+
+		Mockito.doCallRealMethod(
+		).when(
+			baseBuild
+		).getResult();
+
+		Mockito.doReturn(
+			new JSONObject(
+			).put(
+				"result", expectedResult
+			)
+		).when(
+			baseBuild
+		).getBuildJSONObject(
+			"result"
+		);
+
+		Mockito.doReturn(
+			status
+		).when(
+			baseBuild
+		).getStatus();
+
+		Assert.assertEquals(expectedResult, baseBuild.getResult());
 	}
 
 	private void _testSaveBuildURLInBuildDatabase(

@@ -10,7 +10,7 @@
  */
 
 module.exports = {
-	hash: '60cc29fcee729fdfb371a4d888b6196f7a4c1933b9c7fd97069a371bf6f9da16',
+	hash: '5f153e06c8dc9583eee15e6af29e816b272cef5d4463b08adcb34e24c7b0a953',
 	imports: {
 		'@liferay/accessibility-menu-web': [],
 		'@liferay/accessibility-settings-state-web': [],
@@ -423,7 +423,6 @@ module.exports = {
 			'ckeditor5/ckeditor5.css',
 			'ckeditor5-premium-features/ckeditor5-premium-features.css',
 			'eventsource',
-			'frontend-editor-ckeditor-web/plugins/DocumentLinkSelector',
 		],
 		'frontend-js-aui-web': [],
 		'frontend-js-clay-sample-web': [],
@@ -470,7 +469,7 @@ module.exports = {
 		'portal-search-admin-web': [],
 		'portal-search-ranking-web': [],
 		'portal-search-synonyms-web': [],
-		'portal-search-web': ['./search-bar'],
+		'portal-search-web': ['./search-bar', './search-insights'],
 		'portal-template-react-renderer-impl': [],
 		'portal-workflow-kaleo-designer-web': [],
 		'portal-workflow-kaleo-forms-web': [],
@@ -589,9 +588,6 @@ module.exports = {
 		'@codemirror/theme-one-dark': ['*'],
 		'@codemirror/view': ['*'],
 		'dompurify': ['default'],
-		'frontend-editor-ckeditor-web/plugins/DocumentLinkSelector': [
-			'default',
-		],
 		'prop-types': ['*', 'bigint', 'default'],
 		'qrcode': ['create', 'toCanvas', 'toString', 'toDataURL'],
 		'ua-parser-js': ['UAParser'],

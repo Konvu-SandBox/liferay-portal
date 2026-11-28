@@ -6,8 +6,6 @@ import {noop, times} from 'lodash';
 import {SelectionProvider} from 'shared/context/selection';
 import {MemoryRouter} from 'react-router';
 
-jest.unmock('react-dom');
-
 const MAX_LENGTH = 900;
 const TOTAL = 5;
 const INDIVIDUALS = times(TOTAL, i => data.mockIndividual(i));
@@ -56,7 +54,7 @@ describe('BaseResults', () => {
 		await waitFor(
 			() => {
 				expect(
-					getByText('An unexpected error occurred.')
+					getByText(/^an unexpected error occurred\.$/i)
 				).toBeInTheDocument();
 			},
 			{timeout: 1000}
@@ -76,7 +74,7 @@ describe('BaseResults', () => {
 		await waitFor(
 			() => {
 				expect(
-					getByText('No results were found.')
+					getByText(/^no results were found$/i)
 				).toBeInTheDocument();
 			},
 			{timeout: 1000}

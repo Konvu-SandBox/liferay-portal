@@ -17,8 +17,6 @@ import {RangeKeyTimeRanges} from 'shared/util/constants';
 import {Routes} from 'shared/util/router';
 import {waitForLoadingToBeRemoved} from 'test/helpers';
 
-jest.unmock('react-dom');
-
 const DefaultComponent = ({children}: {children: React.ReactNode}) => (
 	<Provider store={mockStore()}>
 		<MemoryRouter
@@ -82,7 +80,7 @@ describe('IndividualProfileCard', () => {
 
 		await waitForLoadingToBeRemoved(document.body);
 
-		expect(getByPlaceholderText('Search')).toBeInTheDocument();
+		expect(getByPlaceholderText(/^search$/i)).toBeInTheDocument();
 	});
 
 	it('shows the no-results message when an activity search returns nothing', async () => {
@@ -143,7 +141,7 @@ describe('IndividualProfileCard', () => {
 
 		jest.runAllTimers();
 
-		expect(getByText('No results were found.')).toBeInTheDocument();
+		expect(getByText(/^no results were found$/i)).toBeInTheDocument();
 	});
 
 	it('should clear search input when clear button is clicked', async () => {
@@ -198,7 +196,7 @@ describe('IndividualProfileCard', () => {
 
 		jest.runAllTimers();
 
-		const searchInput = getByPlaceholderText('Search');
+		const searchInput = getByPlaceholderText(/^search$/i);
 
 		fireEvent.change(searchInput, {target: {value: inputValue}});
 
@@ -210,13 +208,13 @@ describe('IndividualProfileCard', () => {
 
 		jest.runAllTimers();
 
-		expect(getByPlaceholderText('Search')).toHaveValue(inputValue);
+		expect(getByPlaceholderText(/^search$/i)).toHaveValue(inputValue);
 
-		fireEvent.click(getByText('Clear'));
+		fireEvent.click(getByText(/^clear$/i));
 
 		jest.runAllTimers();
 
-		expect(getByPlaceholderText('Search')).toHaveValue('');
+		expect(getByPlaceholderText(/^search$/i)).toHaveValue('');
 	});
 
 	it('should clear search input when X clear button is clicked', async () => {
@@ -274,7 +272,7 @@ describe('IndividualProfileCard', () => {
 			await jest.advanceTimersByTimeAsync(500);
 		});
 
-		const searchInput = getByPlaceholderText('Search');
+		const searchInput = getByPlaceholderText(/^search$/i);
 
 		fireEvent.change(searchInput, {target: {value: inputValue}});
 
@@ -288,7 +286,7 @@ describe('IndividualProfileCard', () => {
 			await jest.advanceTimersByTimeAsync(500);
 		});
 
-		expect(getByPlaceholderText('Search')).toHaveValue(inputValue);
+		expect(getByPlaceholderText(/^search$/i)).toHaveValue(inputValue);
 
 		fireEvent.click(container.querySelector('.lexicon-icon-times')!);
 
@@ -296,7 +294,7 @@ describe('IndividualProfileCard', () => {
 			await jest.advanceTimersByTimeAsync(500);
 		});
 
-		expect(getByPlaceholderText('Search')).toHaveValue('');
+		expect(getByPlaceholderText(/^search$/i)).toHaveValue('');
 	});
 
 	it('should render w/ an error display', async () => {
@@ -332,7 +330,7 @@ describe('IndividualProfileCard', () => {
 
 		await waitForLoadingToBeRemoved(container);
 
-		expect(getByText('An unexpected error occurred.')).toBeTruthy();
+		expect(getByText(/^an unexpected error occurred\.$/i)).toBeTruthy();
 	});
 
 	it('should render w/ loading', () => {

@@ -5,12 +5,10 @@ import {
 	FEATURE_FLAGS,
 	FEATURE_FLAGS_STORAGE_KEY
 } from 'shared/util/feature-flags';
-import {reloadPage} from 'shared/util/router';
+import {reloadPage} from 'shared/util/url';
 
-jest.unmock('react-dom');
-
-jest.mock('shared/util/router', () => ({
-	...jest.requireActual('shared/util/router'),
+jest.mock('shared/util/url', () => ({
+	...jest.requireActual('shared/util/url'),
 	reloadPage: jest.fn()
 }));
 
@@ -41,7 +39,7 @@ describe('FeatureFlags', () => {
 	it('renders a toggle for every registered feature flag', () => {
 		const {container, getByText} = render(<FeatureFlags />);
 
-		expect(getByText('Feature Flags')).toBeTruthy();
+		expect(getByText(/^feature flags$/i)).toBeTruthy();
 		expect(
 			container.querySelectorAll('[data-testid="toggle-switch-input"]')
 		).toHaveLength(FEATURE_FLAGS.length);

@@ -36,7 +36,6 @@ import com.liferay.portal.kernel.servlet.HttpMethods;
 import com.liferay.portal.kernel.servlet.filters.invoker.InvokerFilterChain;
 import com.liferay.portal.kernel.test.rule.AggregateTestRule;
 import com.liferay.portal.kernel.test.rule.DeleteAfterTestRun;
-import com.liferay.portal.kernel.test.util.FeatureFlagTestUtil;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.test.util.TestPropsValues;
 import com.liferay.portal.kernel.test.util.UserTestUtil;
@@ -115,9 +114,9 @@ public class AuditMessageTest {
 		_assertNoImpersonatedUser(_getAuditMessage(null));
 
 		_testConstructorOnMessageBusThread();
-		_testConstructorWhenFeatureFlagIsDisabled();
 		_testConstructorWithHeadlessRequest();
 		_testConstructorWithHeadlessRequestWithoutCSRFToken();
+		_testConstructorWithJSON();
 		_testConstructorWithPortalRequest();
 	}
 
@@ -333,31 +332,6 @@ public class AuditMessageTest {
 			auditMessage1.getRequestId(), auditMessage2.getRequestId());
 	}
 
-	private void _testConstructorWhenFeatureFlagIsDisabled() {
-		try (SafeCloseable safeCloseable =
-				FeatureFlagTestUtil.setFeatureFlagsWithSafeCloseable(
-					false, "LPD-6417")) {
-
-			AuditMessage auditMessage = _getAuditMessage(
-				String.valueOf(_impersonatedUser.getUserId()));
-
-			_assertNoImpersonatedUser(auditMessage);
-
-			JSONObject additionalInfoJSONObject =
-				auditMessage.getAdditionalInfo();
-
-			Assert.assertEquals(
-				_impersonatedUser.getEmailAddress(),
-				additionalInfoJSONObject.getString("doAsUserEmailAddress"));
-			Assert.assertEquals(
-				String.valueOf(_impersonatedUser.getUserId()),
-				additionalInfoJSONObject.getString("doAsUserId"));
-			Assert.assertEquals(
-				_impersonatedUser.getFullName(),
-				additionalInfoJSONObject.getString("doAsUserName"));
-		}
-	}
-
 	private void _testConstructorWithHeadlessRequest() throws Exception {
 		MockHttpServletRequest mockHttpServletRequest =
 			_getMockHttpServletRequest();
@@ -374,6 +348,34 @@ public class AuditMessageTest {
 
 		_assertNoImpersonatedUser(
 			_getHeadlessAuditMessage(_getMockHttpServletRequest()));
+	}
+
+	private void _testConstructorWithJSON() throws Exception {
+		AuditMessage auditMessage = _getAuditMessage(
+			String.valueOf(_user.getUserId()));
+
+		long[] userAccountEntryIds = {
+			RandomTestUtil.randomLong(), RandomTestUtil.randomLong()
+		};
+
+		auditMessage.setUserAccountEntryIds(userAccountEntryIds);
+
+		auditMessage = new AuditMessage(
+			String.valueOf(auditMessage.toJSONObject()));
+
+		Assert.assertArrayEquals(
+			userAccountEntryIds, auditMessage.getUserAccountEntryIds());
+
+		auditMessage = _getAuditMessage(String.valueOf(_user.getUserId()));
+
+		JSONObject jsonObject = auditMessage.toJSONObject();
+
+		Assert.assertFalse(jsonObject.has("userAccountEntryIds"));
+
+		auditMessage = new AuditMessage(jsonObject.toString());
+
+		Assert.assertArrayEquals(
+			new long[0], auditMessage.getUserAccountEntryIds());
 	}
 
 	private void _testConstructorWithPortalRequest() throws Exception {

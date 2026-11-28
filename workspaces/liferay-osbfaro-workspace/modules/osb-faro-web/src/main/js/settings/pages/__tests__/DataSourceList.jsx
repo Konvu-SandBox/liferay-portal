@@ -16,8 +16,6 @@ import {Provider} from 'react-redux';
 import {Routes} from 'shared/util/router';
 import {TimeZone} from 'shared/util/records';
 
-jest.unmock('react-dom');
-
 describe('DataSourceList exports', () => {
 	describe('disableRow', () => {
 		it('returns true when the data source is being deleted', () => {
@@ -71,7 +69,7 @@ describe('DataSourceList exports', () => {
 				<AddDataSourceNav items={[{label: 'Liferay DXP', onClick}]} />
 			);
 
-			expect(getByText('Add Data Source')).toBeInTheDocument();
+			expect(getByText(/^add data source$/i)).toBeInTheDocument();
 
 			fireEvent.click(container.querySelector('button'));
 
@@ -91,7 +89,7 @@ describe('DataSourceList exports', () => {
 				/>
 			);
 
-			expect(getByText('Add Data Source')).toBeInTheDocument();
+			expect(getByText(/^add data source$/i)).toBeInTheDocument();
 
 			fireEvent.click(container.querySelector('button'));
 

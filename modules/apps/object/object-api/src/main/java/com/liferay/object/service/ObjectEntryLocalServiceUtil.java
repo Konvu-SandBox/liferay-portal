@@ -37,6 +37,16 @@ public class ObjectEntryLocalServiceUtil {
 	 *
 	 * Never modify this class directly. Add custom service methods to <code>com.liferay.object.service.impl.ObjectEntryLocalServiceImpl</code> and rerun ServiceBuilder to regenerate this class.
 	 */
+	public static ObjectEntry addDraftObjectEntry(
+			long userId, long headObjectEntryId, int version,
+			Map<String, Serializable> values,
+			com.liferay.portal.kernel.service.ServiceContext serviceContext)
+		throws PortalException {
+
+		return getService().addDraftObjectEntry(
+			userId, headObjectEntryId, version, values, serviceContext);
+	}
+
 	public static ObjectEntry addLatestApprovedObjectEntry(
 			String externalReferenceCode, long groupId, long userId,
 			long headObjectEntryId,
@@ -302,14 +312,6 @@ public class ObjectEntryLocalServiceUtil {
 			userId, objectEntryId, serviceContext);
 	}
 
-	public static ObjectEntry fetchManyToOneObjectEntry(
-			long groupId, long objectRelationshipId, long primaryKey)
-		throws PortalException {
-
-		return getService().fetchManyToOneObjectEntry(
-			groupId, objectRelationshipId, primaryKey);
-	}
-
 	public static ObjectEntry fetchObjectEntry(long objectEntryId) {
 		return getService().fetchObjectEntry(objectEntryId);
 	}
@@ -354,6 +356,14 @@ public class ObjectEntryLocalServiceUtil {
 		String uuid, long groupId) {
 
 		return getService().fetchObjectEntryByUuidAndGroupId(uuid, groupId);
+	}
+
+	public static ObjectEntry fetchRelatedObjectEntry(
+			long groupId, long objectRelationshipId, long primaryKey)
+		throws PortalException {
+
+		return getService().fetchRelatedObjectEntry(
+			groupId, objectRelationshipId, primaryKey);
 	}
 
 	public static com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery
@@ -591,30 +601,6 @@ public class ObjectEntryLocalServiceUtil {
 			aggregationTerm, predicate, related, search);
 	}
 
-	public static List<ObjectEntry> getOneToManyObjectEntries(
-			long groupId, long objectRelationshipId,
-			com.liferay.petra.sql.dsl.expression.Predicate predicate,
-			boolean preferApproved, long primaryKey, boolean related,
-			String search, int start, int end,
-			com.liferay.portal.kernel.search.Sort[] sorts)
-		throws PortalException {
-
-		return getService().getOneToManyObjectEntries(
-			groupId, objectRelationshipId, predicate, preferApproved,
-			primaryKey, related, search, start, end, sorts);
-	}
-
-	public static int getOneToManyObjectEntriesCount(
-			long groupId, long objectRelationshipId,
-			com.liferay.petra.sql.dsl.expression.Predicate predicate,
-			long primaryKey, boolean related, String search)
-		throws PortalException {
-
-		return getService().getOneToManyObjectEntriesCount(
-			groupId, objectRelationshipId, predicate, primaryKey, related,
-			search);
-	}
-
 	public static ObjectEntry getOrAddEmptyObjectEntry(
 			String externalReferenceCode, long groupId, long userId,
 			long objectDefinitionId)
@@ -653,6 +639,30 @@ public class ObjectEntryLocalServiceUtil {
 		return getService().getPrimaryKeys(
 			groupIds, companyId, userId, objectDefinitionId, predicate,
 			preferApproved, search, start, end, sorts);
+	}
+
+	public static List<ObjectEntry> getRelatedObjectEntries(
+			long groupId, long objectRelationshipId,
+			com.liferay.petra.sql.dsl.expression.Predicate predicate,
+			boolean preferApproved, long primaryKey, boolean related,
+			String search, int start, int end,
+			com.liferay.portal.kernel.search.Sort[] sorts)
+		throws PortalException {
+
+		return getService().getRelatedObjectEntries(
+			groupId, objectRelationshipId, predicate, preferApproved,
+			primaryKey, related, search, start, end, sorts);
+	}
+
+	public static int getRelatedObjectEntriesCount(
+			long groupId, long objectRelationshipId,
+			com.liferay.petra.sql.dsl.expression.Predicate predicate,
+			long primaryKey, boolean related, String search)
+		throws PortalException {
+
+		return getService().getRelatedObjectEntriesCount(
+			groupId, objectRelationshipId, predicate, primaryKey, related,
+			search);
 	}
 
 	public static Map<String, Object> getSystemModelAttributes(
@@ -798,6 +808,15 @@ public class ObjectEntryLocalServiceUtil {
 			userId, objectEntryId, objectEntryFolderId, values, serviceContext);
 	}
 
+	public static ObjectEntry publishDraftObjectEntry(
+			long userId, long objectEntryId,
+			com.liferay.portal.kernel.service.ServiceContext serviceContext)
+		throws PortalException {
+
+		return getService().publishDraftObjectEntry(
+			userId, objectEntryId, serviceContext);
+	}
+
 	public static void restoreObjectEntriesFromTrash(
 			long userId,
 			com.liferay.object.model.ObjectEntryFolder objectEntryFolder,
@@ -848,6 +867,13 @@ public class ObjectEntryLocalServiceUtil {
 		getService().updateAsset(
 			userId, objectEntry, assetCategoryIds, assetTagNames,
 			assetLinkEntryIds, priority);
+	}
+
+	public static void updateLatestRootObjectEntryVersion(
+			long userId, long objectEntryId)
+		throws PortalException {
+
+		getService().updateLatestRootObjectEntryVersion(userId, objectEntryId);
 	}
 
 	public static ObjectEntry updateObjectEntry(
@@ -923,4 +949,4 @@ public class ObjectEntryLocalServiceUtil {
 			ObjectEntryLocalServiceUtil.class, ObjectEntryLocalService.class);
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1455848682
+// LIFERAY-SERVICE-BUILDER-HASH:-754416060

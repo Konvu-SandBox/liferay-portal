@@ -14,8 +14,6 @@ import {Settings} from '../Settings';
 import {SubscriptionNames} from 'shared/util/subscriptions';
 import {useCurrentUser} from 'shared/hooks/useCurrentUser';
 
-jest.unmock('react-dom');
-
 jest.mock('shared/hooks/useCurrentUser', () => ({
 	useCurrentUser: jest.fn()
 }));
@@ -79,7 +77,7 @@ describe('Settings usage page routing', () => {
 		renderSettingsAt(mockStore(mockStoreDataLDP));
 
 		expect(
-			await screen.findByText('View Your Workspace Metrics')
+			await screen.findByText(/^view your workspace metrics$/i)
 		).toBeInTheDocument();
 	});
 
@@ -97,7 +95,7 @@ describe('Settings usage page routing', () => {
 		renderSettingsAt(mockStore(mockStoreDataSaaS));
 
 		expect(
-			await screen.findByText('View Your SaaS Project Metrics')
+			await screen.findByText(/^view your saas project metrics$/i)
 		).toBeInTheDocument();
 	});
 });

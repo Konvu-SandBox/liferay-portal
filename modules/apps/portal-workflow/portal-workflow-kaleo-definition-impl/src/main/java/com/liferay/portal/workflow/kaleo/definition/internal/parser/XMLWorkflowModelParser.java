@@ -28,6 +28,7 @@ import com.liferay.portal.workflow.kaleo.definition.AIHubAgent;
 import com.liferay.portal.workflow.kaleo.definition.Action;
 import com.liferay.portal.workflow.kaleo.definition.ActionAware;
 import com.liferay.portal.workflow.kaleo.definition.AddressRecipient;
+import com.liferay.portal.workflow.kaleo.definition.AskAHuman;
 import com.liferay.portal.workflow.kaleo.definition.AssigneesRecipient;
 import com.liferay.portal.workflow.kaleo.definition.Assignment;
 import com.liferay.portal.workflow.kaleo.definition.Condition;
@@ -220,6 +221,16 @@ public class XMLWorkflowModelParser implements WorkflowModelParser {
 		).toString();
 	}
 
+	private String _normalizeJSONObjectJSON(String json) throws Exception {
+		if (Validator.isNull(json)) {
+			return json;
+		}
+
+		return _jsonFactory.createJSONObject(
+			json
+		).toString();
+	}
+
 	private Definition _parse(Document document) throws Exception {
 		Element rootElement = document.getRootElement();
 
@@ -242,6 +253,12 @@ public class XMLWorkflowModelParser implements WorkflowModelParser {
 
 		for (Element aiHubAgentElement : aiHubAgentElements) {
 			definition.addNode(_parseAIHubAgent(aiHubAgentElement));
+		}
+
+		List<Element> askAHumanElements = rootElement.elements("ask-a-human");
+
+		for (Element askAHumanElement : askAHumanElements) {
+			definition.addNode(_parseAskAHuman(askAHumanElement));
 		}
 
 		List<Element> conditionElements = rootElement.elements("condition");
@@ -301,9 +318,9 @@ public class XMLWorkflowModelParser implements WorkflowModelParser {
 
 		_parseTransitions(
 			definition, aiDecisionElements, aiHubAgentElements,
-			conditionElements, forkElements, httpRequestElements, joinElements,
-			joinXorElements, llmElements, serviceElements, stateElements,
-			taskElements);
+			askAHumanElements, conditionElements, forkElements,
+			httpRequestElements, joinElements, joinXorElements, llmElements,
+			serviceElements, stateElements, taskElements);
 
 		return definition;
 	}
@@ -328,11 +345,31 @@ public class XMLWorkflowModelParser implements WorkflowModelParser {
 			settings.add(new Setting("inputVariables", inputVariables));
 		}
 
+		String modelName = aiDecisionElement.elementTextTrim("model-name");
+
+		if (modelName != null) {
+			settings.add(new Setting("modelName", modelName));
+		}
+
+		String modelProvider = aiDecisionElement.elementTextTrim(
+			"model-provider");
+
+		if (modelProvider != null) {
+			settings.add(new Setting("modelProvider", modelProvider));
+		}
+
 		String outputVariables = _normalizeJSONArrayJSON(
 			aiDecisionElement.elementTextTrim("output-variables"));
 
 		if (outputVariables != null) {
 			settings.add(new Setting("outputVariables", outputVariables));
+		}
+
+		String parameters = _normalizeJSONArrayJSON(
+			aiDecisionElement.elementTextTrim("parameters"));
+
+		if (parameters != null) {
+			settings.add(new Setting("parameters", parameters));
 		}
 
 		settings.add(
@@ -456,6 +493,44 @@ public class XMLWorkflowModelParser implements WorkflowModelParser {
 			"notification");
 
 		_parseNotificationElements(notificationElements, node);
+	}
+
+	private AskAHuman _parseAskAHuman(Element askAHumanElement)
+		throws Exception {
+
+		AskAHuman askAHuman = new AskAHuman(
+			StringUtil.trim(askAHumanElement.elementText("description")),
+			askAHumanElement.elementTextTrim("name"));
+
+		askAHuman.setLabelMap(_parseLabels(askAHumanElement.element("labels")));
+		askAHuman.setMetadata(askAHumanElement.elementTextTrim("metadata"));
+
+		Set<Setting> settings = new HashSet<>();
+
+		String inputVariables = _normalizeJSONArrayJSON(
+			askAHumanElement.elementTextTrim("input-variables"));
+
+		if (inputVariables != null) {
+			settings.add(new Setting("inputVariables", inputVariables));
+		}
+
+		String outputVariables = _normalizeJSONArrayJSON(
+			askAHumanElement.elementTextTrim("output-variables"));
+
+		if (outputVariables != null) {
+			settings.add(new Setting("outputVariables", outputVariables));
+		}
+
+		String question = _normalizeJSONObjectJSON(
+			askAHumanElement.elementTextTrim("question"));
+
+		if (question != null) {
+			settings.add(new Setting("question", question));
+		}
+
+		askAHuman.setSettings(settings);
+
+		return askAHuman;
 	}
 
 	private Set<Assignment> _parseAssignments(Element assignmentsElement)
@@ -759,11 +834,24 @@ public class XMLWorkflowModelParser implements WorkflowModelParser {
 			settings.add(new Setting("modelName", modelName));
 		}
 
+		String modelProvider = llmElement.elementTextTrim("model-provider");
+
+		if (modelProvider != null) {
+			settings.add(new Setting("modelProvider", modelProvider));
+		}
+
 		String outputVariables = _normalizeJSONArrayJSON(
 			llmElement.elementTextTrim("output-variables"));
 
 		if (outputVariables != null) {
 			settings.add(new Setting("outputVariables", outputVariables));
+		}
+
+		String parameters = _normalizeJSONArrayJSON(
+			llmElement.elementTextTrim("parameters"));
+
+		if (parameters != null) {
+			settings.add(new Setting("parameters", parameters));
 		}
 
 		settings.add(
@@ -1286,11 +1374,12 @@ public class XMLWorkflowModelParser implements WorkflowModelParser {
 
 	private void _parseTransitions(
 			Definition definition, List<Element> aiDecisionElements,
-			List<Element> aiHubAgentElements, List<Element> conditionElements,
-			List<Element> forkElements, List<Element> httpRequestElements,
-			List<Element> joinElements, List<Element> joinXorElements,
-			List<Element> llmElements, List<Element> serviceElements,
-			List<Element> stateElements, List<Element> taskElements)
+			List<Element> aiHubAgentElements, List<Element> askAHumanElements,
+			List<Element> conditionElements, List<Element> forkElements,
+			List<Element> httpRequestElements, List<Element> joinElements,
+			List<Element> joinXorElements, List<Element> llmElements,
+			List<Element> serviceElements, List<Element> stateElements,
+			List<Element> taskElements)
 		throws Exception {
 
 		for (Element aiDecisionElement : aiDecisionElements) {
@@ -1299,6 +1388,10 @@ public class XMLWorkflowModelParser implements WorkflowModelParser {
 
 		for (Element aiHubAgentElement : aiHubAgentElements) {
 			_parseTransition(definition, aiHubAgentElement);
+		}
+
+		for (Element askAHumanElement : askAHumanElements) {
+			_parseTransition(definition, askAHumanElement);
 		}
 
 		for (Element conditionElement : conditionElements) {
